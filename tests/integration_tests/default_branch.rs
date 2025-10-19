@@ -1,9 +1,7 @@
-mod common;
-
-use common::TestRepo;
+use crate::common::TestRepo;
 
 #[test]
-fn test_get_default_branch_with_origin_head_main() {
+fn test_get_default_branch_with_origin_head() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
     repo.setup_remote("main");
@@ -12,40 +10,6 @@ fn test_get_default_branch_with_origin_head_main() {
     assert!(repo.has_origin_head());
 
     // Test that we can get the default branch
-    let branch = arbor::git::get_default_branch_in(&repo.root_path())
-        .expect("Failed to get default branch");
-    assert_eq!(branch, "main");
-}
-
-#[test]
-fn test_get_default_branch_with_origin_head_master() {
-    // Note: TestRepo::new() creates a repo with "main" branch by default,
-    // but we can still test by setting up the remote with "main" as the actual branch
-    // and just rename the local branch to "master" first
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-
-    // For this test, we'll just use "main" as the default branch since that's what
-    // the repo was initialized with. The important thing is testing the detection logic.
-    // If we want to test with "master", we'd need to rename the branch first.
-    repo.setup_remote("main");
-
-    assert!(repo.has_origin_head());
-
-    let branch = arbor::git::get_default_branch_in(&repo.root_path())
-        .expect("Failed to get default branch");
-    assert_eq!(branch, "main");
-}
-
-#[test]
-fn test_get_default_branch_with_origin_head_custom() {
-    // Similar to above - testing with "main" since that's what the repo has
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
-
-    assert!(repo.has_origin_head());
-
     let branch = arbor::git::get_default_branch_in(&repo.root_path())
         .expect("Failed to get default branch");
     assert_eq!(branch, "main");

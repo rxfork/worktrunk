@@ -1,6 +1,4 @@
-mod common;
-
-use common::TestRepo;
+use crate::common::TestRepo;
 use insta::Settings;
 use insta_cmd::{assert_cmd_snapshot, get_cargo_bin};
 use std::process::Command;

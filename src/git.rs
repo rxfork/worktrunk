@@ -29,9 +29,16 @@ impl std::fmt::Display for GitError {
 
 impl std::error::Error for GitError {}
 
-pub fn list_worktrees() -> Result<Vec<Worktree>, GitError> {
-    let output = Command::new("git")
-        .args(["worktree", "list", "--porcelain"])
+/// Helper function to run a git command and return its stdout
+fn run_git_command(args: &[&str], path: Option<&std::path::Path>) -> Result<String, GitError> {
+    let mut cmd = Command::new("git");
+    cmd.args(args);
+
+    if let Some(p) = path {
+        cmd.current_dir(p);
+    }
+
+    let output = cmd
         .output()
         .map_err(|e| GitError::CommandFailed(e.to_string()))?;
 
@@ -40,7 +47,11 @@ pub fn list_worktrees() -> Result<Vec<Worktree>, GitError> {
         return Err(GitError::CommandFailed(stderr.to_string()));
     }
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+pub fn list_worktrees() -> Result<Vec<Worktree>, GitError> {
+    let stdout = run_git_command(&["worktree", "list", "--porcelain"], None)?;
     parse_worktree_list(&stdout)
 }
 
@@ -149,18 +160,7 @@ pub fn get_default_branch_in(path: &std::path::Path) -> Result<String, GitError>
 
 /// Try to get the default branch from the local cache (origin/HEAD)
 fn get_local_default_branch(path: &std::path::Path) -> Result<String, GitError> {
-    let output = Command::new("git")
-        .args(["rev-parse", "--abbrev-ref", "origin/HEAD"])
-        .current_dir(path)
-        .output()
-        .map_err(|e| GitError::CommandFailed(e.to_string()))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(GitError::CommandFailed(stderr.to_string()));
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stdout = run_git_command(&["rev-parse", "--abbrev-ref", "origin/HEAD"], Some(path))?;
     parse_local_default_branch(&stdout)
 }
 
@@ -185,18 +185,7 @@ fn parse_local_default_branch(output: &str) -> Result<String, GitError> {
 
 /// Query the remote to determine the default branch
 fn query_remote_default_branch(path: &std::path::Path) -> Result<String, GitError> {
-    let output = Command::new("git")
-        .args(["ls-remote", "--symref", "origin", "HEAD"])
-        .current_dir(path)
-        .output()
-        .map_err(|e| GitError::CommandFailed(e.to_string()))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(GitError::CommandFailed(stderr.to_string()));
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stdout = run_git_command(&["ls-remote", "--symref", "origin", "HEAD"], Some(path))?;
     parse_remote_default_branch(&stdout)
 }
 
@@ -227,17 +216,7 @@ fn parse_remote_default_branch(output: &str) -> Result<String, GitError> {
 
 /// Cache the default branch locally by setting origin/HEAD
 fn cache_default_branch(path: &std::path::Path, branch: &str) -> Result<(), GitError> {
-    let output = Command::new("git")
-        .args(["remote", "set-head", "origin", branch])
-        .current_dir(path)
-        .output()
-        .map_err(|e| GitError::CommandFailed(e.to_string()))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(GitError::CommandFailed(stderr.to_string()));
-    }
-
+    run_git_command(&["remote", "set-head", "origin", branch], Some(path))?;
     Ok(())
 }
 
