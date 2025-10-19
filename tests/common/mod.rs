@@ -1,6 +1,6 @@
-//! # Test Utilities for arbor
+//! # Test Utilities for worktrunk
 //!
-//! This module provides test harnesses for testing the arbor CLI tool.
+//! This module provides test harnesses for testing the worktrunk CLI tool.
 //!
 //! ## TestRepo
 //!
@@ -93,14 +93,14 @@ impl TestRepo {
         cmd.env("SOURCE_DATE_EPOCH", "1704067200");
     }
 
-    /// Clean environment for arbor CLI commands
+    /// Clean environment for worktrunk CLI commands
     ///
     /// Removes potentially interfering environment variables and sets
     /// deterministic git environment for CLI tests.
     pub fn clean_cli_env(&self, cmd: &mut Command) {
         // Remove git-related env vars that might interfere
         for (key, _) in std::env::vars() {
-            if key.starts_with("GIT_") || key.starts_with("ARBOR_") {
+            if key.starts_with("GIT_") || key.starts_with("WORKTRUNK_") {
                 cmd.env_remove(&key);
             }
         }

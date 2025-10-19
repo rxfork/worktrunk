@@ -153,8 +153,8 @@ wt-switch() {
   # Parse output for special directives
   while IFS= read -r line; do
     case "$line" in
-      __ARBOR_CD__*)
-        cd "${line#__ARBOR_CD__}"
+      __WORKTRUNK_CD__*)
+        cd "${line#__WORKTRUNK_CD__}"
         ;;
       *)
         echo "$line"
@@ -172,7 +172,7 @@ wt-switch() {
 
 **Directive format:**
 ```
-__ARBOR_CD__/path/to/worktree
+__WORKTRUNK_CD__/path/to/worktree
 Regular output line
 Another output line
 ```
@@ -235,7 +235,7 @@ Another output line
 1. ~~**Shell integration approach**: How to handle `cd` in a compiled binary?~~
    - ✅ **RESOLVED**: Use "eval init" pattern with directive protocol
    - Generate shell-specific wrapper functions via Askama templates
-   - Binary outputs `__ARBOR_CD__<path>` directives, shell wrapper executes `cd`
+   - Binary outputs `__WORKTRUNK_CD__<path>` directives, shell wrapper executes `cd`
 
 2. **External command dependencies**: How to handle git-commit-llm, claude, task?
    - Configurable hooks?

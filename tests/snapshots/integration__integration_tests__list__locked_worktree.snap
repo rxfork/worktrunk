@@ -1,7 +1,7 @@
 ---
 source: tests/integration_tests/list.rs
 info:
-  program: arbor
+  program: wt
   args:
     - list
   env:

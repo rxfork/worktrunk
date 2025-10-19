@@ -1,7 +1,7 @@
 ---
 source: tests/integration_tests/init.rs
 info:
-  program: arbor
+  program: wt
   args:
     - init
     - bash
