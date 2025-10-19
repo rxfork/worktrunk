@@ -1,7 +1,9 @@
+mod config;
 mod git;
 mod shell;
 
 use clap::{Parser, Subcommand};
+use config::ArborConfig;
 use git::{GitError, list_worktrees};
 use std::process;
 
