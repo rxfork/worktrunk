@@ -1,20 +1,24 @@
 use anstyle::{AnsiColor, Color, Style};
 use std::io::IsTerminal;
 
-/// Determines if colored output should be used
-fn should_use_color() -> bool {
-    // Check for force color environment variables (for testing)
-    if std::env::var("CLICOLOR_FORCE").is_ok() || std::env::var("FORCE_COLOR").is_ok() {
+/// Determines if colored output should be used based on environment
+fn should_use_color_with_env(no_color: bool, force_color: bool, is_terminal: bool) -> bool {
+    if force_color {
         return true;
     }
-
-    // Check if NO_COLOR is set (universal way to disable colors)
-    if std::env::var("NO_COLOR").is_ok() {
+    if no_color {
         return false;
     }
+    is_terminal
+}
 
-    // Otherwise use TTY detection
-    std::io::stderr().is_terminal()
+/// Determines if colored output should be used
+fn should_use_color() -> bool {
+    should_use_color_with_env(
+        std::env::var("NO_COLOR").is_ok(),
+        std::env::var("CLICOLOR_FORCE").is_ok() || std::env::var("FORCE_COLOR").is_ok(),
+        std::io::stderr().is_terminal(),
+    )
 }
 
 /// Format an error message with red color and ❌ emoji
@@ -77,16 +81,6 @@ pub fn bold(text: &str) -> String {
     }
 }
 
-/// Format text with a specific color
-pub fn colored(text: &str, color: AnsiColor) -> String {
-    if should_use_color() {
-        let style = Style::new().fg_color(Some(Color::Ansi(color)));
-        format!("{}{}{}", style.render(), text, style.render_reset())
-    } else {
-        text.to_string()
-    }
-}
-
 /// Format an error message with bold emphasis on specific parts
 ///
 /// Example: `format_error_with_bold("Branch '", "feature-x", "' already exists")`
@@ -116,63 +110,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_format_error_no_color() {
-        // Ensure NO_COLOR disables formatting
-        unsafe {
-            std::env::set_var("NO_COLOR", "1");
-        }
-        let result = format_error("Test error");
-        assert_eq!(result, "❌ Test error");
-        unsafe {
-            std::env::remove_var("NO_COLOR");
-        }
+    fn test_should_use_color_force_color() {
+        assert!(should_use_color_with_env(false, true, false));
+        assert!(should_use_color_with_env(true, true, false));
     }
 
     #[test]
-    fn test_format_error_with_bold_no_color() {
-        unsafe {
-            std::env::set_var("NO_COLOR", "1");
-        }
-        let result = format_error_with_bold("Branch '", "main", "' already exists");
-        assert_eq!(result, "❌ Branch 'main' already exists");
-        unsafe {
-            std::env::remove_var("NO_COLOR");
-        }
+    fn test_should_use_color_no_color() {
+        assert!(!should_use_color_with_env(true, false, true));
+        assert!(!should_use_color_with_env(true, false, false));
     }
 
     #[test]
-    fn test_format_warning() {
-        unsafe {
-            std::env::set_var("NO_COLOR", "1");
-        }
-        let result = format_warning("Test warning");
-        assert_eq!(result, "🟡 Test warning");
-        unsafe {
-            std::env::remove_var("NO_COLOR");
-        }
-    }
-
-    #[test]
-    fn test_format_hint() {
-        unsafe {
-            std::env::set_var("NO_COLOR", "1");
-        }
-        let result = format_hint("Test hint");
-        assert_eq!(result, "💡 Test hint");
-        unsafe {
-            std::env::remove_var("NO_COLOR");
-        }
-    }
-
-    #[test]
-    fn test_bold() {
-        unsafe {
-            std::env::set_var("NO_COLOR", "1");
-        }
-        let result = bold("important");
-        assert_eq!(result, "important");
-        unsafe {
-            std::env::remove_var("NO_COLOR");
-        }
+    fn test_should_use_color_terminal() {
+        assert!(should_use_color_with_env(false, false, true));
+        assert!(!should_use_color_with_env(false, false, false));
     }
 }

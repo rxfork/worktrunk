@@ -212,3 +212,20 @@ fn test_merge_to_default_branch() {
     // Merge without specifying target (should use default branch)
     snapshot_merge("merge_to_default", &repo, &[], Some(&feature_wt));
 }
+
+#[test]
+fn test_merge_error_detached_head() {
+    let repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    // Detach HEAD in the repo
+    repo.detach_head();
+
+    // Try to merge (should fail - detached HEAD)
+    snapshot_merge(
+        "merge_error_detached_head",
+        &repo,
+        &["main"],
+        Some(repo.root_path()),
+    );
+}

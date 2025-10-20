@@ -5,7 +5,7 @@ use rayon::prelude::*;
 use std::io;
 use std::process;
 use worktrunk::config::{format_worktree_path, load_config};
-use worktrunk::error_format::{format_error_with_bold, format_hint, format_warning};
+use worktrunk::error_format::{format_error, format_error_with_bold, format_hint, format_warning};
 use worktrunk::git::{
     GitError, Worktree, branch_exists, count_commits, get_ahead_behind_in, get_all_branches,
     get_available_branches, get_branch_diff_stats_in, get_changed_files, get_commit_timestamp_in,
@@ -608,7 +608,6 @@ fn handle_switch(
 fn handle_remove(internal: bool) -> Result<(), GitError> {
     // Check for uncommitted changes
     if is_dirty()? {
-        use worktrunk::error_format::format_error;
         return Err(GitError::CommandFailed(format_error(
             "Working tree has uncommitted changes. Commit or stash them first.",
         )));
@@ -704,7 +703,6 @@ fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<(), Gi
 
     // Check for merge commits unless allowed
     if !allow_merge_commits && has_merge_commits(&target_branch, "HEAD")? {
-        use worktrunk::error_format::format_error;
         return Err(GitError::CommandFailed(format_error(
             "Found merge commits in push range. Use --allow-merge-commits to push non-linear history.",
         )));
@@ -757,7 +755,6 @@ fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<(), Gi
                 .collect();
 
             if !overlapping.is_empty() {
-                use worktrunk::error_format::format_error;
                 eprintln!(
                     "{}",
                     format_error("Cannot push: conflicting uncommitted changes in:")
@@ -811,7 +808,6 @@ fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<(), Gi
 
 fn handle_merge(target: Option<&str>, keep: bool) -> Result<(), GitError> {
     // Get current branch
-    use worktrunk::error_format::format_error;
     let current_branch = get_current_branch()?
         .ok_or_else(|| GitError::CommandFailed(format_error("Not on a branch (detached HEAD)")))?;
 
@@ -829,7 +825,6 @@ fn handle_merge(target: Option<&str>, keep: bool) -> Result<(), GitError> {
 
     // Check for uncommitted changes
     if is_dirty()? {
-        use worktrunk::error_format::format_error;
         return Err(GitError::CommandFailed(format_error(
             "Working tree has uncommitted changes. Commit or stash them first.",
         )));

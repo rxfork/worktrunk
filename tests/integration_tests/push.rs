@@ -161,3 +161,136 @@ fn test_push_with_dirty_target() {
     // Try to push (should fail due to conflicting changes)
     snapshot_push("push_dirty_target", &repo, &["main"], Some(&feature_wt));
 }
+
+#[test]
+fn test_push_error_not_fast_forward() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+    repo.setup_remote("main");
+
+    // Create feature branch from initial commit
+    let feature_wt = repo.add_worktree("feature", "feature");
+
+    // Make a commit in the main worktree (repo root) and push it
+    std::fs::write(repo.root_path().join("main-file.txt"), "main content")
+        .expect("Failed to write file");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "main-file.txt"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to add file");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "Main commit"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to commit");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["push", "origin", "main"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to push");
+
+    // Make a commit in feature (which doesn't have main's commit)
+    std::fs::write(feature_wt.join("feature.txt"), "feature content")
+        .expect("Failed to write file");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "feature.txt"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to add file");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "Feature commit"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to commit");
+
+    // Try to push feature to main (should fail - main has commits not in feature)
+    snapshot_push(
+        "push_error_not_fast_forward",
+        &repo,
+        &["main"],
+        Some(&feature_wt),
+    );
+}
+
+#[test]
+fn test_push_error_with_merge_commits() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+    repo.setup_remote("main");
+
+    // Create feature branch
+    let feature_wt = repo.add_worktree("feature", "feature");
+    std::fs::write(feature_wt.join("file1.txt"), "content1").expect("Failed to write file");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "file1.txt"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to add file");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "Commit 1"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to commit");
+
+    // Create another branch for merging
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["checkout", "-b", "temp"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to create temp branch");
+
+    std::fs::write(feature_wt.join("file2.txt"), "content2").expect("Failed to write file");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "file2.txt"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to add file");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "Commit 2"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to commit");
+
+    // Switch back to feature and merge temp (creating merge commit)
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["checkout", "feature"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to checkout feature");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["merge", "temp", "--no-ff", "-m", "Merge temp"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to merge");
+
+    // Try to push to main (should fail - has merge commits)
+    snapshot_push(
+        "push_error_with_merge_commits",
+        &repo,
+        &["main"],
+        Some(&feature_wt),
+    );
+}

@@ -95,3 +95,18 @@ fn test_switch_existing_worktree_internal() {
         &["--internal", "existing-wt"],
     );
 }
+
+#[test]
+fn test_switch_error_missing_worktree_directory() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    // Create a worktree
+    let wt_path = repo.add_worktree("missing-wt", "missing-wt");
+
+    // Remove the worktree directory (but leave it registered in git)
+    std::fs::remove_dir_all(&wt_path).expect("Failed to remove worktree directory");
+
+    // Try to switch to the missing worktree (should fail)
+    snapshot_switch("switch_error_missing_directory", &repo, &["missing-wt"]);
+}

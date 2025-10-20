@@ -89,7 +89,7 @@ fn validate_worktree_path(template: &str) -> Result<(), ConfigError> {
 
 pub fn format_worktree_path(template: &str, repo: &str, branch: &str) -> String {
     // Sanitize branch name by replacing path separators to prevent directory traversal
-    let safe_branch = branch.replace('/', "-").replace('\\', "-");
+    let safe_branch = branch.replace(['/', '\\'], "-");
     template
         .replace("{repo}", repo)
         .replace("{branch}", &safe_branch)

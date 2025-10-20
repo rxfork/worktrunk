@@ -128,7 +128,7 @@ fn add_worktree_with_divergence(
 
     // Get current HEAD to diverge from
     let head_output = Command::new("git")
-        .args(&["rev-parse", "HEAD"])
+        .args(["rev-parse", "HEAD"])
         .current_dir(repo_path)
         .output()
         .unwrap();
@@ -191,7 +191,7 @@ fn bench_list_by_worktree_count(c: &mut Criterion) {
 
     // Build release binary once
     let build_output = Command::new("cargo")
-        .args(&["build", "--release"])
+        .args(["build", "--release"])
         .output()
         .unwrap();
     assert!(
@@ -292,7 +292,7 @@ fn bench_sequential_vs_parallel(c: &mut Criterion) {
 
     // Build release binary once
     let build_output = Command::new("cargo")
-        .args(&["build", "--release"])
+        .args(["build", "--release"])
         .output()
         .unwrap();
     assert!(

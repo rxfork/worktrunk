@@ -1,0 +1,25 @@
+---
+source: tests/integration_tests/push.rs
+info:
+  program: wt
+  args:
+    - push
+    - main
+  env:
+    CLICOLOR_FORCE: "1"
+    GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
+    GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
+    GIT_CONFIG_GLOBAL: /dev/null
+    GIT_CONFIG_SYSTEM: /dev/null
+    GIT_EDITOR: ""
+    LANG: C
+    LC_ALL: C
+    SOURCE_DATE_EPOCH: "1704067200"
+---
+success: false
+exit_code: 1
+----- stdout -----
+
+----- stderr -----
+[31m❌ Not a fast-forward from '[1m[31mmain[31m' to HEAD[0m
+[2m💡 The target branch has commits not in your current branch. Consider 'git pull' or 'git rebase'[0m
