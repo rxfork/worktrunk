@@ -216,10 +216,7 @@ pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<()
     let repo = Repository::current();
 
     // Get target branch (default to default branch if not provided)
-    let target_branch = match target {
-        Some(b) => b.to_string(),
-        None => repo.default_branch()?,
-    };
+    let target_branch = target.map_or_else(|| repo.default_branch(), |b| Ok(b.to_string()))?;
 
     // Check if it's a fast-forward
     if !repo.is_ancestor(&target_branch, "HEAD")? {

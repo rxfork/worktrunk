@@ -14,10 +14,7 @@ pub fn handle_merge(target: Option<&str>, squash: bool, keep: bool) -> Result<()
         .ok_or_else(|| GitError::CommandFailed(format_error("Not on a branch (detached HEAD)")))?;
 
     // Get target branch (default to default branch if not provided)
-    let target_branch = match target {
-        Some(b) => b.to_string(),
-        None => repo.default_branch()?,
-    };
+    let target_branch = target.map_or_else(|| repo.default_branch(), |b| Ok(b.to_string()))?;
 
     // Check if already on target branch
     if current_branch == target_branch {
