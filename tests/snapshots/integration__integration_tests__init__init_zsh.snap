@@ -71,4 +71,302 @@ _wt_complete() {
 # Register dynamic completion
 complete -F _wt_complete wt
 
+# Static completions (commands and flags)
+#compdef wt
+
+autoload -U is-at-least
+
+_wt() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local context curcontext="$curcontext" state line
+    _arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+'-V[Print version]' \
+'--version[Print version]' \
+":: :_wt_commands" \
+"*::: :->wt" \
+&& ret=0
+    case $state in
+    (wt)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:wt-command-$line[1]:"
+        case $line[1] in
+            (init)
+_arguments "${_arguments_options[@]}" : \
+'--cmd=[Command prefix (default\: wt)]:CMD:_default' \
+'--hook=[Hook mode (none, prompt)]:HOOK:_default' \
+'-h[Print help]' \
+'--help[Print help]' \
+':shell -- Shell to generate code for (bash, fish, zsh):_default' \
+&& ret=0
+;;
+(list)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(switch)
+_arguments "${_arguments_options[@]}" : \
+'-b+[Base branch to create from (only with --create)]:BASE:_default' \
+'--base=[Base branch to create from (only with --create)]:BASE:_default' \
+'-c[Create a new branch]' \
+'--create[Create a new branch]' \
+'--internal[Use internal mode (outputs directives for shell wrapper)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':branch -- Branch name or worktree path:_default' \
+&& ret=0
+;;
+(finish)
+_arguments "${_arguments_options[@]}" : \
+'--internal[Use internal mode (outputs directives for shell wrapper)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(push)
+_arguments "${_arguments_options[@]}" : \
+'--allow-merge-commits[Allow pushing merge commits (non-linear history)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'::target -- Target branch (defaults to default branch):_default' \
+&& ret=0
+;;
+(merge)
+_arguments "${_arguments_options[@]}" : \
+'-k[Keep worktree after merging (don'\''t finish)]' \
+'--keep[Keep worktree after merging (don'\''t finish)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'::target -- Target branch to merge into (defaults to default branch):_default' \
+&& ret=0
+;;
+(hook)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+':hook_type -- Hook type:_default' \
+&& ret=0
+;;
+(completion)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+':shell -- Shell to generate completions for:(bash fish zsh)' \
+&& ret=0
+;;
+(complete)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+'*::args -- Arguments to complete:_default' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_wt__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:wt-help-command-$line[1]:"
+        case $line[1] in
+            (init)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(switch)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(finish)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(push)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(merge)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(hook)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(completion)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(complete)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+}
+
+(( $+functions[_wt_commands] )) ||
+_wt_commands() {
+    local commands; commands=(
+'init:Generate shell integration code' \
+'list:List all worktrees' \
+'switch:Switch to a worktree (creates if doesn'\''t exist)' \
+'finish:Finish current worktree and return to primary' \
+'push:Push changes between worktrees' \
+'merge:Merge and cleanup worktree' \
+'hook:Hook commands (for shell integration)' \
+'completion:Generate shell completion script (deprecated - use init instead)' \
+'complete:Internal completion helper (hidden)' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'wt commands' commands "$@"
+}
+(( $+functions[_wt__complete_commands] )) ||
+_wt__complete_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt complete commands' commands "$@"
+}
+(( $+functions[_wt__completion_commands] )) ||
+_wt__completion_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt completion commands' commands "$@"
+}
+(( $+functions[_wt__finish_commands] )) ||
+_wt__finish_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt finish commands' commands "$@"
+}
+(( $+functions[_wt__help_commands] )) ||
+_wt__help_commands() {
+    local commands; commands=(
+'init:Generate shell integration code' \
+'list:List all worktrees' \
+'switch:Switch to a worktree (creates if doesn'\''t exist)' \
+'finish:Finish current worktree and return to primary' \
+'push:Push changes between worktrees' \
+'merge:Merge and cleanup worktree' \
+'hook:Hook commands (for shell integration)' \
+'completion:Generate shell completion script (deprecated - use init instead)' \
+'complete:Internal completion helper (hidden)' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'wt help commands' commands "$@"
+}
+(( $+functions[_wt__help__complete_commands] )) ||
+_wt__help__complete_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt help complete commands' commands "$@"
+}
+(( $+functions[_wt__help__completion_commands] )) ||
+_wt__help__completion_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt help completion commands' commands "$@"
+}
+(( $+functions[_wt__help__finish_commands] )) ||
+_wt__help__finish_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt help finish commands' commands "$@"
+}
+(( $+functions[_wt__help__help_commands] )) ||
+_wt__help__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt help help commands' commands "$@"
+}
+(( $+functions[_wt__help__hook_commands] )) ||
+_wt__help__hook_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt help hook commands' commands "$@"
+}
+(( $+functions[_wt__help__init_commands] )) ||
+_wt__help__init_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt help init commands' commands "$@"
+}
+(( $+functions[_wt__help__list_commands] )) ||
+_wt__help__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt help list commands' commands "$@"
+}
+(( $+functions[_wt__help__merge_commands] )) ||
+_wt__help__merge_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt help merge commands' commands "$@"
+}
+(( $+functions[_wt__help__push_commands] )) ||
+_wt__help__push_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt help push commands' commands "$@"
+}
+(( $+functions[_wt__help__switch_commands] )) ||
+_wt__help__switch_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt help switch commands' commands "$@"
+}
+(( $+functions[_wt__hook_commands] )) ||
+_wt__hook_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt hook commands' commands "$@"
+}
+(( $+functions[_wt__init_commands] )) ||
+_wt__init_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt init commands' commands "$@"
+}
+(( $+functions[_wt__list_commands] )) ||
+_wt__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt list commands' commands "$@"
+}
+(( $+functions[_wt__merge_commands] )) ||
+_wt__merge_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt merge commands' commands "$@"
+}
+(( $+functions[_wt__push_commands] )) ||
+_wt__push_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt push commands' commands "$@"
+}
+(( $+functions[_wt__switch_commands] )) ||
+_wt__switch_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt switch commands' commands "$@"
+}
+
+if [ "$funcstack[1]" = "_wt" ]; then
+    _wt "$@"
+else
+    compdef _wt wt
+fi
+
 ----- stderr -----

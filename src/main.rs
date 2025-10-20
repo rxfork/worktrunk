@@ -86,12 +86,14 @@ enum Commands {
     },
 
     /// Hook commands (for shell integration)
+    #[command(hide = true)]
     Hook {
         /// Hook type
         hook_type: String,
     },
 
-    /// Generate shell completion script
+    /// Generate shell completion script (deprecated - use init instead)
+    #[command(hide = true)]
     Completion {
         /// Shell to generate completions for
         #[arg(value_enum)]
@@ -154,11 +156,46 @@ fn handle_init(shell_name: &str, cmd: &str, hook_str: &str) -> Result<(), String
 
     let init = shell::ShellInit::new(shell, cmd.to_string(), hook);
 
-    let output = init
+    // Generate shell integration code
+    let integration_output = init
         .generate()
         .map_err(|e| format!("Failed to generate shell code: {}", e))?;
 
-    println!("{}", output);
+    println!("{}", integration_output);
+
+    // Generate and append static completions
+    println!();
+    println!("# Static completions (commands and flags)");
+
+    // Generate completions to a string so we can filter out hidden commands
+    let mut completion_output = Vec::new();
+    let mut cmd = Cli::command();
+    let completion_shell = match shell {
+        shell::Shell::Bash => CompletionShell::Bash,
+        shell::Shell::Fish => CompletionShell::Fish,
+        shell::Shell::Zsh => CompletionShell::Zsh,
+    };
+    generate(completion_shell, &mut cmd, "wt", &mut completion_output);
+
+    // Filter out lines for hidden commands (hook, completion, complete)
+    let completion_str = String::from_utf8_lossy(&completion_output);
+    let filtered: Vec<&str> = completion_str
+        .lines()
+        .filter(|line| {
+            // Remove lines that complete the hidden commands
+            !(line.contains("\"hook\"")
+                || line.contains("\"completion\"")
+                || line.contains("\"complete\"")
+                || line.contains("-a \"hook\"")
+                || line.contains("-a \"completion\"")
+                || line.contains("-a \"complete\""))
+        })
+        .collect();
+
+    for line in filtered {
+        println!("{}", line);
+    }
+
     Ok(())
 }
 

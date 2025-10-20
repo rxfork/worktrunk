@@ -19,11 +19,7 @@ cargo build --release
 
 ## Setup
 
-Worktrunk requires a two-step setup for full functionality:
-
-### 1. Shell Integration (for automatic `cd`)
-
-This enables `wt switch` and `wt finish` to automatically change directories.
+One-command setup that includes shell integration and completions:
 
 **Bash** - Add to `~/.bashrc`:
 ```bash
@@ -40,34 +36,9 @@ wt init fish | source
 eval "$(wt init zsh)"
 ```
 
-### 2. Shell Completion (for TAB completion)
-
-This enables completion for commands, flags, and branch names.
-
-**Fish:**
-```fish
-wt completion fish > ~/.config/fish/completions/wt.fish
-```
-
-**Bash** - Add to `~/.bashrc` (after the init line):
-```bash
-eval "$(wt completion bash)"
-```
-
-**Zsh** - Add to `~/.zshrc` (after the init line):
-```bash
-eval "$(wt completion zsh)"
-```
-
-### Complete Setup Example (Fish)
-
-```fish
-# In ~/.config/fish/config.fish
-wt init fish | source
-
-# Run once to install completions
-wt completion fish > ~/.config/fish/completions/wt.fish
-```
+This single command provides:
+- Shell integration for automatic `cd` on `wt switch` and `wt finish`
+- TAB completion for commands, flags, and branch names
 
 ### What Gets Completed
 
@@ -78,7 +49,7 @@ wt completion fish > ~/.config/fish/completions/wt.fish
 
 **Notes:**
 - Zsh currently uses Bash-compatible completion syntax. Dynamic branch completion may require `bashcompinit`. For best results, use Fish or Bash.
-- Regenerate completion scripts after updating `wt`
+- After updating `wt`, restart your shell or re-run the init command to get new completions
 - Debug completion: Set `WT_DEBUG_COMPLETION=1` to see errors
 - Performance: Run `cargo bench` to measure completion performance on your system
 
