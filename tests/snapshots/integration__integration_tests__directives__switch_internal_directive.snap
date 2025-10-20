@@ -7,6 +7,7 @@ info:
     - my-feature
     - "--internal"
   env:
+    CLICOLOR_FORCE: "1"
     GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
@@ -21,4 +22,4 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-Error: Git command failed: fatal: invalid reference: my-feature
+fatal: invalid reference: my-feature

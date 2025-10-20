@@ -1,12 +1,13 @@
 ---
 source: tests/integration_tests/switch.rs
 info:
-  program: arbor
+  program: wt
   args:
     - switch
     - "--create"
     - feature-y
   env:
+    CLICOLOR_FORCE: "1"
     GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
@@ -21,4 +22,4 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-Error: Git command failed: Branch 'feature-y' already exists. Remove --create flag to switch to it.
+[31m❌ Branch '[1m[31mfeature-y[31m' already exists. Remove --create flag to switch to it.[0m

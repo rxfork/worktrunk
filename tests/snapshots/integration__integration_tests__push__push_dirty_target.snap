@@ -6,6 +6,7 @@ info:
     - push
     - main
   env:
+    CLICOLOR_FORCE: "1"
     GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
@@ -20,6 +21,6 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-Cannot push: conflicting uncommitted changes in:
+[31m❌ Cannot push: conflicting uncommitted changes in:[0m
   - conflict.txt
-Error: Git command failed: Commit or stash changes in [REPO] first
+Commit or stash changes in [REPO] first

@@ -41,13 +41,13 @@ fn test_complete_switch_shows_branches() {
 
     // Create some branches using git
     StdCommand::new("git")
-        .args(&["branch", "feature/new"])
+        .args(["branch", "feature/new"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
 
     StdCommand::new("git")
-        .args(&["branch", "hotfix/bug"])
+        .args(["branch", "hotfix/bug"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
@@ -56,7 +56,7 @@ fn test_complete_switch_shows_branches() {
     let mut cmd = Command::cargo_bin("wt").unwrap();
     let output = cmd
         .current_dir(temp.root_path())
-        .args(&["complete", "wt", "switch", ""])
+        .args(["complete", "wt", "switch", ""])
         .output()
         .unwrap();
 
@@ -79,7 +79,7 @@ fn test_complete_switch_excludes_branches_with_worktrees() {
 
     // Create another branch without worktree
     StdCommand::new("git")
-        .args(&["branch", "hotfix/bug"])
+        .args(["branch", "hotfix/bug"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
@@ -88,7 +88,7 @@ fn test_complete_switch_excludes_branches_with_worktrees() {
     let mut cmd = Command::cargo_bin("wt").unwrap();
     let output = cmd
         .current_dir(temp.root_path())
-        .args(&["complete", "wt", "switch", ""])
+        .args(["complete", "wt", "switch", ""])
         .output()
         .unwrap();
 
@@ -112,7 +112,7 @@ fn test_complete_push_shows_all_branches() {
 
     // Create another branch without worktree
     StdCommand::new("git")
-        .args(&["branch", "hotfix/bug"])
+        .args(["branch", "hotfix/bug"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
@@ -121,7 +121,7 @@ fn test_complete_push_shows_all_branches() {
     let mut cmd = Command::cargo_bin("wt").unwrap();
     let output = cmd
         .current_dir(temp.root_path())
-        .args(&["complete", "wt", "push", ""])
+        .args(["complete", "wt", "push", ""])
         .output()
         .unwrap();
 
@@ -141,13 +141,13 @@ fn test_complete_base_flag_shows_all_branches() {
 
     // Create branches
     StdCommand::new("git")
-        .args(&["branch", "develop"])
+        .args(["branch", "develop"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
 
     StdCommand::new("git")
-        .args(&["branch", "feature/existing"])
+        .args(["branch", "feature/existing"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
@@ -156,7 +156,7 @@ fn test_complete_base_flag_shows_all_branches() {
     let mut cmd = Command::cargo_bin("wt").unwrap();
     let output = cmd
         .current_dir(temp.root_path())
-        .args(&[
+        .args([
             "complete",
             "wt",
             "switch",
@@ -185,7 +185,7 @@ fn test_complete_outside_git_repo_returns_empty() {
     let mut cmd = Command::cargo_bin("wt").unwrap();
     let output = cmd
         .current_dir(temp.path())
-        .args(&["complete", "wt", "switch", ""])
+        .args(["complete", "wt", "switch", ""])
         .output()
         .unwrap();
 
@@ -228,7 +228,7 @@ fn test_complete_base_flag_short_form() {
 
     // Create branches
     StdCommand::new("git")
-        .args(&["branch", "develop"])
+        .args(["branch", "develop"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
@@ -237,7 +237,7 @@ fn test_complete_base_flag_short_form() {
     let mut cmd = Command::cargo_bin("wt").unwrap();
     let output = cmd
         .current_dir(temp.root_path())
-        .args(&[
+        .args([
             "complete",
             "wt",
             "switch",
@@ -266,7 +266,7 @@ fn test_complete_empty_repo_returns_empty() {
     let mut cmd = Command::cargo_bin("wt").unwrap();
     let output = cmd
         .current_dir(temp.root_path())
-        .args(&["complete", "wt", "switch", ""])
+        .args(["complete", "wt", "switch", ""])
         .output()
         .unwrap();
 
@@ -283,19 +283,19 @@ fn test_complete_with_partial_prefix() {
 
     // Create branches with common prefix
     StdCommand::new("git")
-        .args(&["branch", "feature/one"])
+        .args(["branch", "feature/one"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
 
     StdCommand::new("git")
-        .args(&["branch", "feature/two"])
+        .args(["branch", "feature/two"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
 
     StdCommand::new("git")
-        .args(&["branch", "hotfix/bug"])
+        .args(["branch", "hotfix/bug"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
@@ -305,7 +305,7 @@ fn test_complete_with_partial_prefix() {
     let mut cmd = Command::cargo_bin("wt").unwrap();
     let output = cmd
         .current_dir(temp.root_path())
-        .args(&["complete", "wt", "switch", "feat"])
+        .args(["complete", "wt", "switch", "feat"])
         .output()
         .unwrap();
 
@@ -333,7 +333,7 @@ fn test_complete_switch_no_available_branches() {
     let mut cmd = Command::cargo_bin("wt").unwrap();
     let output = cmd
         .current_dir(temp.root_path())
-        .args(&["complete", "wt", "switch", ""])
+        .args(["complete", "wt", "switch", ""])
         .output()
         .unwrap();
 
@@ -353,14 +353,14 @@ fn test_complete_excludes_remote_branches() {
 
     // Create local branches
     StdCommand::new("git")
-        .args(&["branch", "feature/local"])
+        .args(["branch", "feature/local"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
 
     // Set up a fake remote
     StdCommand::new("git")
-        .args(&["remote", "add", "origin", "https://example.com/repo.git"])
+        .args(["remote", "add", "origin", "https://example.com/repo.git"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
@@ -369,33 +369,33 @@ fn test_complete_excludes_remote_branches() {
     // First, create a bare repo to act as remote
     let remote_dir = temp.root_path().parent().unwrap().join("remote.git");
     StdCommand::new("git")
-        .args(&["init", "--bare", remote_dir.to_str().unwrap()])
+        .args(["init", "--bare", remote_dir.to_str().unwrap()])
         .output()
         .unwrap();
 
     // Update remote URL to point to our bare repo
     StdCommand::new("git")
-        .args(&["remote", "set-url", "origin", remote_dir.to_str().unwrap()])
+        .args(["remote", "set-url", "origin", remote_dir.to_str().unwrap()])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
 
     // Push to create remote branches
     StdCommand::new("git")
-        .args(&["push", "origin", "main"])
+        .args(["push", "origin", "main"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
 
     StdCommand::new("git")
-        .args(&["push", "origin", "feature/local:feature/remote"])
+        .args(["push", "origin", "feature/local:feature/remote"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
 
     // Fetch to create remote-tracking branches
     StdCommand::new("git")
-        .args(&["fetch", "origin"])
+        .args(["fetch", "origin"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
@@ -404,7 +404,7 @@ fn test_complete_excludes_remote_branches() {
     let mut cmd = Command::cargo_bin("wt").unwrap();
     let output = cmd
         .current_dir(temp.root_path())
-        .args(&["complete", "wt", "switch", ""])
+        .args(["complete", "wt", "switch", ""])
         .output()
         .unwrap();
 
@@ -439,7 +439,7 @@ fn test_complete_merge_shows_branches() {
 
     // Create another branch without worktree
     StdCommand::new("git")
-        .args(&["branch", "hotfix/bug"])
+        .args(["branch", "hotfix/bug"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
@@ -448,7 +448,7 @@ fn test_complete_merge_shows_branches() {
     let mut cmd = Command::cargo_bin("wt").unwrap();
     let output = cmd
         .current_dir(temp.root_path())
-        .args(&["complete", "wt", "merge", ""])
+        .args(["complete", "wt", "merge", ""])
         .output()
         .unwrap();
 
@@ -468,7 +468,7 @@ fn test_complete_unknown_command_returns_empty() {
 
     // Create some branches
     StdCommand::new("git")
-        .args(&["branch", "feature/test"])
+        .args(["branch", "feature/test"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
@@ -477,7 +477,7 @@ fn test_complete_unknown_command_returns_empty() {
     let mut cmd = Command::cargo_bin("wt").unwrap();
     let output = cmd
         .current_dir(temp.root_path())
-        .args(&["complete", "wt", "unknown-command", ""])
+        .args(["complete", "wt", "unknown-command", ""])
         .output()
         .unwrap();
 
@@ -502,7 +502,7 @@ fn test_complete_with_special_characters_in_branch_names() {
 
     for branch in &branch_names {
         StdCommand::new("git")
-            .args(&["branch", branch])
+            .args(["branch", branch])
             .current_dir(temp.root_path())
             .output()
             .unwrap();
@@ -512,7 +512,7 @@ fn test_complete_with_special_characters_in_branch_names() {
     let mut cmd = Command::cargo_bin("wt").unwrap();
     let output = cmd
         .current_dir(temp.root_path())
-        .args(&["complete", "wt", "switch", ""])
+        .args(["complete", "wt", "switch", ""])
         .output()
         .unwrap();
 
@@ -536,7 +536,7 @@ fn test_complete_list_command_returns_empty() {
 
     // Create branches
     StdCommand::new("git")
-        .args(&["branch", "feature/test"])
+        .args(["branch", "feature/test"])
         .current_dir(temp.root_path())
         .output()
         .unwrap();
@@ -545,7 +545,7 @@ fn test_complete_list_command_returns_empty() {
     let mut cmd = Command::cargo_bin("wt").unwrap();
     let output = cmd
         .current_dir(temp.root_path())
-        .args(&["complete", "wt", "list", ""])
+        .args(["complete", "wt", "list", ""])
         .output()
         .unwrap();
 

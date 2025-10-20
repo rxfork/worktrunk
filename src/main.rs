@@ -3,6 +3,7 @@ use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{Shell as CompletionShell, generate};
 use std::io;
 use std::process;
+use worktrunk::error_format::{format_error_with_bold, format_hint, format_warning};
 use worktrunk::git::{
     GitError, branch_exists, count_commits, get_ahead_behind_in, get_all_branches,
     get_available_branches, get_branch_diff_stats_in, get_changed_files, get_commit_timestamp_in,
@@ -146,7 +147,8 @@ fn main() {
     };
 
     if let Err(e) = result {
-        eprintln!("Error: {}", e);
+        // Error messages are already formatted with emoji and colors
+        eprintln!("{}", e);
         process::exit(1);
     }
 }
@@ -247,20 +249,24 @@ fn handle_list() -> Result<(), GitError> {
         let timestamp = get_commit_timestamp_in(&wt.path, &wt.head).unwrap_or(0);
 
         // Calculate ahead/behind relative to primary branch (only if primary has a branch)
-        let (ahead, behind) = if is_primary || primary_branch.is_none() {
+        let (ahead, behind) = if is_primary {
             (0, 0)
+        } else if let Some(pb) = primary_branch {
+            get_ahead_behind_in(&wt.path, pb, &wt.head).unwrap_or((0, 0))
         } else {
-            get_ahead_behind_in(&wt.path, primary_branch.unwrap(), &wt.head).unwrap_or((0, 0))
+            (0, 0)
         };
 
         // Get working tree diff stats
         let working_tree_diff = get_working_tree_diff_stats_in(&wt.path).unwrap_or((0, 0));
 
         // Get branch diff stats (downstream of primary, only if primary has a branch)
-        let branch_diff = if is_primary || primary_branch.is_none() {
+        let branch_diff = if is_primary {
             (0, 0)
+        } else if let Some(pb) = primary_branch {
+            get_branch_diff_stats_in(&wt.path, pb, &wt.head).unwrap_or((0, 0))
         } else {
-            get_branch_diff_stats_in(&wt.path, primary_branch.unwrap(), &wt.head).unwrap_or((0, 0))
+            (0, 0)
         };
 
         infos.push(WorktreeInfo {
@@ -474,15 +480,19 @@ fn handle_switch(
 ) -> Result<(), GitError> {
     // Check for conflicting conditions
     if create && branch_exists(branch)? {
-        return Err(GitError::CommandFailed(format!(
-            "Branch '{}' already exists. Remove --create flag to switch to it.",
-            branch
+        return Err(GitError::CommandFailed(format_error_with_bold(
+            "Branch '",
+            branch,
+            "' already exists. Remove --create flag to switch to it.",
         )));
     }
 
     // Check if base flag was provided without create flag
     if base.is_some() && !create {
-        eprintln!("Warning: --base flag is only used with --create, ignoring");
+        eprintln!(
+            "{}",
+            format_warning("--base flag is only used with --create, ignoring")
+        );
     }
 
     // Check if worktree already exists for this branch
@@ -493,9 +503,10 @@ fn handle_switch(
             }
             return Ok(());
         } else {
-            return Err(GitError::CommandFailed(format!(
-                "Worktree directory missing for '{}'. Run 'git worktree prune' to clean up.",
-                branch
+            return Err(GitError::CommandFailed(format_error_with_bold(
+                "Worktree directory missing for '",
+                branch,
+                "'. Run 'git worktree prune' to clean up.",
             )));
         }
     }
@@ -566,9 +577,10 @@ fn handle_switch(
 fn handle_remove(internal: bool) -> Result<(), GitError> {
     // Check for uncommitted changes
     if is_dirty()? {
-        return Err(GitError::CommandFailed(
-            "Working tree has uncommitted changes. Commit or stash them first.".to_string(),
-        ));
+        use worktrunk::error_format::format_error;
+        return Err(GitError::CommandFailed(format_error(
+            "Working tree has uncommitted changes. Commit or stash them first.",
+        )));
     }
 
     // Get current state
@@ -648,17 +660,23 @@ fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<(), Gi
 
     // Check if it's a fast-forward
     if !is_ancestor(&target_branch, "HEAD")? {
+        let error_msg =
+            format_error_with_bold("Not a fast-forward from '", &target_branch, "' to HEAD");
+        let hint_msg = format_hint(
+            "The target branch has commits not in your current branch. Consider 'git pull' or 'git rebase'",
+        );
         return Err(GitError::CommandFailed(format!(
-            "Not a fast-forward from '{}' to HEAD. The target branch has commits not in your current branch.",
-            target_branch
+            "{}\n{}",
+            error_msg, hint_msg
         )));
     }
 
     // Check for merge commits unless allowed
     if !allow_merge_commits && has_merge_commits(&target_branch, "HEAD")? {
-        return Err(GitError::CommandFailed(
-            "Found merge commits in push range. Use --allow-merge-commits to push non-linear history.".to_string(),
-        ));
+        use worktrunk::error_format::format_error;
+        return Err(GitError::CommandFailed(format_error(
+            "Found merge commits in push range. Use --allow-merge-commits to push non-linear history.",
+        )));
     }
 
     // Configure receive.denyCurrentBranch if needed
@@ -708,7 +726,11 @@ fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<(), Gi
                 .collect();
 
             if !overlapping.is_empty() {
-                eprintln!("Cannot push: conflicting uncommitted changes in:");
+                use worktrunk::error_format::format_error;
+                eprintln!(
+                    "{}",
+                    format_error("Cannot push: conflicting uncommitted changes in:")
+                );
                 for file in &overlapping {
                     eprintln!("  - {}", file);
                 }
@@ -758,8 +780,9 @@ fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<(), Gi
 
 fn handle_merge(target: Option<&str>, keep: bool) -> Result<(), GitError> {
     // Get current branch
+    use worktrunk::error_format::format_error;
     let current_branch = get_current_branch()?
-        .ok_or_else(|| GitError::CommandFailed("Not on a branch (detached HEAD)".to_string()))?;
+        .ok_or_else(|| GitError::CommandFailed(format_error("Not on a branch (detached HEAD)")))?;
 
     // Get target branch (default to default branch if not provided)
     let target_branch = match target {
@@ -775,9 +798,10 @@ fn handle_merge(target: Option<&str>, keep: bool) -> Result<(), GitError> {
 
     // Check for uncommitted changes
     if is_dirty()? {
-        return Err(GitError::CommandFailed(
-            "Working tree has uncommitted changes. Commit or stash them first.".to_string(),
-        ));
+        use worktrunk::error_format::format_error;
+        return Err(GitError::CommandFailed(format_error(
+            "Working tree has uncommitted changes. Commit or stash them first.",
+        )));
     }
 
     // Rebase onto target
@@ -887,8 +911,8 @@ fn parse_completion_context(args: &[String]) -> CompletionContext {
         "switch" => {
             // Check if we're completing --base flag value
             if args.len() >= 3 {
-                for i in 2..args.len() - 1 {
-                    if args[i] == "--base" || args[i] == "-b" {
+                for arg in args.iter().skip(2).take(args.len() - 3) {
+                    if arg == "--base" || arg == "-b" {
                         // We're completing the value after --base
                         return CompletionContext::BaseFlag;
                     }

@@ -1,13 +1,14 @@
 ---
 source: tests/integration_tests/switch.rs
 info:
-  program: arbor
+  program: wt
   args:
     - switch
     - "--base"
     - main
     - main
   env:
+    CLICOLOR_FORCE: "1"
     GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
@@ -22,4 +23,4 @@ exit_code: 0
 ----- stdout -----
 
 ----- stderr -----
-Warning: --base flag is only used with --create, ignoring
+[33m🟡 --base flag is only used with --create, ignoring[0m

@@ -21,8 +21,13 @@ pub enum GitError {
 impl std::fmt::Display for GitError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            GitError::CommandFailed(msg) => write!(f, "Git command failed: {}", msg),
-            GitError::ParseError(msg) => write!(f, "Parse error: {}", msg),
+            // CommandFailed messages are already formatted with emoji and colors
+            GitError::CommandFailed(msg) => write!(f, "{}", msg),
+            // ParseError messages need formatting
+            GitError::ParseError(msg) => {
+                use crate::error_format::format_error;
+                write!(f, "{}", format_error(msg))
+            }
         }
     }
 }

@@ -106,6 +106,8 @@ impl TestRepo {
         }
         // Set deterministic environment for git
         self.configure_git_cmd(cmd);
+        // Force color output for snapshot testing (captures ANSI codes)
+        cmd.env("CLICOLOR_FORCE", "1");
     }
 
     /// Get the root path of the repository

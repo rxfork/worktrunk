@@ -6,6 +6,7 @@ info:
     - merge
     - main
   env:
+    CLICOLOR_FORCE: "1"
     GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
@@ -20,4 +21,4 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-Error: Git command failed: Working tree has uncommitted changes. Commit or stash them first.
+[31m❌ Working tree has uncommitted changes. Commit or stash them first.[0m

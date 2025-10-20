@@ -3,8 +3,9 @@ source: tests/integration_tests/directives.rs
 info:
   program: wt
   args:
-    - finish
+    - remove
   env:
+    CLICOLOR_FORCE: "1"
     GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
@@ -19,7 +20,7 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-Error: Git command failed: fatal: 'origin' does not appear to be a git repository
+fatal: 'origin' does not appear to be a git repository
 fatal: Could not read from remote repository.
 
 Please make sure you have the correct access rights

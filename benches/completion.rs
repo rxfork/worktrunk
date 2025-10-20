@@ -9,27 +9,27 @@ fn setup_test_repo(num_branches: usize, num_worktrees: usize) -> TempDir {
 
     // Initialize git repo
     Command::new("git")
-        .args(&["init"])
+        .args(["init"])
         .current_dir(repo_path)
         .output()
         .unwrap();
 
     // Configure git
     Command::new("git")
-        .args(&["config", "user.name", "Test"])
+        .args(["config", "user.name", "Test"])
         .current_dir(repo_path)
         .output()
         .unwrap();
 
     Command::new("git")
-        .args(&["config", "user.email", "test@example.com"])
+        .args(["config", "user.email", "test@example.com"])
         .current_dir(repo_path)
         .output()
         .unwrap();
 
     // Create initial commit
     Command::new("git")
-        .args(&["commit", "--allow-empty", "-m", "initial"])
+        .args(["commit", "--allow-empty", "-m", "initial"])
         .current_dir(repo_path)
         .output()
         .unwrap();
@@ -37,7 +37,7 @@ fn setup_test_repo(num_branches: usize, num_worktrees: usize) -> TempDir {
     // Create branches
     for i in 0..num_branches {
         Command::new("git")
-            .args(&["branch", &format!("branch-{}", i)])
+            .args(["branch", &format!("branch-{}", i)])
             .current_dir(repo_path)
             .output()
             .unwrap();
@@ -47,7 +47,7 @@ fn setup_test_repo(num_branches: usize, num_worktrees: usize) -> TempDir {
     for i in 0..num_worktrees {
         let worktree_path = repo_path.join(format!("wt-{}", i));
         Command::new("git")
-            .args(&[
+            .args([
                 "worktree",
                 "add",
                 "-b",
@@ -70,7 +70,7 @@ fn bench_completion_switch(c: &mut Criterion) {
         let temp = setup_test_repo(10, 0);
         b.iter(|| {
             Command::new("cargo")
-                .args(&["run", "--", "complete", "wt", "switch", ""])
+                .args(["run", "--", "complete", "wt", "switch", ""])
                 .current_dir(temp.path())
                 .output()
                 .unwrap();
@@ -82,7 +82,7 @@ fn bench_completion_switch(c: &mut Criterion) {
         let temp = setup_test_repo(50, 0);
         b.iter(|| {
             Command::new("cargo")
-                .args(&["run", "--", "complete", "wt", "switch", ""])
+                .args(["run", "--", "complete", "wt", "switch", ""])
                 .current_dir(temp.path())
                 .output()
                 .unwrap();
@@ -94,7 +94,7 @@ fn bench_completion_switch(c: &mut Criterion) {
         let temp = setup_test_repo(100, 0);
         b.iter(|| {
             Command::new("cargo")
-                .args(&["run", "--", "complete", "wt", "switch", ""])
+                .args(["run", "--", "complete", "wt", "switch", ""])
                 .current_dir(temp.path())
                 .output()
                 .unwrap();
@@ -112,7 +112,7 @@ fn bench_completion_switch_with_worktrees(c: &mut Criterion) {
         let temp = setup_test_repo(50, 10);
         b.iter(|| {
             Command::new("cargo")
-                .args(&["run", "--", "complete", "wt", "switch", ""])
+                .args(["run", "--", "complete", "wt", "switch", ""])
                 .current_dir(temp.path())
                 .output()
                 .unwrap();
@@ -130,7 +130,7 @@ fn bench_completion_push(c: &mut Criterion) {
         let temp = setup_test_repo(100, 0);
         b.iter(|| {
             Command::new("cargo")
-                .args(&["run", "--", "complete", "wt", "push", ""])
+                .args(["run", "--", "complete", "wt", "push", ""])
                 .current_dir(temp.path())
                 .output()
                 .unwrap();
