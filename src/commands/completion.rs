@@ -1,3 +1,15 @@
+// Custom completion implementation rather than clap's unstable-dynamic feature.
+//
+// While clap_complete offers CompleteEnv and ArgValueCompleter traits, we implement
+// our own completion logic because:
+// - unstable-dynamic is an unstable API that may change between versions
+// - We need conditional completion logic (e.g., don't complete branches when --create is present)
+// - We need runtime-fetched values (git branches) with context-aware filtering
+// - We need precise control over positional argument state tracking with flags
+//
+// This approach uses stable APIs and handles edge cases that clap's completion system
+// isn't designed for. See the extensive test suite in tests/integration_tests/completion.rs
+
 use clap::Command;
 use clap_complete::{Shell as CompletionShell, generate};
 use std::io;
