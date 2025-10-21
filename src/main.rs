@@ -62,6 +62,10 @@ enum Commands {
         /// Output format
         #[arg(long, value_enum, default_value = "table")]
         format: OutputFormat,
+
+        /// Also display branches that don't have worktrees
+        #[arg(long)]
+        branches: bool,
     },
 
     /// Switch to a worktree
@@ -154,7 +158,7 @@ fn main() {
                 }
             })
             .map_err(GitError::CommandFailed),
-        Commands::List { format } => handle_list(format),
+        Commands::List { format, branches } => handle_list(format, branches),
         Commands::Switch {
             branch,
             create,

@@ -21,6 +21,7 @@ exit_code: 0
 ----- stdout -----
 [
   {
+    "type": "worktree",
     "worktree": {
       "path": "[REPO]",
       "head": "[SHA]",
@@ -49,6 +50,7 @@ exit_code: 0
     "worktree_state": null
   },
   {
+    "type": "worktree",
     "worktree": {
       "path": "[WORKTREE_FEATURE_DETACHED]",
       "head": "[SHA]",
@@ -77,6 +79,7 @@ exit_code: 0
     "worktree_state": null
   },
   {
+    "type": "worktree",
     "worktree": {
       "path": "[WORKTREE_LOCKED_FEATURE]",
       "head": "[SHA]",

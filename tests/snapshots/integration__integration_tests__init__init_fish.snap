@@ -117,6 +117,7 @@ complete -c wt -n "__fish_wt_using_subcommand configure-shell" -l dry-run -d 'Sh
 complete -c wt -n "__fish_wt_using_subcommand configure-shell" -s h -l help -d 'Print help'
 complete -c wt -n "__fish_wt_using_subcommand list" -l format -d 'Output format' -r -f -a "table\t'Human-readable table format'
 json\t'JSON format'"
+complete -c wt -n "__fish_wt_using_subcommand list" -l branches -d 'Also display branches that don\'t have worktrees'
 complete -c wt -n "__fish_wt_using_subcommand list" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c wt -n "__fish_wt_using_subcommand switch" -s b -l base -d 'Base branch to create from (only with --create)' -r
 complete -c wt -n "__fish_wt_using_subcommand switch" -s c -l create -d 'Create a new branch'

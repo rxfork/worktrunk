@@ -2,7 +2,7 @@ use crate::display::{find_common_prefix, get_terminal_width};
 use std::path::{Path, PathBuf};
 use unicode_width::UnicodeWidthStr;
 
-use super::WorktreeInfo;
+use super::ListItem;
 
 /// Helper: Check if a column is "dense" (appears in >50% of all rows)
 fn is_dense_for_all_rows(count: usize, total: usize) -> bool {
@@ -42,7 +42,7 @@ pub struct LayoutConfig {
     pub max_message_len: usize,
 }
 
-pub fn calculate_column_widths(infos: &[WorktreeInfo]) -> ColumnWidths {
+pub fn calculate_column_widths(items: &[ListItem]) -> ColumnWidths {
     // Initialize with header label widths to ensure headers always fit
     let mut max_branch = "Branch".width();
     let mut max_time = "Age".width();
@@ -53,40 +53,35 @@ pub fn calculate_column_widths(infos: &[WorktreeInfo]) -> ColumnWidths {
     let mut max_upstream = "Remote".width();
     let mut max_states = "State".width();
 
-    for info in infos {
+    for item in items {
         // Branch name
-        let branch_len = info
-            .worktree
-            .branch
-            .as_deref()
-            .unwrap_or("(detached)")
-            .width();
-        max_branch = max_branch.max(branch_len);
+        max_branch = max_branch.max(item.branch_name().width());
 
         // Time
-        let time_str = crate::display::format_relative_time(info.timestamp);
+        let time_str = crate::display::format_relative_time(item.timestamp());
         max_time = max_time.max(time_str.width());
 
         // Message (truncate to 50 chars max)
-        let msg_len = info.commit_message.chars().take(50).count();
+        let msg_len = item.commit_message().chars().take(50).count();
         max_message = max_message.max(msg_len);
 
-        // Ahead/behind
-        if !info.is_primary && (info.ahead > 0 || info.behind > 0) {
-            let ahead_behind_len = format!("↑{} ↓{}", info.ahead, info.behind).width();
+        // Ahead/behind (only for non-primary items)
+        if !item.is_primary() && (item.ahead() > 0 || item.behind() > 0) {
+            let ahead_behind_len = format!("↑{} ↓{}", item.ahead(), item.behind()).width();
             max_ahead_behind = max_ahead_behind.max(ahead_behind_len);
         }
 
-        // Working tree diff
-        let (wt_added, wt_deleted) = info.working_tree_diff;
-        if wt_added > 0 || wt_deleted > 0 {
+        // Working tree diff (worktrees only)
+        if let Some((wt_added, wt_deleted)) = item.working_tree_diff()
+            && (wt_added > 0 || wt_deleted > 0)
+        {
             let working_diff_len = format!("+{} -{}", wt_added, wt_deleted).width();
             max_working_diff = max_working_diff.max(working_diff_len);
         }
 
-        // Branch diff
-        if !info.is_primary {
-            let (br_added, br_deleted) = info.branch_diff;
+        // Branch diff (only for non-primary items)
+        if !item.is_primary() {
+            let (br_added, br_deleted) = item.branch_diff();
             if br_added > 0 || br_deleted > 0 {
                 let branch_diff_len = format!("+{} -{}", br_added, br_deleted).width();
                 max_branch_diff = max_branch_diff.max(branch_diff_len);
@@ -94,20 +89,18 @@ pub fn calculate_column_widths(infos: &[WorktreeInfo]) -> ColumnWidths {
         }
 
         // Upstream tracking
-        if info.upstream_ahead > 0 || info.upstream_behind > 0 {
-            let remote_name = info.upstream_remote.as_deref().unwrap_or("origin");
-            let upstream_len = format!(
-                "{} ↑{} ↓{}",
-                remote_name, info.upstream_ahead, info.upstream_behind
-            )
-            .width();
+        if let Some((remote_name, upstream_ahead, upstream_behind)) = item.upstream_info() {
+            let upstream_len =
+                format!("{} ↑{} ↓{}", remote_name, upstream_ahead, upstream_behind).width();
             max_upstream = max_upstream.max(upstream_len);
         }
 
-        // States (including worktree_state)
-        let states = super::render::format_all_states(info);
-        if !states.is_empty() {
-            max_states = max_states.max(states.width());
+        // States (worktrees only)
+        if let Some(worktree_info) = item.worktree_info() {
+            let states = super::render::format_all_states(worktree_info);
+            if !states.is_empty() {
+                max_states = max_states.max(states.width());
+            }
         }
     }
 
@@ -124,49 +117,56 @@ pub fn calculate_column_widths(infos: &[WorktreeInfo]) -> ColumnWidths {
 }
 
 /// Calculate responsive layout based on terminal width
-pub fn calculate_responsive_layout(infos: &[WorktreeInfo]) -> LayoutConfig {
+pub fn calculate_responsive_layout(items: &[ListItem]) -> LayoutConfig {
     let terminal_width = get_terminal_width();
-    let paths: Vec<&Path> = infos
+    let paths: Vec<&Path> = items
         .iter()
-        .map(|info| info.worktree.path.as_path())
+        .filter_map(|item| {
+            item.worktree_info()
+                .map(|info| info.worktree.path.as_path())
+        })
         .collect();
     let common_prefix = find_common_prefix(&paths);
 
     // Count how many rows have each sparse column
-    let non_primary_count = infos.iter().filter(|i| !i.is_primary).count();
-    let ahead_behind_count = infos
+    let non_primary_count = items.iter().filter(|item| !item.is_primary()).count();
+    let ahead_behind_count = items
         .iter()
-        .filter(|i| !i.is_primary && (i.ahead > 0 || i.behind > 0))
+        .filter(|item| !item.is_primary() && (item.ahead() > 0 || item.behind() > 0))
         .count();
-    let working_diff_count = infos
+    let working_diff_count = items
         .iter()
-        .filter(|i| {
-            let (added, deleted) = i.working_tree_diff;
-            added > 0 || deleted > 0
+        .filter(|item| {
+            item.working_tree_diff()
+                .map(|(added, deleted)| added > 0 || deleted > 0)
+                .unwrap_or(false)
         })
         .count();
-    let branch_diff_count = infos
+    let branch_diff_count = items
         .iter()
-        .filter(|i| {
-            if i.is_primary {
-                return false;
+        .filter(|item| {
+            !item.is_primary() && {
+                let (added, deleted) = item.branch_diff();
+                added > 0 || deleted > 0
             }
-            let (added, deleted) = i.branch_diff;
-            added > 0 || deleted > 0
         })
         .count();
-    let upstream_count = infos
+    let upstream_count = items
         .iter()
-        .filter(|i| i.upstream_ahead > 0 || i.upstream_behind > 0)
+        .filter(|item| item.upstream_info().is_some())
         .count();
-    let states_count = infos
+    let states_count = items
         .iter()
-        .filter(|i| {
-            i.worktree_state.is_some()
-                || (i.worktree.detached && i.worktree.branch.is_some())
-                || i.worktree.bare
-                || i.worktree.locked.is_some()
-                || i.worktree.prunable.is_some()
+        .filter(|item| {
+            item.worktree_info()
+                .map(|i| {
+                    i.worktree_state.is_some()
+                        || (i.worktree.detached && i.worktree.branch.is_some())
+                        || i.worktree.bare
+                        || i.worktree.locked.is_some()
+                        || i.worktree.prunable.is_some()
+                })
+                .unwrap_or(false)
         })
         .count();
 
@@ -174,13 +174,13 @@ pub fn calculate_responsive_layout(infos: &[WorktreeInfo]) -> LayoutConfig {
     // For ahead/behind and branch_diff, applicable = non-primary rows
     // For others, applicable = all rows
     let ahead_behind_is_dense = is_dense_for_non_primary(ahead_behind_count, non_primary_count);
-    let working_diff_is_dense = is_dense_for_all_rows(working_diff_count, infos.len());
+    let working_diff_is_dense = is_dense_for_all_rows(working_diff_count, items.len());
     let branch_diff_is_dense = is_dense_for_non_primary(branch_diff_count, non_primary_count);
-    let upstream_is_dense = is_dense_for_all_rows(upstream_count, infos.len());
-    let states_is_dense = is_dense_for_all_rows(states_count, infos.len());
+    let upstream_is_dense = is_dense_for_all_rows(upstream_count, items.len());
+    let states_is_dense = is_dense_for_all_rows(states_count, items.len());
 
     // Calculate ideal column widths
-    let ideal_widths = calculate_column_widths(infos);
+    let ideal_widths = calculate_column_widths(items);
 
     // Essential columns (always shown):
     // - current indicator: 2 chars
@@ -310,7 +310,7 @@ mod tests {
             worktree_state: None,
         };
 
-        let widths = calculate_column_widths(&[info1]);
+        let widths = calculate_column_widths(&[super::ListItem::Worktree(info1)]);
 
         // "↑3 ↓2" has visual width 5 (not 9 bytes)
         assert_eq!(widths.ahead_behind, 5, "↑3 ↓2 should have width 5");

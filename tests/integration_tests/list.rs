@@ -68,6 +68,48 @@ fn snapshot_list_json(test_name: &str, repo: &TestRepo) {
     });
 }
 
+/// Helper to create snapshot with --branches flag
+fn snapshot_list_with_branches(test_name: &str, repo: &TestRepo) {
+    let mut settings = Settings::clone_current();
+    settings.set_snapshot_path("../snapshots");
+
+    // Normalize paths - replace absolute paths with semantic names
+    settings.add_filter(repo.root_path().to_str().unwrap(), "[REPO]");
+    for (name, path) in &repo.worktrees {
+        settings.add_filter(
+            path.to_str().unwrap(),
+            format!("[WORKTREE_{}]", name.to_uppercase().replace('-', "_")),
+        );
+    }
+
+    // Normalize git SHAs (7-40 hex chars) to [SHA] padded to 8 chars
+    settings.add_filter(r"\b[0-9a-f]{7,40}\b", "[SHA]   ");
+
+    // Normalize Windows paths to Unix style
+    settings.add_filter(r"\\", "/");
+
+    settings.bind(|| {
+        let mut cmd = Command::new(get_cargo_bin("wt"));
+        // Clean environment to avoid interference from global git config
+        repo.clean_cli_env(&mut cmd);
+        cmd.arg("list")
+            .arg("--branches")
+            .current_dir(repo.root_path());
+
+        assert_cmd_snapshot!(test_name, cmd);
+    });
+}
+
+/// Helper to create a branch without a worktree
+fn create_branch(repo: &TestRepo, branch_name: &str) {
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["branch", branch_name])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to create branch");
+}
+
 #[test]
 fn test_list_single_worktree() {
     let repo = TestRepo::new();
@@ -221,4 +263,45 @@ fn test_list_json_with_metadata() {
     repo.lock_worktree("locked-feature", Some("Testing"));
 
     snapshot_list_json("json_with_metadata", &repo);
+}
+
+#[test]
+fn test_list_with_branches_flag() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    // Create some branches without worktrees
+    create_branch(&repo, "feature-without-worktree");
+    create_branch(&repo, "another-branch");
+    create_branch(&repo, "fix-bug");
+
+    // Create one branch with a worktree
+    repo.add_worktree("feature-with-worktree", "feature-with-worktree");
+
+    snapshot_list_with_branches("with_branches_flag", &repo);
+}
+
+#[test]
+fn test_list_with_branches_flag_no_available() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    // All branches have worktrees (only main exists and has worktree)
+    repo.add_worktree("feature-a", "feature-a");
+    repo.add_worktree("feature-b", "feature-b");
+
+    snapshot_list_with_branches("with_branches_flag_none_available", &repo);
+}
+
+#[test]
+fn test_list_with_branches_flag_only_branches() {
+    let repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    // Create several branches without worktrees
+    create_branch(&repo, "branch-alpha");
+    create_branch(&repo, "branch-beta");
+    create_branch(&repo, "branch-gamma");
+
+    snapshot_list_with_branches("with_branches_flag_only_branches", &repo);
 }

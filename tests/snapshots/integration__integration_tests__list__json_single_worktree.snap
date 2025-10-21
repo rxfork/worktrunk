@@ -21,6 +21,7 @@ exit_code: 0
 ----- stdout -----
 [
   {
+    "type": "worktree",
     "worktree": {
       "path": "[REPO]",
       "head": "[SHA]",

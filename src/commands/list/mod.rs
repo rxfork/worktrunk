@@ -8,7 +8,7 @@ use rayon::prelude::*;
 use worktrunk::git::{GitError, Repository};
 
 use layout::calculate_responsive_layout;
-use render::{format_header_line, format_worktree_line};
+use render::{format_header_line, format_list_item_line};
 
 #[derive(serde::Serialize)]
 pub struct WorktreeInfo {
@@ -24,6 +24,187 @@ pub struct WorktreeInfo {
     pub upstream_ahead: usize,
     pub upstream_behind: usize,
     pub worktree_state: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+pub struct BranchInfo {
+    pub name: String,
+    pub head: String,
+    pub timestamp: i64,
+    pub commit_message: String,
+    pub ahead: usize,
+    pub behind: usize,
+    pub branch_diff: (usize, usize),
+    pub upstream_remote: Option<String>,
+    pub upstream_ahead: usize,
+    pub upstream_behind: usize,
+}
+
+/// Unified type for displaying worktrees and branches in the same table
+#[derive(serde::Serialize)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum ListItem {
+    Worktree(WorktreeInfo),
+    Branch(BranchInfo),
+}
+
+impl ListItem {
+    pub fn timestamp(&self) -> i64 {
+        match self {
+            ListItem::Worktree(wt) => wt.timestamp,
+            ListItem::Branch(br) => br.timestamp,
+        }
+    }
+
+    pub fn worktree_info(&self) -> Option<&WorktreeInfo> {
+        match self {
+            ListItem::Worktree(wt) => Some(wt),
+            ListItem::Branch(_) => None,
+        }
+    }
+
+    pub fn branch_name(&self) -> &str {
+        match self {
+            ListItem::Worktree(wt) => wt.worktree.branch.as_deref().unwrap_or("(detached)"),
+            ListItem::Branch(br) => &br.name,
+        }
+    }
+
+    pub fn commit_head(&self) -> &str {
+        match self {
+            ListItem::Worktree(wt) => &wt.worktree.head,
+            ListItem::Branch(br) => &br.head,
+        }
+    }
+
+    pub fn commit_message(&self) -> &str {
+        match self {
+            ListItem::Worktree(wt) => &wt.commit_message,
+            ListItem::Branch(br) => &br.commit_message,
+        }
+    }
+
+    pub fn ahead(&self) -> usize {
+        match self {
+            ListItem::Worktree(wt) => wt.ahead,
+            ListItem::Branch(br) => br.ahead,
+        }
+    }
+
+    pub fn behind(&self) -> usize {
+        match self {
+            ListItem::Worktree(wt) => wt.behind,
+            ListItem::Branch(br) => br.behind,
+        }
+    }
+
+    pub fn is_primary(&self) -> bool {
+        match self {
+            ListItem::Worktree(wt) => wt.is_primary,
+            ListItem::Branch(_) => false,
+        }
+    }
+
+    pub fn branch_diff(&self) -> (usize, usize) {
+        match self {
+            ListItem::Worktree(wt) => wt.branch_diff,
+            ListItem::Branch(br) => br.branch_diff,
+        }
+    }
+
+    pub fn working_tree_diff(&self) -> Option<(usize, usize)> {
+        match self {
+            ListItem::Worktree(wt) => Some(wt.working_tree_diff),
+            ListItem::Branch(_) => None,
+        }
+    }
+
+    pub fn upstream_info(&self) -> Option<(&str, usize, usize)> {
+        match self {
+            ListItem::Worktree(wt) => {
+                if wt.upstream_ahead > 0 || wt.upstream_behind > 0 {
+                    Some((
+                        wt.upstream_remote.as_deref().unwrap_or("origin"),
+                        wt.upstream_ahead,
+                        wt.upstream_behind,
+                    ))
+                } else {
+                    None
+                }
+            }
+            ListItem::Branch(br) => {
+                if br.upstream_ahead > 0 || br.upstream_behind > 0 {
+                    Some((
+                        br.upstream_remote.as_deref().unwrap_or("origin"),
+                        br.upstream_ahead,
+                        br.upstream_behind,
+                    ))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+}
+
+impl BranchInfo {
+    /// Create BranchInfo from a branch name, enriching it with git metadata
+    fn from_branch(
+        branch: &str,
+        repo: &Repository,
+        primary_branch: Option<&str>,
+    ) -> Result<Self, GitError> {
+        // Get the commit SHA for this branch
+        let head = repo.run_command(&["rev-parse", branch])?.trim().to_string();
+
+        // Get commit timestamp
+        let timestamp = repo.commit_timestamp(&head)?;
+
+        // Get commit message
+        let commit_message = repo.commit_message(&head)?;
+
+        // Calculate ahead/behind relative to primary branch
+        let (ahead, behind) = if let Some(pb) = primary_branch {
+            repo.ahead_behind(pb, &head)?
+        } else {
+            (0, 0)
+        };
+
+        // Get branch diff stats (line diff relative to primary)
+        let branch_diff = if let Some(pb) = primary_branch {
+            repo.branch_diff_stats(pb, &head)?
+        } else {
+            (0, 0)
+        };
+
+        // Get upstream tracking info
+        let (upstream_remote, upstream_ahead, upstream_behind) =
+            match repo.upstream_branch(branch).ok().flatten() {
+                Some(upstream_branch) => {
+                    let remote = upstream_branch
+                        .split_once('/')
+                        .map(|(remote, _)| remote)
+                        .unwrap_or("origin")
+                        .to_string();
+                    let (ahead, behind) = repo.ahead_behind(&upstream_branch, &head)?;
+                    (Some(remote), ahead, behind)
+                }
+                None => (None, 0, 0),
+            };
+
+        Ok(BranchInfo {
+            name: branch.to_string(),
+            head,
+            timestamp,
+            commit_message,
+            ahead,
+            behind,
+            branch_diff,
+            upstream_remote,
+            upstream_ahead,
+            upstream_behind,
+        })
+    }
 }
 
 impl WorktreeInfo {
@@ -99,7 +280,7 @@ impl WorktreeInfo {
     }
 }
 
-pub fn handle_list(format: crate::OutputFormat) -> Result<(), GitError> {
+pub fn handle_list(format: crate::OutputFormat, show_branches: bool) -> Result<(), GitError> {
     let repo = Repository::current();
     let worktrees = repo.list_worktrees()?;
 
@@ -125,41 +306,47 @@ pub fn handle_list(format: crate::OutputFormat) -> Result<(), GitError> {
     //
     // TODO: Could parallelize the 5 git commands within each worktree if needed,
     // but worktree-level parallelism provides the best cost/benefit tradeoff
-    let mut infos: Vec<WorktreeInfo> = if std::env::var("WT_SEQUENTIAL").is_ok() {
-        // Sequential iteration (for benchmarking)
-        worktrees
-            .iter()
-            .map(|wt| WorktreeInfo::from_worktree(wt, &primary))
-            .collect::<Result<Vec<_>, _>>()?
-    } else {
-        // Parallel iteration (default)
-        worktrees
-            .par_iter()
-            .map(|wt| WorktreeInfo::from_worktree(wt, &primary))
-            .collect::<Result<Vec<_>, _>>()?
-    };
+    let worktree_infos: Vec<WorktreeInfo> = worktrees
+        .par_iter()
+        .map(|wt| WorktreeInfo::from_worktree(wt, &primary))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    // Build list of items to display (worktrees + optional branches)
+    let mut items: Vec<ListItem> = worktree_infos.into_iter().map(ListItem::Worktree).collect();
+
+    // Add branches if requested
+    if show_branches {
+        let available_branches = repo.available_branches()?;
+        let primary_branch = primary.branch.as_deref();
+        for branch in available_branches {
+            match BranchInfo::from_branch(&branch, &repo, primary_branch) {
+                Ok(branch_info) => items.push(ListItem::Branch(branch_info)),
+                Err(e) => eprintln!("Warning: Failed to enrich branch '{}': {}", branch, e),
+            }
+        }
+    }
 
     // Sort by most recent commit (descending)
-    infos.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    items.sort_by_key(|b| std::cmp::Reverse(b.timestamp()));
 
     match format {
         crate::OutputFormat::Json => {
             // Output JSON format
-            let json = serde_json::to_string_pretty(&infos).map_err(|e| {
+            let json = serde_json::to_string_pretty(&items).map_err(|e| {
                 GitError::CommandFailed(format!("Failed to serialize to JSON: {}", e))
             })?;
             println!("{}", json);
         }
         crate::OutputFormat::Table => {
             // Calculate responsive layout based on terminal width
-            let layout = calculate_responsive_layout(&infos);
+            let layout = calculate_responsive_layout(&items);
 
             // Display header
             format_header_line(&layout);
 
             // Display formatted output
-            for info in &infos {
-                format_worktree_line(info, &layout, current_worktree_path.as_ref());
+            for item in &items {
+                format_list_item_line(item, &layout, current_worktree_path.as_ref());
             }
         }
     }

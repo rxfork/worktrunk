@@ -1,0 +1,29 @@
+---
+source: tests/integration_tests/list.rs
+info:
+  program: wt
+  args:
+    - list
+    - "--branches"
+  env:
+    CLICOLOR_FORCE: "1"
+    GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
+    GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
+    GIT_CONFIG_GLOBAL: /dev/null
+    GIT_CONFIG_SYSTEM: /dev/null
+    GIT_EDITOR: ""
+    LANG: C
+    LC_ALL: C
+    SOURCE_DATE_EPOCH: "1704067200"
+---
+success: true
+exit_code: 0
+----- stdout -----
+[2mBranch                  [0m  [2mAge         [0m  [2mCmts[0m  [2mCmt +/-[0m  [2mWT +/-[0m  [2mRemote[0m  [2mCommit  [0m  [2mState[0m  [2mPath[0m
+[1m[35mmain                    [0m  [2m9 months ago[0m                                 [1m[35mb834638e[0m         [1m[35m./main[0m
+feature-with-worktree     [2m9 months ago[0m                                 [2mb834638e[0m         ./feature-with-worktree
+another-branch            [2m9 months ago[0m                                 [2mb834638e[0m         
+feature-without-worktree  [2m9 months ago[0m                                 [2mb834638e[0m         
+fix-bug                   [2m9 months ago[0m                                 [2mb834638e[0m         
+
+----- stderr -----

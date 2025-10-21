@@ -4,8 +4,8 @@ use worktrunk::styling::{
     primary_style,
 };
 
-use super::WorktreeInfo;
 use super::layout::LayoutConfig;
+use super::{ListItem, WorktreeInfo};
 
 pub fn format_all_states(info: &WorktreeInfo) -> String {
     let mut states = Vec::new();
@@ -121,8 +121,17 @@ pub fn format_header_line(layout: &LayoutConfig) {
     println!("{}", line.render());
 }
 
-pub fn format_worktree_line(
-    info: &WorktreeInfo,
+/// Render a list item (worktree or branch) as a formatted line
+pub fn format_list_item_line(
+    item: &ListItem,
+    layout: &LayoutConfig,
+    current_worktree_path: Option<&std::path::PathBuf>,
+) {
+    format_item_line(item, layout, current_worktree_path)
+}
+
+fn format_item_line(
+    item: &ListItem,
     layout: &LayoutConfig,
     current_worktree_path: Option<&std::path::PathBuf>,
 ) {
@@ -134,24 +143,25 @@ pub fn format_worktree_line(
     let yellow = neutral_style();
     let dim = dim_style();
 
-    let branch_display = info.worktree.branch.as_deref().unwrap_or("(detached)");
-    let short_head = &info.worktree.head[..8.min(info.worktree.head.len())];
+    let short_head = &item.commit_head()[..8.min(item.commit_head().len())];
 
-    // Determine styles: current worktree is bold magenta, primary is cyan
-    let is_current = current_worktree_path
-        .map(|p| p == &info.worktree.path)
-        .unwrap_or(false);
-    let text_style = match (is_current, info.is_primary) {
-        (true, _) => Some(current),
-        (_, true) => Some(primary),
-        _ => None,
-    };
+    // Determine styling (worktree-specific)
+    let text_style = item.worktree_info().and_then(|info| {
+        let is_current = current_worktree_path
+            .map(|p| p == &info.worktree.path)
+            .unwrap_or(false);
+        match (is_current, item.is_primary()) {
+            (true, _) => Some(current),
+            (_, true) => Some(primary),
+            _ => None,
+        }
+    });
 
     // Start building the line
     let mut line = StyledLine::new();
 
     // Branch name
-    let branch_text = format!("{:width$}", branch_display, width = widths.branch);
+    let branch_text = format!("{:width$}", item.branch_name(), width = widths.branch);
     if let Some(style) = text_style {
         line.push_styled(branch_text, style);
     } else {
@@ -163,137 +173,133 @@ pub fn format_worktree_line(
     if widths.time > 0 {
         let time_str = format!(
             "{:width$}",
-            format_relative_time(info.timestamp),
+            format_relative_time(item.timestamp()),
             width = widths.time
         );
         line.push_styled(time_str, dim);
         line.push_raw("  ");
     }
 
-    // Ahead/behind (commits difference) - always reserve space if ANY row uses it
+    // Ahead/behind (commits difference)
     if layout.ideal_widths.ahead_behind > 0 {
-        if !info.is_primary && (info.ahead > 0 || info.behind > 0) {
+        if !item.is_primary() && (item.ahead() > 0 || item.behind() > 0) {
             let ahead_behind_text = format!(
                 "{:width$}",
-                format!("↑{} ↓{}", info.ahead, info.behind),
+                format!("↑{} ↓{}", item.ahead(), item.behind()),
                 width = layout.ideal_widths.ahead_behind
             );
             line.push_styled(ahead_behind_text, yellow);
         } else {
-            // No data for this row: pad with spaces
             line.push_raw(" ".repeat(layout.ideal_widths.ahead_behind));
         }
         line.push_raw("  ");
     }
 
-    // Branch diff (line diff in commits) - always reserve space if ANY row uses it
+    // Branch diff (line diff in commits)
     if layout.ideal_widths.branch_diff > 0 {
-        if !info.is_primary {
-            let (br_added, br_deleted) = info.branch_diff;
+        if !item.is_primary() {
+            let (br_added, br_deleted) = item.branch_diff();
             if br_added > 0 || br_deleted > 0 {
-                // Build the diff as a mini styled line
                 let mut diff_segment = StyledLine::new();
                 diff_segment.push_styled(format!("+{}", br_added), green);
                 diff_segment.push_raw(" ");
                 diff_segment.push_styled(format!("-{}", br_deleted), red);
                 diff_segment.pad_to(layout.ideal_widths.branch_diff);
-                // Append all segments from diff_segment to main line
                 for segment in diff_segment.segments {
                     line.push(segment);
                 }
             } else {
-                // No data for this row: pad with spaces
                 line.push_raw(" ".repeat(layout.ideal_widths.branch_diff));
             }
         } else {
-            // Primary row: pad with spaces
             line.push_raw(" ".repeat(layout.ideal_widths.branch_diff));
         }
         line.push_raw("  ");
     }
 
-    // Working tree diff (line diff in working tree) - always reserve space if ANY row uses it
+    // Working tree diff (worktrees only)
     if layout.ideal_widths.working_diff > 0 {
-        let (wt_added, wt_deleted) = info.working_tree_diff;
-        if wt_added > 0 || wt_deleted > 0 {
-            // Build the diff as a mini styled line
-            let mut diff_segment = StyledLine::new();
-            diff_segment.push_styled(format!("+{}", wt_added), green);
-            diff_segment.push_raw(" ");
-            diff_segment.push_styled(format!("-{}", wt_deleted), red);
-            diff_segment.pad_to(layout.ideal_widths.working_diff);
-            // Append all segments from diff_segment to main line
-            for segment in diff_segment.segments {
-                line.push(segment);
+        if let Some((wt_added, wt_deleted)) = item.working_tree_diff() {
+            if wt_added > 0 || wt_deleted > 0 {
+                let mut diff_segment = StyledLine::new();
+                diff_segment.push_styled(format!("+{}", wt_added), green);
+                diff_segment.push_raw(" ");
+                diff_segment.push_styled(format!("-{}", wt_deleted), red);
+                diff_segment.pad_to(layout.ideal_widths.working_diff);
+                for segment in diff_segment.segments {
+                    line.push(segment);
+                }
+            } else {
+                line.push_raw(" ".repeat(layout.ideal_widths.working_diff));
             }
         } else {
-            // No data for this row: pad with spaces
             line.push_raw(" ".repeat(layout.ideal_widths.working_diff));
         }
         line.push_raw("  ");
     }
 
-    // Upstream tracking - always reserve space if ANY row uses it
+    // Upstream tracking
     if layout.ideal_widths.upstream > 0 {
-        if info.upstream_ahead > 0 || info.upstream_behind > 0 {
-            let remote_name = info.upstream_remote.as_deref().unwrap_or("origin");
-            // Build the upstream as a mini styled line
+        if let Some((remote_name, upstream_ahead, upstream_behind)) = item.upstream_info() {
             let mut upstream_segment = StyledLine::new();
             upstream_segment.push_styled(remote_name, dim);
             upstream_segment.push_raw(" ");
-            upstream_segment.push_styled(format!("↑{}", info.upstream_ahead), green);
+            upstream_segment.push_styled(format!("↑{}", upstream_ahead), green);
             upstream_segment.push_raw(" ");
-            upstream_segment.push_styled(format!("↓{}", info.upstream_behind), red);
+            upstream_segment.push_styled(format!("↓{}", upstream_behind), red);
             upstream_segment.pad_to(layout.ideal_widths.upstream);
-            // Append all segments from upstream_segment to main line
             for segment in upstream_segment.segments {
                 line.push(segment);
             }
         } else {
-            // No data for this row: pad with spaces
             line.push_raw(" ".repeat(layout.ideal_widths.upstream));
         }
         line.push_raw("  ");
     }
 
-    // Commit (short HEAD, fixed width: 8 chars)
+    // Commit (short HEAD)
     if let Some(style) = text_style {
         line.push_styled(short_head, style);
     } else {
-        line.push_raw(short_head);
+        line.push_styled(short_head, dim);
     }
     line.push_raw("  ");
 
-    // Message (left-aligned, truncated at word boundary)
+    // Message
     if widths.message > 0 {
         let msg = format!(
             "{:width$}",
-            truncate_at_word_boundary(&info.commit_message, layout.max_message_len),
+            truncate_at_word_boundary(item.commit_message(), layout.max_message_len),
             width = widths.message
         );
         line.push_styled(msg, dim);
         line.push_raw("  ");
     }
 
-    // States - always reserve space if ANY row uses it
+    // States (worktrees only)
     if layout.ideal_widths.states > 0 {
-        let states = format_all_states(info);
-        if !states.is_empty() {
-            let states_text = format!("{:width$}", states, width = layout.ideal_widths.states);
-            line.push_raw(states_text);
+        if let Some(worktree_info) = item.worktree_info() {
+            let states = format_all_states(worktree_info);
+            if !states.is_empty() {
+                let states_text = format!("{:width$}", states, width = layout.ideal_widths.states);
+                line.push_raw(states_text);
+            } else {
+                line.push_raw(" ".repeat(layout.ideal_widths.states));
+            }
         } else {
-            // No data for this row: pad with spaces
             line.push_raw(" ".repeat(layout.ideal_widths.states));
         }
         line.push_raw("  ");
     }
 
-    // Path (no padding needed, it's the last column, use shortened path)
-    let path_str = shorten_path(&info.worktree.path, &layout.common_prefix);
-    if let Some(style) = text_style {
-        line.push_styled(path_str, style);
-    } else {
-        line.push_raw(path_str);
+    // Path (worktrees only)
+    if let Some(worktree_info) = item.worktree_info() {
+        let path_str = shorten_path(&worktree_info.worktree.path, &layout.common_prefix);
+        if let Some(style) = text_style {
+            line.push_styled(path_str, style);
+        } else {
+            line.push_raw(path_str);
+        }
     }
 
     println!("{}", line.render());
