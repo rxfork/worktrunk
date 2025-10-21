@@ -43,14 +43,15 @@ pub struct LayoutConfig {
 }
 
 pub fn calculate_column_widths(infos: &[WorktreeInfo]) -> ColumnWidths {
-    let mut max_branch = 0;
-    let mut max_time = 0;
-    let mut max_message = 0;
-    let mut max_ahead_behind = 0;
-    let mut max_working_diff = 0;
-    let mut max_branch_diff = 0;
-    let mut max_upstream = 0;
-    let mut max_states = 0;
+    // Initialize with header label widths to ensure headers always fit
+    let mut max_branch = "Branch".width();
+    let mut max_time = "Age".width();
+    let mut max_message = "Message".width();
+    let mut max_ahead_behind = "Cmts".width();
+    let mut max_working_diff = "WT +/-".width();
+    let mut max_branch_diff = "Cmt +/-".width();
+    let mut max_upstream = "Remote".width();
+    let mut max_states = "State".width();
 
     for info in infos {
         // Branch name

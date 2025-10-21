@@ -1,6 +1,9 @@
 mod layout;
 mod render;
 
+#[cfg(test)]
+mod spacing_test;
+
 use rayon::prelude::*;
 use worktrunk::git::{GitError, Repository};
 
