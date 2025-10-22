@@ -704,8 +704,9 @@ pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<()
             &format!("{}..HEAD", target_branch),
         ])?;
 
-        if !diff_stat.trim().is_empty() {
-            println!("{}", diff_stat.trim());
+        let diff_stat = diff_stat.trim_end();
+        if !diff_stat.is_empty() {
+            println!("{}", diff_stat);
             println!();
         }
     }

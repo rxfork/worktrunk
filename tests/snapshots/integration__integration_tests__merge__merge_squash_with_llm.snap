@@ -29,7 +29,7 @@ exit_code: 0
 
 * [33mffa5181[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature[m[33m)[m Squash commits from main
 
-auth.txt | 1 [32m+[m
+ auth.txt | 1 [32m+[m
  1 file changed, 1 insertion(+)
 
 ✅ [32mPushed to [1m[32mmain[0m (1 commit, 1 file, [32m+1[0m)  [0m
