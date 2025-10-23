@@ -167,7 +167,7 @@ _wt() {
 
     case "${cmd}" in
         wt)
-            opts="-h -V --help --version init configure-shell config list switch remove push merge completion complete"
+            opts="-v -h -V --verbose --help --version init configure-shell config list switch remove push merge completion complete"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -181,7 +181,7 @@ _wt() {
             return 0
             ;;
         wt__complete)
-            opts="-h --help [ARGS]..."
+            opts="-v -h --verbose --help [ARGS]..."
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -195,7 +195,7 @@ _wt() {
             return 0
             ;;
         wt__completion)
-            opts="-h --help bash elvish fish nushell oil powershell xonsh zsh"
+            opts="-v -h --verbose --help bash elvish fish nushell oil powershell xonsh zsh"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -209,7 +209,7 @@ _wt() {
             return 0
             ;;
         wt__config)
-            opts="-h --help init list"
+            opts="-v -h --verbose --help init list"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -223,7 +223,7 @@ _wt() {
             return 0
             ;;
         wt__config__init)
-            opts="-h --help"
+            opts="-v -h --verbose --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -237,7 +237,7 @@ _wt() {
             return 0
             ;;
         wt__config__list)
-            opts="-h --help"
+            opts="-v -h --verbose --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -251,7 +251,7 @@ _wt() {
             return 0
             ;;
         wt__configure__shell)
-            opts="-y -h --shell --cmd --yes --help"
+            opts="-y -v -h --shell --cmd --yes --verbose --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -273,7 +273,7 @@ _wt() {
             return 0
             ;;
         wt__init)
-            opts="-h --cmd --help <SHELL>"
+            opts="-v -h --cmd --verbose --help <SHELL>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -291,7 +291,7 @@ _wt() {
             return 0
             ;;
         wt__list)
-            opts="-h --format --branches --help"
+            opts="-v -h --format --branches --verbose --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -309,7 +309,7 @@ _wt() {
             return 0
             ;;
         wt__merge)
-            opts="-s -k -m -f -h --squash --keep --message --no-verify --force --help [TARGET]"
+            opts="-s -k -m -f -v -h --squash --keep --message --no-verify --force --verbose --help [TARGET]"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -331,7 +331,7 @@ _wt() {
             return 0
             ;;
         wt__push)
-            opts="-h --allow-merge-commits --help [TARGET]"
+            opts="-v -h --allow-merge-commits --verbose --help [TARGET]"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -345,7 +345,7 @@ _wt() {
             return 0
             ;;
         wt__remove)
-            opts="-h --help"
+            opts="-v -h --verbose --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -359,7 +359,7 @@ _wt() {
             return 0
             ;;
         wt__switch)
-            opts="-c -b -x -f -h --create --base --execute --force --no-config-commands --help <BRANCH>"
+            opts="-c -b -x -f -v -h --create --base --execute --force --no-config-commands --verbose --help <BRANCH>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0

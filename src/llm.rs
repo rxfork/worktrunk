@@ -109,6 +109,12 @@ fn try_generate_commit_message(
     prompt.push_str("</git-info>\n\n");
 
     // Execute LLM command
+    log::debug!("$ {} {}", command, args.join(" "));
+    log::debug!("  System: {}", user_instruction);
+    for line in prompt.lines() {
+        log::debug!("  {}", line);
+    }
+
     let output = process::Command::new(command)
         .args(args)
         .arg("--system")
@@ -181,6 +187,12 @@ fn try_generate_llm_message(
     let full_prompt = format!("{}\n\n{}", context, prompt);
 
     // Execute LLM command with prompt via stdin
+    log::debug!("$ {} {}", command, args.join(" "));
+    log::debug!("  Prompt (stdin):");
+    for line in full_prompt.lines() {
+        log::debug!("  {}", line);
+    }
+
     let mut child = process::Command::new(command)
         .args(args)
         .stdin(Stdio::piped())

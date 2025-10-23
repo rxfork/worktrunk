@@ -31,6 +31,10 @@ pub enum OutputFormat {
 #[command(version = env!("VERGEN_GIT_DESCRIBE"))]
 #[command(disable_help_subcommand = true)]
 struct Cli {
+    /// Enable verbose output (show git commands and debug info)
+    #[arg(long, short = 'v', global = true)]
+    verbose: bool,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -183,6 +187,62 @@ enum Commands {
 
 fn main() {
     let cli = Cli::parse();
+
+    // Configure logging based on --verbose flag or RUST_LOG env var
+    env_logger::Builder::from_env(
+        env_logger::Env::default().default_filter_or(if cli.verbose { "debug" } else { "off" }),
+    )
+    .format(|buf, record| {
+        use anstyle::Style;
+        use std::io::Write;
+
+        let msg = record.args().to_string();
+
+        // Map thread ID to a single character (a-z, then A-Z)
+        let thread_id = format!("{:?}", std::thread::current().id());
+        let thread_num = thread_id
+            .strip_prefix("ThreadId(")
+            .and_then(|s| s.strip_suffix(")"))
+            .and_then(|s| s.parse::<usize>().ok())
+            .map(|n| {
+                if n <= 26 {
+                    char::from(b'a' + (n - 1) as u8)
+                } else if n <= 52 {
+                    char::from(b'A' + (n - 27) as u8)
+                } else {
+                    '?'
+                }
+            })
+            .unwrap_or('?');
+
+        let dim = Style::new().dimmed();
+
+        // Commands start with $, make only the command bold (not $ or [worktree])
+        if let Some(rest) = msg.strip_prefix("$ ") {
+            let bold = Style::new().bold();
+
+            // Split: "git command [worktree]" -> ("git command", " [worktree]")
+            if let Some(bracket_pos) = rest.find(" [") {
+                let command = &rest[..bracket_pos];
+                let worktree = &rest[bracket_pos..];
+                writeln!(
+                    buf,
+                    "{dim}[{thread_num}]{dim:#} $ {bold}{command}{bold:#}{worktree}"
+                )
+            } else {
+                writeln!(buf, "{dim}[{thread_num}]{dim:#} $ {bold}{rest}{bold:#}")
+            }
+        } else if msg.starts_with("  ! ") {
+            // Error output - show in red
+            use anstyle::{AnsiColor, Color};
+            let red = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Red)));
+            writeln!(buf, "{dim}[{thread_num}]{dim:#} {red}{msg}{red:#}")
+        } else {
+            // Regular output with thread ID
+            writeln!(buf, "{dim}[{thread_num}]{dim:#} {msg}")
+        }
+    })
+    .init();
 
     let result = match cli.command {
         Commands::Init { shell, cmd } => {

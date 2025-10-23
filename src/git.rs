@@ -529,16 +529,40 @@ impl Repository {
         cmd.args(args);
         cmd.current_dir(&self.path);
 
+        // Log: $ git <args> [worktree]
+        // TODO: Guard with log::log_enabled! if args.join() overhead becomes measurable
+        if self.path.to_str() == Some(".") {
+            log::debug!("$ git {}", args.join(" "));
+        } else {
+            let worktree = self
+                .path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("?");
+            log::debug!("$ git {} [{}]", args.join(" "), worktree);
+        }
+
         let output = cmd
             .output()
             .map_err(|e| GitError::CommandFailed(e.to_string()))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
+            // Log errors with ! prefix
+            for line in stderr.trim().lines() {
+                log::debug!("  ! {}", line);
+            }
             return Err(GitError::CommandFailed(stderr.into_owned()));
         }
 
-        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+        let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+        if !stdout.is_empty() {
+            // Log output indented
+            for line in stdout.trim().lines() {
+                log::debug!("  {}", line);
+            }
+        }
+        Ok(stdout)
     }
 
     /// Run a git command and return whether it succeeded (exit code 0).
@@ -559,11 +583,27 @@ impl Repository {
         cmd.args(args);
         cmd.current_dir(&self.path);
 
+        // Log: $ git <args> [worktree]
+        if self.path.to_str() == Some(".") {
+            log::debug!("$ git {}", args.join(" "));
+        } else {
+            let worktree = self
+                .path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("?");
+            log::debug!("$ git {} [{}]", args.join(" "), worktree);
+        }
+
         let output = cmd
             .output()
             .map_err(|e| GitError::CommandFailed(e.to_string()))?;
 
-        Ok(output.status.success())
+        let success = output.status.success();
+        if !success {
+            log::debug!("  → exit code: non-zero");
+        }
+        Ok(success)
     }
 }
 

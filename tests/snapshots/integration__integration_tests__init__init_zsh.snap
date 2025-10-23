@@ -121,6 +121,8 @@ _wt() {
 
     local context curcontext="$curcontext" state line
     _arguments "${_arguments_options[@]}" : \
+'-v[Enable verbose output (show git commands and debug info)]' \
+'--verbose[Enable verbose output (show git commands and debug info)]' \
 '-h[Print help]' \
 '--help[Print help]' \
 '-V[Print version]' \
@@ -137,6 +139,8 @@ _wt() {
             (init)
 _arguments "${_arguments_options[@]}" : \
 '--cmd=[Command prefix (default\: wt)]:CMD:_default' \
+'-v[Enable verbose output (show git commands and debug info)]' \
+'--verbose[Enable verbose output (show git commands and debug info)]' \
 '-h[Print help]' \
 '--help[Print help]' \
 ':shell -- Shell to generate code for (bash, fish, zsh):_default' \
@@ -148,12 +152,16 @@ _arguments "${_arguments_options[@]}" : \
 '--cmd=[Command prefix (default\: wt)]:CMD:_default' \
 '-y[Skip confirmation prompt]' \
 '--yes[Skip confirmation prompt]' \
+'-v[Enable verbose output (show git commands and debug info)]' \
+'--verbose[Enable verbose output (show git commands and debug info)]' \
 '-h[Print help]' \
 '--help[Print help]' \
 && ret=0
 ;;
 (config)
 _arguments "${_arguments_options[@]}" : \
+'-v[Enable verbose output (show git commands and debug info)]' \
+'--verbose[Enable verbose output (show git commands and debug info)]' \
 '-h[Print help]' \
 '--help[Print help]' \
 ":: :_wt__config_commands" \
@@ -168,12 +176,16 @@ _arguments "${_arguments_options[@]}" : \
         case $line[1] in
             (init)
 _arguments "${_arguments_options[@]}" : \
+'-v[Enable verbose output (show git commands and debug info)]' \
+'--verbose[Enable verbose output (show git commands and debug info)]' \
 '-h[Print help]' \
 '--help[Print help]' \
 && ret=0
 ;;
 (list)
 _arguments "${_arguments_options[@]}" : \
+'-v[Enable verbose output (show git commands and debug info)]' \
+'--verbose[Enable verbose output (show git commands and debug info)]' \
 '-h[Print help]' \
 '--help[Print help]' \
 && ret=0
@@ -187,6 +199,8 @@ _arguments "${_arguments_options[@]}" : \
 '--format=[Output format]:FORMAT:((table\:"Human-readable table format"
 json\:"JSON format"))' \
 '--branches[Also display branches that don'\''t have worktrees]' \
+'-v[Enable verbose output (show git commands and debug info)]' \
+'--verbose[Enable verbose output (show git commands and debug info)]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -202,6 +216,8 @@ _arguments "${_arguments_options[@]}" : \
 '-f[Skip confirmation prompt]' \
 '--force[Skip confirmation prompt]' \
 '--no-config-commands[Skip executing post-start commands from project config]' \
+'-v[Enable verbose output (show git commands and debug info)]' \
+'--verbose[Enable verbose output (show git commands and debug info)]' \
 '-h[Print help]' \
 '--help[Print help]' \
 ':branch -- Branch name or worktree path:_default' \
@@ -209,6 +225,8 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (remove)
 _arguments "${_arguments_options[@]}" : \
+'-v[Enable verbose output (show git commands and debug info)]' \
+'--verbose[Enable verbose output (show git commands and debug info)]' \
 '-h[Print help]' \
 '--help[Print help]' \
 && ret=0
@@ -216,6 +234,8 @@ _arguments "${_arguments_options[@]}" : \
 (push)
 _arguments "${_arguments_options[@]}" : \
 '--allow-merge-commits[Allow pushing merge commits (non-linear history)]' \
+'-v[Enable verbose output (show git commands and debug info)]' \
+'--verbose[Enable verbose output (show git commands and debug info)]' \
 '-h[Print help]' \
 '--help[Print help]' \
 '::target -- Target branch (defaults to default branch):_default' \
@@ -232,6 +252,8 @@ _arguments "${_arguments_options[@]}" : \
 '--no-verify[Skip pre-merge checks]' \
 '-f[Skip approval prompts for commands]' \
 '--force[Skip approval prompts for commands]' \
+'-v[Enable verbose output (show git commands and debug info)]' \
+'--verbose[Enable verbose output (show git commands and debug info)]' \
 '-h[Print help]' \
 '--help[Print help]' \
 '::target -- Target branch to merge into (defaults to default branch):_default' \
@@ -239,6 +261,8 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (completion)
 _arguments "${_arguments_options[@]}" : \
+'-v[Enable verbose output (show git commands and debug info)]' \
+'--verbose[Enable verbose output (show git commands and debug info)]' \
 '-h[Print help]' \
 '--help[Print help]' \
 ':shell -- Shell to generate completions for:(bash elvish fish nushell oil powershell xonsh zsh)' \
@@ -246,6 +270,8 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (complete)
 _arguments "${_arguments_options[@]}" : \
+'-v[Enable verbose output (show git commands and debug info)]' \
+'--verbose[Enable verbose output (show git commands and debug info)]' \
 '-h[Print help]' \
 '--help[Print help]' \
 '*::args -- Arguments to complete:_default' \
