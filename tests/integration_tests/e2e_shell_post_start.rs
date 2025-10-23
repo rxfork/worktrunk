@@ -333,7 +333,7 @@ command = "sleep 0.5 && echo 'Task 2' > task2.txt"
         .root_path()
         .parent()
         .unwrap()
-        .join("main.parallel-test");
+        .join("test-repo.parallel-test");
     assert!(
         worktree_path.join("task1.txt").exists(),
         "Task 1 should have completed"
@@ -498,7 +498,11 @@ command = "sleep 0.5 && echo 'Fish background done' > fish_bg.txt"
     thread::sleep(Duration::from_secs(1));
 
     // Verify background command ran
-    let worktree_path = repo.root_path().parent().unwrap().join("main.fish-bg-test");
+    let worktree_path = repo
+        .root_path()
+        .parent()
+        .unwrap()
+        .join("test-repo.fish-bg-test");
     let marker_file = worktree_path.join("fish_bg.txt");
     assert!(
         marker_file.exists(),

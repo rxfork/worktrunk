@@ -139,14 +139,6 @@ pub fn format_list_item_line(
     layout: &LayoutConfig,
     current_worktree_path: Option<&std::path::PathBuf>,
 ) {
-    format_item_line(item, layout, current_worktree_path)
-}
-
-fn format_item_line(
-    item: &ListItem,
-    layout: &LayoutConfig,
-    current_worktree_path: Option<&std::path::PathBuf>,
-) {
     let widths = &layout.widths;
 
     let head = item.head();

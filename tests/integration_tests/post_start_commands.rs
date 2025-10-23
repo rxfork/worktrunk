@@ -74,7 +74,7 @@ fn test_post_create_single_command() {
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "echo 'Setup complete'"
 "#,
     )
@@ -114,11 +114,11 @@ fn test_post_create_multiple_commands_array() {
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "echo 'First'"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "echo 'Second'"
 "#,
     )
@@ -161,11 +161,11 @@ setup = "echo 'Running setup'"
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "echo 'Installing deps'"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "echo 'Running setup'"
 "#,
     )
@@ -205,7 +205,7 @@ fn test_post_create_failing_command() {
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "exit 1"
 "#,
     )
@@ -334,7 +334,7 @@ fn test_post_start_single_background_command() {
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "sleep 1 && echo 'Background task done' > background.txt"
 "#,
     )
@@ -393,11 +393,11 @@ task2 = "echo 'Task 2 running' > task2.txt"
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "echo 'Task 1 running' > task1.txt"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "echo 'Task 2 running' > task2.txt"
 "#,
     )
@@ -449,11 +449,11 @@ server = "sleep 0.5 && echo 'Server running' > server.txt"
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "echo 'Setup done' > setup.txt"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "sleep 0.5 && echo 'Server running' > server.txt"
 "#,
     )
@@ -533,7 +533,7 @@ fn test_post_start_log_file_captures_output() {
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "echo 'stdout output' && echo 'stderr output' >&2"
 "#,
     )
@@ -610,7 +610,7 @@ fn test_post_start_invalid_command_handling() {
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "echo 'unclosed quote"
 "#,
     )
@@ -661,15 +661,15 @@ task3 = "echo 'TASK3_OUTPUT'"
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "echo 'TASK1_OUTPUT'"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "echo 'TASK2_OUTPUT'"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "echo 'TASK3_OUTPUT'"
 "#,
     )
@@ -763,7 +763,7 @@ fn test_execute_flag_with_post_start_commands() {
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "echo 'Background task' > background.txt"
 "#,
     )
@@ -825,7 +825,7 @@ fn test_post_start_complex_shell_commands() {
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
-project = "main"
+project = "test-repo"
 command = "echo 'line1\nline2\nline3' | grep line2 > filtered.txt"
 "#,
     )

@@ -65,8 +65,7 @@ pub fn check_and_approve_command(
         match prompt_for_approval(command, project_id) {
             Ok(approved) => approved,
             Err(e) => {
-                use worktrunk::styling::eprintln;
-                eprintln!("{WARNING_EMOJI} {WARNING}Failed to read user input: {e}{WARNING:#}");
+                log_approval_warning("Failed to read user input", e);
                 return Ok(false);
             }
         }
@@ -80,17 +79,13 @@ pub fn check_and_approve_command(
                     fresh_config.approve_command(project_id.to_string(), command.to_string())
                 {
                     use worktrunk::styling::eprintln;
-                    eprintln!(
-                        "{WARNING_EMOJI} {WARNING}Failed to save command approval: {e}{WARNING:#}"
-                    );
+                    log_approval_warning("Failed to save command approval", e);
                     eprintln!("You will be prompted again next time.");
                 }
             }
             Err(e) => {
                 use worktrunk::styling::eprintln;
-                eprintln!(
-                    "{WARNING_EMOJI} {WARNING}Failed to reload config for saving approval: {e}{WARNING:#}"
-                );
+                log_approval_warning("Failed to reload config for saving approval", e);
                 eprintln!("You will be prompted again next time.");
             }
         }
@@ -98,6 +93,12 @@ pub fn check_and_approve_command(
     } else {
         Ok(false)
     }
+}
+
+/// Log a warning message for command approval failures
+fn log_approval_warning(message: &str, error: impl std::fmt::Display) {
+    use worktrunk::styling::eprintln;
+    eprintln!("{WARNING_EMOJI} {WARNING}{message}: {error}{WARNING:#}");
 }
 
 /// Prompt the user to approve a command for execution
