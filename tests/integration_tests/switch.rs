@@ -279,7 +279,7 @@ fn test_switch_no_config_commands_skips_post_start_commands() {
     fs::write(
         user_config_dir.join("config.toml"),
         format!(
-            r#"worktree-path = "../{{repo}}.{{branch}}"
+            r#"worktree-path = "../{{main-worktree}}.{{branch}}"
 
 [[approved-commands]]
 project = "main"

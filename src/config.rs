@@ -6,24 +6,22 @@ use toml;
 
 /// Configuration for worktree path formatting and LLM integration.
 ///
-/// The `worktree-path` template is relative to the repository root and supports:
-/// - `{repo}` - Repository name
+/// The `worktree-path` template is relative to the repository root.
+/// Supported variables:
+/// - `{main-worktree}` - Main worktree directory name
 /// - `{branch}` - Branch name (slashes replaced with dashes)
 ///
 /// # Examples
 ///
 /// ```toml
 /// # Default - parent directory siblings
-/// worktree-path = "../{repo}.{branch}"
+/// worktree-path = "../{main-worktree}.{branch}"
 ///
-/// # Inside repo (bare repository style)
-/// worktree-path = "{branch}"
-///
-/// # Organized in .worktrees subdirectory
+/// # Inside repo (clean, no redundant directory)
 /// worktree-path = ".worktrees/{branch}"
 ///
-/// # Repository-namespaced shared directory (avoids conflicts)
-/// worktree-path = "../worktrees/{repo}/{branch}"
+/// # Repository-namespaced (useful for shared directories with multiple repos)
+/// worktree-path = "../worktrees/{main-worktree}/{branch}"
 ///
 /// # LLM configuration for commit message generation
 /// [llm]
@@ -123,7 +121,7 @@ pub struct ApprovedCommand {
 impl Default for WorktrunkConfig {
     fn default() -> Self {
         Self {
-            worktree_path: "../{repo}.{branch}".to_string(),
+            worktree_path: "../{main-worktree}.{branch}".to_string(),
             llm: LlmConfig::default(),
             approved_commands: Vec::new(),
         }
@@ -163,7 +161,7 @@ impl WorktrunkConfig {
     /// Format a worktree path using this configuration's template.
     ///
     /// # Arguments
-    /// * `repo` - Repository name (replaces {repo} in template)
+    /// * `main_worktree` - Main worktree directory name (replaces {main-worktree} in template)
     /// * `branch` - Branch name (replaces {branch} in template, slashes sanitized to dashes)
     ///
     /// # Examples
@@ -174,10 +172,10 @@ impl WorktrunkConfig {
     /// let path = config.format_path("myproject", "feature/foo");
     /// assert_eq!(path, "../myproject.feature-foo");
     /// ```
-    pub fn format_path(&self, repo: &str, branch: &str) -> String {
+    pub fn format_path(&self, main_worktree: &str, branch: &str) -> String {
         expand_template(
             &self.worktree_path,
-            repo,
+            main_worktree,
             branch,
             &std::collections::HashMap::new(),
         )
@@ -196,7 +194,7 @@ fn get_config_path() -> Option<PathBuf> {
 /// Expand template variables in a string
 ///
 /// All templates support:
-/// - `{repo}` - Repository name
+/// - `{main-worktree}` - Main worktree directory name
 /// - `{branch}` - Branch name (sanitized: slashes → dashes)
 ///
 /// Additional variables can be provided via the `extra` parameter.
@@ -206,12 +204,12 @@ fn get_config_path() -> Option<PathBuf> {
 /// use worktrunk::config::expand_template;
 /// use std::collections::HashMap;
 ///
-/// let result = expand_template("path/{repo}/{branch}", "myrepo", "feature/foo", &HashMap::new());
+/// let result = expand_template("path/{main-worktree}/{branch}", "myrepo", "feature/foo", &HashMap::new());
 /// assert_eq!(result, "path/myrepo/feature-foo");
 /// ```
 pub fn expand_template(
     template: &str,
-    repo: &str,
+    main_worktree: &str,
     branch: &str,
     extra: &std::collections::HashMap<&str, &str>,
 ) -> String {
@@ -219,7 +217,7 @@ pub fn expand_template(
     let safe_branch = branch.replace(['/', '\\'], "-");
 
     let mut result = template
-        .replace("{repo}", repo)
+        .replace("{main-worktree}", main_worktree)
         .replace("{branch}", &safe_branch);
 
     // Apply any extra variables
@@ -314,7 +312,7 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = WorktrunkConfig::default();
-        assert_eq!(config.worktree_path, "../{repo}.{branch}");
+        assert_eq!(config.worktree_path, "../{main-worktree}.{branch}");
     }
 
     #[test]
@@ -322,20 +320,20 @@ mod tests {
         let config = WorktrunkConfig::default();
         let toml = toml::to_string(&config).unwrap();
         assert!(toml.contains("worktree-path"));
-        assert!(toml.contains("../{repo}.{branch}"));
+        assert!(toml.contains("../{main-worktree}.{branch}"));
     }
 
     #[test]
     fn test_load_config_defaults() {
         // Without a config file or env vars, should return defaults
         let config = WorktrunkConfig::load().unwrap();
-        assert_eq!(config.worktree_path, "../{repo}.{branch}");
+        assert_eq!(config.worktree_path, "../{main-worktree}.{branch}");
     }
 
     #[test]
     fn test_format_worktree_path() {
         let config = WorktrunkConfig {
-            worktree_path: "{repo}.{branch}".to_string(),
+            worktree_path: "{main-worktree}.{branch}".to_string(),
             llm: LlmConfig::default(),
             approved_commands: Vec::new(),
         };
@@ -348,7 +346,7 @@ mod tests {
     #[test]
     fn test_format_worktree_path_custom_template() {
         let config = WorktrunkConfig {
-            worktree_path: "{repo}-{branch}".to_string(),
+            worktree_path: "{main-worktree}-{branch}".to_string(),
             llm: LlmConfig::default(),
             approved_commands: Vec::new(),
         };
@@ -361,18 +359,21 @@ mod tests {
     #[test]
     fn test_format_worktree_path_only_branch() {
         let config = WorktrunkConfig {
-            worktree_path: "{branch}".to_string(),
+            worktree_path: ".worktrees/{main-worktree}/{branch}".to_string(),
             llm: LlmConfig::default(),
             approved_commands: Vec::new(),
         };
-        assert_eq!(config.format_path("myproject", "feature-x"), "feature-x");
+        assert_eq!(
+            config.format_path("myproject", "feature-x"),
+            ".worktrees/myproject/feature-x"
+        );
     }
 
     #[test]
     fn test_format_worktree_path_with_slashes() {
         // Slashes should be replaced with dashes to prevent directory traversal
         let config = WorktrunkConfig {
-            worktree_path: "{repo}.{branch}".to_string(),
+            worktree_path: "{main-worktree}.{branch}".to_string(),
             llm: LlmConfig::default(),
             approved_commands: Vec::new(),
         };
@@ -385,13 +386,13 @@ mod tests {
     #[test]
     fn test_format_worktree_path_with_multiple_slashes() {
         let config = WorktrunkConfig {
-            worktree_path: "{branch}".to_string(),
+            worktree_path: ".worktrees/{main-worktree}/{branch}".to_string(),
             llm: LlmConfig::default(),
             approved_commands: Vec::new(),
         };
         assert_eq!(
             config.format_path("myproject", "feature/sub/task"),
-            "feature-sub-task"
+            ".worktrees/myproject/feature-sub-task"
         );
     }
 
@@ -399,13 +400,13 @@ mod tests {
     fn test_format_worktree_path_with_backslashes() {
         // Windows-style path separators should also be sanitized
         let config = WorktrunkConfig {
-            worktree_path: "{branch}".to_string(),
+            worktree_path: ".worktrees/{main-worktree}/{branch}".to_string(),
             llm: LlmConfig::default(),
             approved_commands: Vec::new(),
         };
         assert_eq!(
             config.format_path("myproject", "feature\\foo"),
-            "feature-foo"
+            ".worktrees/myproject/feature-foo"
         );
     }
 
@@ -433,9 +434,10 @@ mod tests {
 
     #[test]
     fn test_validate_accepts_relative_path() {
+        assert!(validate_worktree_path(".worktrees/{main-worktree}/{branch}").is_ok());
+        assert!(validate_worktree_path("../{main-worktree}.{branch}").is_ok());
+        assert!(validate_worktree_path("../../shared/{main-worktree}/{branch}").is_ok());
         assert!(validate_worktree_path(".worktrees/{branch}").is_ok());
-        assert!(validate_worktree_path("../{repo}.{branch}").is_ok());
-        assert!(validate_worktree_path("../../shared/{branch}").is_ok());
     }
 
     #[test]
@@ -608,7 +610,12 @@ mod tests {
     fn test_expand_template_basic() {
         use std::collections::HashMap;
 
-        let result = expand_template("../{repo}.{branch}", "myrepo", "feature-x", &HashMap::new());
+        let result = expand_template(
+            "../{main-worktree}.{branch}",
+            "myrepo",
+            "feature-x",
+            &HashMap::new(),
+        );
         assert_eq!(result, "../myrepo.feature-x");
     }
 
@@ -616,11 +623,21 @@ mod tests {
     fn test_expand_template_sanitizes_branch() {
         use std::collections::HashMap;
 
-        let result = expand_template("{repo}/{branch}", "myrepo", "feature/foo", &HashMap::new());
+        let result = expand_template(
+            "{main-worktree}/{branch}",
+            "myrepo",
+            "feature/foo",
+            &HashMap::new(),
+        );
         assert_eq!(result, "myrepo/feature-foo");
 
-        let result = expand_template("{branch}", "myrepo", "feat\\bar", &HashMap::new());
-        assert_eq!(result, "feat-bar");
+        let result = expand_template(
+            ".worktrees/{main-worktree}/{branch}",
+            "myrepo",
+            "feat\\bar",
+            &HashMap::new(),
+        );
+        assert_eq!(result, ".worktrees/myrepo/feat-bar");
     }
 
     #[test]

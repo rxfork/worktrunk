@@ -6,13 +6,13 @@ info:
     - config
     - list
   env:
-    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpqVUgYd
+    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpxHds55
 ---
 success: true
 exit_code: 0
 ----- stdout -----
 Global Config: [TEMP_HOME]/.config/worktrunk/config.toml
-  worktree-path = "../{repo}.{branch}"
+  worktree-path = "../{main-worktree}.{branch}"
 
 Project Config: Not in a git repository
 

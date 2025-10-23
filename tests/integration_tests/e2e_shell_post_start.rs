@@ -156,7 +156,7 @@ fn test_e2e_post_start_background_command(#[case] shell: &str) {
     fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"
@@ -282,7 +282,7 @@ task2 = "sleep 0.5 && echo 'Task 2' > task2.txt"
     fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"
@@ -368,7 +368,7 @@ fn test_bash_post_create_blocks() {
     fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"
@@ -454,7 +454,7 @@ fish_bg = "sleep 0.5 && echo 'Fish background done' > fish_bg.txt"
     fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"

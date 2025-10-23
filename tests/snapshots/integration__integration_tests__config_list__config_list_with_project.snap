@@ -12,7 +12,7 @@ info:
     GIT_CONFIG_GLOBAL: /dev/null
     GIT_CONFIG_SYSTEM: /dev/null
     GIT_EDITOR: ""
-    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpfh2xeS
+    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpuCBKlR
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1704067200"
@@ -21,7 +21,7 @@ success: true
 exit_code: 0
 ----- stdout -----
 Global Config: [1m[TEMP_HOME]/.config/worktrunk/config.toml[0m
-  [2mworktree-path = "../{repo}.{branch}"[0m
+  [2mworktree-path = "../{main-worktree}.{branch}"[0m
 
   [2m[[approved-commands]][0m
   [2mproject = "test-project"[0m

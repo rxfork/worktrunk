@@ -71,7 +71,7 @@ fn test_post_create_single_command() {
     fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"
@@ -111,7 +111,7 @@ fn test_post_create_multiple_commands_array() {
     fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"
@@ -158,7 +158,7 @@ setup = "echo 'Running setup'"
     fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"
@@ -202,7 +202,7 @@ fn test_post_create_failing_command() {
     fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"
@@ -232,7 +232,7 @@ fn test_post_create_template_expansion() {
     fs::write(
         config_dir.join("wt.toml"),
         r#"post-create-command = [
-    "echo 'Repo: {repo}' > info.txt",
+    "echo 'Repo: {main-worktree}' > info.txt",
     "echo 'Branch: {branch}' >> info.txt",
     "echo 'Worktree: {worktree}' >> info.txt",
     "echo 'Root: {repo_root}' >> info.txt"
@@ -248,11 +248,11 @@ fn test_post_create_template_expansion() {
     let repo_name = "main";
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"
-command = "echo 'Repo: {repo}' > info.txt"
+command = "echo 'Repo: {main-worktree}' > info.txt"
 
 [[approved-commands]]
 project = "main"
@@ -331,7 +331,7 @@ fn test_post_start_single_background_command() {
     fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"
@@ -390,7 +390,7 @@ task2 = "echo 'Task 2 running' > task2.txt"
     fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"
@@ -446,7 +446,7 @@ server = "sleep 0.5 && echo 'Server running' > server.txt"
     fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"
@@ -530,7 +530,7 @@ fn test_post_start_log_file_captures_output() {
     fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"
@@ -607,7 +607,7 @@ fn test_post_start_invalid_command_handling() {
     fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"
@@ -658,7 +658,7 @@ task3 = "echo 'TASK3_OUTPUT'"
     fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"
@@ -760,7 +760,7 @@ fn test_execute_flag_with_post_start_commands() {
     fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"
@@ -822,7 +822,7 @@ fn test_post_start_complex_shell_commands() {
     fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
         user_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "main"

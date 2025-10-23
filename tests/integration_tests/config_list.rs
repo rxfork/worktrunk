@@ -16,7 +16,7 @@ fn test_config_list_with_project_config() {
     fs::create_dir_all(&global_config_dir).unwrap();
     fs::write(
         global_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
 project = "test-project"
@@ -70,7 +70,7 @@ fn test_config_list_no_project_config() {
     fs::create_dir_all(&global_config_dir).unwrap();
     fs::write(
         global_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 "#,
     )
     .unwrap();
@@ -106,7 +106,7 @@ fn test_config_list_outside_git_repo() {
     fs::create_dir_all(&global_config_dir).unwrap();
     fs::write(
         global_config_dir.join("config.toml"),
-        r#"worktree-path = "../{repo}.{branch}"
+        r#"worktree-path = "../{main-worktree}.{branch}"
 "#,
     )
     .unwrap();
