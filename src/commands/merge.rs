@@ -49,7 +49,7 @@ pub fn handle_merge(
         let worktree_path = std::env::current_dir().map_err(|e| {
             GitError::CommandFailed(format!("Failed to get current directory: {}", e))
         })?;
-        run_pre_merge_checks(
+        run_pre_merge_commands(
             &project_config,
             &current_branch,
             &target_branch,
@@ -336,8 +336,8 @@ fn handle_squash(target_branch: &str) -> Result<Option<usize>, GitError> {
     Ok(Some(commit_count))
 }
 
-/// Run pre-merge checks sequentially (blocking, fail-fast)
-fn run_pre_merge_checks(
+/// Run pre-merge commands sequentially (blocking, fail-fast)
+fn run_pre_merge_commands(
     project_config: &ProjectConfig,
     current_branch: &str,
     target_branch: &str,
@@ -346,7 +346,7 @@ fn run_pre_merge_checks(
     config: &WorktrunkConfig,
     force: bool,
 ) -> Result<(), GitError> {
-    let Some(pre_merge_config) = &project_config.pre_merge_check else {
+    let Some(pre_merge_config) = &project_config.pre_merge_command else {
         return Ok(());
     };
 
@@ -357,10 +357,10 @@ fn run_pre_merge_checks(
         &ctx,
         false,
         &[("target", target_branch)],
-        "Pre-merge checks",
+        "Pre-merge commands",
         |_, command| {
             let dim = AnstyleStyle::new().dimmed();
-            eprintln!("{dim}Skipping pre-merge check: {command}{dim:#}");
+            eprintln!("{dim}Skipping pre-merge command: {command}{dim:#}");
         },
     )?;
     for prepared in commands {
@@ -368,15 +368,15 @@ fn run_pre_merge_checks(
         use worktrunk::styling;
 
         eprintln!(
-            "🔄 {CYAN}Running pre-merge check {CYAN_BOLD}{name}{CYAN_BOLD:#}:{CYAN:#}",
+            "🔄 {CYAN}Running pre-merge command {CYAN_BOLD}{name}{CYAN_BOLD:#}:{CYAN:#}",
             name = prepared.name
         );
         eprint!("{}", format_with_gutter(&prepared.expanded, "", None)); // Gutter at column 0
         let _ = styling::stderr().flush();
 
         if let Err(e) = execute_command_in_worktree(worktree_path, &prepared.expanded) {
-            return Err(GitError::PreMergeCheckFailed {
-                check_name: prepared.name.clone(),
+            return Err(GitError::PreMergeCommandFailed {
+                command_name: prepared.name.clone(),
                 error: e.to_string(),
             });
         }

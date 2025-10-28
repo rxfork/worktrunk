@@ -801,16 +801,19 @@ fn test_merge_auto_commit_and_squash() {
 }
 
 #[test]
-fn test_merge_pre_merge_check_success() {
+fn test_merge_pre_merge_command_success() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
     repo.setup_remote("main");
 
-    // Create project config with pre-merge check
+    // Create project config with pre-merge command
     let config_dir = repo.root_path().join(".config");
     fs::create_dir_all(&config_dir).expect("Failed to create config dir");
-    fs::write(config_dir.join("wt.toml"), r#"pre-merge-check = "exit 0""#)
-        .expect("Failed to write config");
+    fs::write(
+        config_dir.join("wt.toml"),
+        r#"pre-merge-command = "exit 0""#,
+    )
+    .expect("Failed to write config");
 
     repo.commit("Add config");
 
@@ -843,7 +846,7 @@ fn test_merge_pre_merge_check_success() {
 
     // Merge with --force to skip approval prompts
     snapshot_merge(
-        "merge_pre_merge_check_success",
+        "merge_pre_merge_command_success",
         &repo,
         &["main", "--force"],
         Some(&feature_wt),
@@ -851,16 +854,19 @@ fn test_merge_pre_merge_check_success() {
 }
 
 #[test]
-fn test_merge_pre_merge_check_failure() {
+fn test_merge_pre_merge_command_failure() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
     repo.setup_remote("main");
 
-    // Create project config with failing pre-merge check
+    // Create project config with failing pre-merge command
     let config_dir = repo.root_path().join(".config");
     fs::create_dir_all(&config_dir).expect("Failed to create config dir");
-    fs::write(config_dir.join("wt.toml"), r#"pre-merge-check = "exit 1""#)
-        .expect("Failed to write config");
+    fs::write(
+        config_dir.join("wt.toml"),
+        r#"pre-merge-command = "exit 1""#,
+    )
+    .expect("Failed to write config");
 
     repo.commit("Add config");
 
@@ -891,9 +897,9 @@ fn test_merge_pre_merge_check_failure() {
         .output()
         .expect("Failed to commit");
 
-    // Merge with --force - pre-merge check should fail and block merge
+    // Merge with --force - pre-merge command should fail and block merge
     snapshot_merge(
-        "merge_pre_merge_check_failure",
+        "merge_pre_merge_command_failure",
         &repo,
         &["main", "--force"],
         Some(&feature_wt),
@@ -901,16 +907,19 @@ fn test_merge_pre_merge_check_failure() {
 }
 
 #[test]
-fn test_merge_pre_merge_check_no_hooks() {
+fn test_merge_pre_merge_command_no_hooks() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
     repo.setup_remote("main");
 
-    // Create project config with failing pre-merge check
+    // Create project config with failing pre-merge command
     let config_dir = repo.root_path().join(".config");
     fs::create_dir_all(&config_dir).expect("Failed to create config dir");
-    fs::write(config_dir.join("wt.toml"), r#"pre-merge-check = "exit 1""#)
-        .expect("Failed to write config");
+    fs::write(
+        config_dir.join("wt.toml"),
+        r#"pre-merge-command = "exit 1""#,
+    )
+    .expect("Failed to write config");
 
     repo.commit("Add config");
 
@@ -941,9 +950,9 @@ fn test_merge_pre_merge_check_no_hooks() {
         .output()
         .expect("Failed to commit");
 
-    // Merge with --no-hooks - should skip pre-merge checks and succeed
+    // Merge with --no-hooks - should skip pre-merge commands and succeed
     snapshot_merge(
-        "merge_pre_merge_check_no_hooks",
+        "merge_pre_merge_command_no_hooks",
         &repo,
         &["main", "--no-hooks"],
         Some(&feature_wt),
@@ -951,18 +960,18 @@ fn test_merge_pre_merge_check_no_hooks() {
 }
 
 #[test]
-fn test_merge_pre_merge_check_named() {
+fn test_merge_pre_merge_command_named() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
     repo.setup_remote("main");
 
-    // Create project config with named pre-merge checks
+    // Create project config with named pre-merge commands
     let config_dir = repo.root_path().join(".config");
     fs::create_dir_all(&config_dir).expect("Failed to create config dir");
     fs::write(
         config_dir.join("wt.toml"),
         r#"
-[pre-merge-check]
+[pre-merge-command]
 format = "exit 0"
 lint = "exit 0"
 test = "exit 0"
@@ -999,9 +1008,9 @@ test = "exit 0"
         .output()
         .expect("Failed to commit");
 
-    // Merge with --force - all pre-merge checks should pass
+    // Merge with --force - all pre-merge commands should pass
     snapshot_merge(
-        "merge_pre_merge_check_named",
+        "merge_pre_merge_command_named",
         &repo,
         &["main", "--force"],
         Some(&feature_wt),
@@ -1009,7 +1018,7 @@ test = "exit 0"
 }
 
 #[test]
-fn test_merge_pre_merge_check_stdout_stderr_ordering() {
+fn test_merge_pre_merge_command_stdout_stderr_ordering() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
     repo.setup_remote("main");
@@ -1018,14 +1027,14 @@ fn test_merge_pre_merge_check_stdout_stderr_ordering() {
     let fixtures_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
     let script_path = fixtures_dir.join("mixed-output.sh");
 
-    // Create project config with two named pre-merge checks that both output to stdout and stderr
+    // Create project config with two named pre-merge commands that both output to stdout and stderr
     let config_dir = repo.root_path().join(".config");
     fs::create_dir_all(&config_dir).expect("Failed to create config dir");
     fs::write(
         config_dir.join("wt.toml"),
         format!(
             r#"
-[pre-merge-check]
+[pre-merge-command]
 check1 = "{} check1 3"
 check2 = "{} check2 3"
 "#,
@@ -1072,7 +1081,7 @@ check2 = "{} check2 3"
     // they're properly interleaved when both go to the terminal.
     // The important verification is that within each stream, the ordering is correct.
     snapshot_merge(
-        "merge_pre_merge_check_stdout_stderr_ordering",
+        "merge_pre_merge_command_stdout_stderr_ordering",
         &repo,
         &["main", "--force"],
         Some(&feature_wt),
@@ -1080,21 +1089,21 @@ check2 = "{} check2 3"
 }
 
 #[test]
-fn test_merge_pre_merge_check_combined_output() {
+fn test_merge_pre_merge_command_combined_output() {
     use crate::common::run_with_combined_output;
 
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
     repo.setup_remote("main");
 
-    // Create project config with two named pre-merge checks that output to BOTH stdout and stderr
+    // Create project config with two named pre-merge commands that output to BOTH stdout and stderr
     // This verifies the ordering is: header1 → command1 → stdout1 → stderr1 → header2 → command2 → stdout2 → stderr2
     let config_dir = repo.root_path().join(".config");
     fs::create_dir_all(&config_dir).expect("Failed to create config dir");
     fs::write(
         config_dir.join("wt.toml"),
         r#"
-[pre-merge-check]
+[pre-merge-command]
 first = "echo 'STDOUT-FROM-FIRST' && echo 'STDERR-FROM-FIRST' >&2"
 second = "echo 'STDOUT-FROM-SECOND' && echo 'STDERR-FROM-SECOND' >&2"
 "#,
@@ -1135,7 +1144,7 @@ second = "echo 'STDOUT-FROM-SECOND' && echo 'STDERR-FROM-SECOND' >&2"
 
     let settings = crate::common::setup_snapshot_settings(&repo);
     settings.bind(|| {
-        insta::assert_snapshot!("merge_pre_merge_check_combined_output", output);
+        insta::assert_snapshot!("merge_pre_merge_command_combined_output", output);
     });
 }
 

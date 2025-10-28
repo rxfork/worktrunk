@@ -125,7 +125,7 @@ Projects can define commands that run automatically when creating or switching t
 "type check" = "npm run type-check -- --watch"
 
 # Validation before merging (blocking, fail-fast)
-[pre-merge-check]
+[pre-merge-command]
 "tests" = "npm test"
 "lint" = "npm run lint"
 
@@ -139,7 +139,7 @@ Projects can define commands that run automatically when creating or switching t
 
 - **`post-create-command`**: Runs sequentially after creating a worktree. Use for setup tasks like installing dependencies.
 - **`post-start-command`**: Runs in parallel as background processes after switching to a worktree. Use for dev servers and watchers.
-- **`pre-merge-check`**: Runs sequentially before merging. All commands must succeed for the merge to proceed. Use for validation (tests, lints).
+- **`pre-merge-command`**: Runs sequentially before merging. All commands must succeed for the merge to proceed. Use for validation (tests, lints).
 - **`post-merge-command`**: Runs sequentially in the main worktree after a successful merge and push. Use for deployment, notifications, or updating global state.
 
 Template variables expand at runtime:
@@ -147,22 +147,23 @@ Template variables expand at runtime:
 - `{branch}` - Current branch
 - `{worktree}` - Absolute path to worktree
 - `{repo_root}` - Absolute path to repository root
-- `{target}` - Target branch (pre-merge-check and post-merge-command only)
+- `{target}` - Target branch (pre-merge-command and post-merge-command only)
 
 ### Available Hooks
 
-Worktrunk provides three lifecycle hooks for project automation:
+Worktrunk provides four lifecycle hooks for project automation:
 
 | Hook | When It Runs | Execution | Failure Behavior |
 |------|--------------|-----------|------------------|
 | **post-create-command** | After `git worktree add` completes | Sequential, blocking | Logs warning, continues with remaining commands |
 | **post-start-command** | After post-create completes | Parallel, non-blocking (background processes) | Logs warning, doesn't affect switch result |
-| **pre-merge-check** | Before committing/rebasing during `wt merge` | Sequential, blocking, fail-fast | Terminates merge immediately |
+| **pre-merge-command** | Before committing/rebasing during `wt merge` | Sequential, blocking, fail-fast | Terminates merge immediately |
+| **post-merge-command** | After successful merge and push to target branch, before cleanup | Sequential, blocking | Logs warning, continues with remaining commands |
 
 **Skipping hooks:**
 - Use `--no-hooks` to skip all project hooks
 - `wt switch --no-hooks` skips post-create and post-start
-- `wt merge --no-hooks` skips pre-merge-check
+- `wt merge --no-hooks` skips pre-merge-command
 
 **Security:**
 Commands require approval on first run. Approved commands are saved globally per project. Use `--force` to bypass approval prompts.
@@ -250,7 +251,7 @@ wt merge main                # merge commits as-is
 wt merge main --squash       # squash all commits
 wt merge main --keep         # keep worktree after merging
 wt merge main -m "Custom message instruction"
-wt merge main --no-hooks     # skip pre-merge-check hook
+wt merge main --no-hooks     # skip pre-merge-command hook
 ```
 
 ## Configuration

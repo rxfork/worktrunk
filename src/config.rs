@@ -72,7 +72,7 @@ pub struct CommitGenerationConfig {
 /// - `{worktree}` - Absolute path to the worktree
 /// - `{repo_root}` - Absolute path to the repository root
 ///
-/// Additionally, `pre-merge-check` commands support:
+/// Additionally, `pre-merge-command` commands support:
 /// - `{target}` - Target branch for the merge (e.g., "main")
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct ProjectConfig {
@@ -95,8 +95,8 @@ pub struct ProjectConfig {
     /// All commands must exit with code 0 for merge to proceed
     ///
     /// Available template variables: `{repo}`, `{branch}`, `{worktree}`, `{repo_root}`, `{target}`
-    #[serde(default, rename = "pre-merge-check")]
-    pub pre_merge_check: Option<CommandConfig>,
+    #[serde(default, rename = "pre-merge-command")]
+    pub pre_merge_command: Option<CommandConfig>,
 
     /// Commands to execute after successful merge in the main worktree (blocking)
     /// Supports string (single command), array (sequential), or table (named, sequential)
@@ -529,7 +529,7 @@ mod tests {
         let config = ProjectConfig::default();
         assert!(config.post_create_command.is_none());
         assert!(config.post_start_command.is_none());
-        assert!(config.pre_merge_check.is_none());
+        assert!(config.pre_merge_command.is_none());
         assert!(config.post_merge_command.is_none());
     }
 
@@ -589,20 +589,20 @@ mod tests {
     }
 
     #[test]
-    fn test_pre_merge_check_single() {
-        let toml = r#"pre-merge-check = "cargo test""#;
+    fn test_pre_merge_command_single() {
+        let toml = r#"pre-merge-command = "cargo test""#;
         let config: ProjectConfig = toml::from_str(toml).unwrap();
         assert!(matches!(
-            config.pre_merge_check,
+            config.pre_merge_command,
             Some(CommandConfig::Single(_))
         ));
     }
 
     #[test]
-    fn test_pre_merge_check_multiple() {
-        let toml = r#"pre-merge-check = ["cargo fmt -- --check", "cargo test"]"#;
+    fn test_pre_merge_command_multiple() {
+        let toml = r#"pre-merge-command = ["cargo fmt -- --check", "cargo test"]"#;
         let config: ProjectConfig = toml::from_str(toml).unwrap();
-        match config.pre_merge_check {
+        match config.pre_merge_command {
             Some(CommandConfig::Multiple(cmds)) => {
                 assert_eq!(cmds.len(), 2);
                 assert_eq!(cmds[0], "cargo fmt -- --check");
@@ -613,15 +613,15 @@ mod tests {
     }
 
     #[test]
-    fn test_pre_merge_check_named() {
+    fn test_pre_merge_command_named() {
         let toml = r#"
-            [pre-merge-check]
+            [pre-merge-command]
             format = "cargo fmt -- --check"
             lint = "cargo clippy"
             test = "cargo test"
         "#;
         let config: ProjectConfig = toml::from_str(toml).unwrap();
-        match config.pre_merge_check {
+        match config.pre_merge_command {
             Some(CommandConfig::Named(cmds)) => {
                 assert_eq!(cmds.len(), 3);
                 assert_eq!(

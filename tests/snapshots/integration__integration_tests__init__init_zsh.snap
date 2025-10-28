@@ -15,7 +15,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: [TEST_CONFIG]
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpQGFV0d/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -251,7 +251,7 @@ _arguments "${_arguments_options[@]}" : \
 '--squash[Squash all commits into one before merging]' \
 '-k[Keep worktree after merging (don'\''t remove)]' \
 '--keep[Keep worktree after merging (don'\''t remove)]' \
-'--no-hooks[Skip all project hooks (pre-merge-check)]' \
+'--no-hooks[Skip all project hooks (pre-merge-command)]' \
 '-f[Skip approval prompts for commands]' \
 '--force[Skip approval prompts for commands]' \
 '-v[Enable verbose output (show git commands and debug info)]' \

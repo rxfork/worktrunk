@@ -148,9 +148,9 @@ The merge operation follows a strict order designed for fail-fast execution:
    Verifies current branch exists (not detached HEAD) and determines target branch
    (defaults to repository's default branch).
 
-2. Run pre-merge checks
-   Runs commands from project config's [[pre-merge-check]] before any git operations.
-   These receive {target} placeholder for the target branch. Checks run sequentially
+2. Run pre-merge commands
+   Runs commands from project config's [pre-merge-command] before any git operations.
+   These receive {target} placeholder for the target branch. Commands run sequentially
    and any failure aborts the merge immediately. Skip with --no-verify.
 
 3. Auto-commit uncommitted changes
@@ -183,7 +183,7 @@ Squash commits before merging:
 Keep worktree after merging:
   wt merge --keep
 
-Skip pre-merge checks:
+Skip pre-merge commands:
   wt merge --no-verify")]
     Merge {
         /// Target branch to merge into (defaults to default branch)
@@ -201,7 +201,7 @@ Skip pre-merge checks:
         #[arg(short = 'm', long)]
         message: Option<String>,
 
-        /// Skip all project hooks (pre-merge-check)
+        /// Skip all project hooks (pre-merge-command)
         #[arg(long)]
         no_hooks: bool,
 
