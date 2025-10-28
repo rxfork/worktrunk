@@ -397,12 +397,28 @@ fn main() {
 
                     // Remove others first
                     for worktree in others.iter() {
+                        // Show progress before starting removal
+                        use anstyle::Style;
+                        use worktrunk::styling::CYAN;
+                        let bold = Style::new().bold();
+                        output::progress(format!(
+                            "🔄 {CYAN}Removing worktree for {bold}{worktree}{bold:#}...{CYAN:#}"
+                        ))?;
+
                         let result = handle_remove(Some(worktree.as_str()))?;
                         handle_remove_output(&result)?;
                     }
 
                     // Remove current worktree last (if it was in the list)
                     if let Some(current_name) = current {
+                        // Show progress before starting removal
+                        use anstyle::Style;
+                        use worktrunk::styling::CYAN;
+                        let bold = Style::new().bold();
+                        output::progress(format!(
+                            "🔄 {CYAN}Removing worktree for {bold}{current_name}{bold:#}...{CYAN:#}"
+                        ))?;
+
                         let result = handle_remove(Some(current_name.as_str()))?;
                         handle_remove_output(&result)?;
                     }

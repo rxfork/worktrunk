@@ -88,57 +88,99 @@ Command::new("sh")
     .status()?;
 ```
 
-### Temporal Locality: Show Success When Actions Complete
+### Temporal Locality: Output Should Be Close to Operations
 
-**Principle: Emit success messages immediately when operations complete, not just in summaries.**
+**Core Principle: Output should appear immediately adjacent to the operations they describe.**
 
-Users need instant feedback that an operation succeeded. Summaries at the end are useful for context, but immediate feedback at the point of completion is critical for good UX.
+Users experience commands as temporal sequences. Output that appears far from its triggering operation creates confusion and breaks the mental model of what's happening.
 
-**Good pattern:**
+**The Two Patterns:**
+
+1. **Progress → Operation → Success** (for sequential operations)
+   ```
+   🔄 Removing worktree for feature...
+   ✅ Removed worktree for feature
+   🔄 Removing worktree for bugfix...
+   ✅ Removed worktree for bugfix
+   ```
+
+2. **Progress → Operation → Success → Summary** (for complex multi-step operations)
+   ```
+   🔄 Squashing 3 commits into one...
+   🔄 Generating commit message...
+     [commit message display]
+   ✅ Squashed 3 commits into one          ← Immediate feedback
+   🔄 Rebasing onto main...
+   ...
+   ✅ Merged feature → main                ← Final summary
+   Squashed 3 commits                      ← Context in summary
+   ```
+
+**Bad pattern - output decoupled from operations:**
 ```
-🔄 Squashing 3 commits into one...
-🔄 Generating squash commit message...
-  [commit message display]
-✅ Squashed 3 commits into one          ← Immediate feedback
-🔄 Rebasing onto main...
-...
-✅ Merged feature → main                ← Final summary
-Squashed 3 commits                      ← Context in summary
-```
-
-**Bad pattern:**
-```
-🔄 Squashing 3 commits into one...
-🔄 Generating squash commit message...
-  [commit message display]
-                                        ← No immediate feedback!
-🔄 Rebasing onto main...
-...
-✅ Merged feature → main
-Squashed 3 commits                      ← Only mentioned in summary
+🔄 Removing worktree for feature...
+🔄 Removing worktree for bugfix...
+🔄 Removing worktree for hotfix...
+                                          ← Long delay, no feedback
+Removed worktree for feature              ← All output at the end
+Removed worktree for bugfix
+Removed worktree for hotfix
 ```
 
 **Why this matters:**
-- **Temporal locality**: Feedback should appear when the action completes, not minutes later
-- **User confidence**: Immediate success messages confirm the operation worked
-- **Debugging**: If something fails later, users know which steps succeeded
+
+- **Temporal locality**: Feedback appears when the action completes, not seconds/minutes later
+- **User confidence**: Immediate success messages confirm each operation worked
+- **Debugging**: If something fails, users know exactly which operation failed
 - **Progress visibility**: Users can see what's done vs. what's still in progress
+- **Interrupt recovery**: If user hits Ctrl+C, they know what completed
+- **Natural mental model**: Matches how users think about sequential operations
 
-**Implementation:**
+**Implementation patterns:**
+
 ```rust
-// After completing a significant operation, emit success immediately
-crate::output::success("Squashed 3 commits into one")?;
+// Pattern 1: Simple sequential operations (like batch remove)
+for item in items {
+    // Show what we're about to do
+    output::progress(format!("🔄 {CYAN}Removing {item}...{CYAN:#}"))?;
 
-// The summary can still include this info for context
-let summary = format!("Merged {from} → {to}\nSquashed {count} commits\n...");
-crate::output::success(summary)?;
+    // Do the operation
+    let result = perform_operation(item)?;
+
+    // Show immediate success
+    output::success(format!("Removed {item}"))?;
+}
+
+// Pattern 2: Complex operation with substeps
+output::progress("🔄 Starting complex operation...")?;
+
+// Substep 1
+output::progress("🔄 Validating...")?;
+validate()?;
+output::success("Validated")?;
+
+// Substep 2
+output::progress("🔄 Processing...")?;
+process()?;
+output::success("Processed")?;
+
+// Final summary (optional, for context)
+output::success("Completed complex operation")?;
 ```
 
+**Red flags - violations of temporal locality:**
+
+1. **Collecting messages in a buffer**: `let mut messages = Vec::new(); messages.push(...)` → emit immediately instead
+2. **Single success message for batch operations**: Loop that shows all successes at the end
+3. **No progress before slow operations**: User sees nothing, then suddenly output appears
+4. **Progress without matching success**: Progress messages that aren't followed by success/failure
+5. **Success before operation**: Showing success message before operation completes (async timing bugs)
+
 **Apply this to:**
-- Squashing commits: Show "✅ Squashed N commits" immediately after squashing
-- Pushing changes: Show "✅ Pushed to branch" immediately after pushing
-- Committing changes: Show "✅ Committed changes" immediately after committing
-- Any multi-step operation: Show success after each major step completes
+- Batch operations: Show progress + success for each item in the loop
+- Multi-step operations: Show success after each major step completes
+- Slow operations: Show progress immediately before starting
+- Error handling: Show failure immediately when detected, not collected for later
 
 ### Semantic Style Constants
 
