@@ -28,8 +28,8 @@ if shutil.which("wt") is not None:
                     # TODO: Use str.replace instead of hard-coded offset (fragile if prefix changes)
                     exec_cmd = chunk[18:]  # Remove prefix
                 elif chunk:
-                    # Regular output - print it (preserving newlines)
-                    print(chunk, end='')
+                    # Regular output - print it with newline
+                    print(chunk)
 
         # Execute command if one was specified
         if exec_cmd:

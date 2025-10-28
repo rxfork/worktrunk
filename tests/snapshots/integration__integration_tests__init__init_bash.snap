@@ -14,7 +14,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpig4dTj/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpiVd1K8/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -47,8 +47,8 @@ if command -v wt >/dev/null 2>&1; then
                 # EXEC directive - extract command (may contain newlines)
                 exec_cmd="${chunk#__WORKTRUNK_EXEC__}"
             else
-                # Regular output - print it (preserving newlines)
-                printf '%s' "$chunk"
+                # Regular output - print it with newline
+                printf '%s\n' "$chunk"
             fi
         done < <(command "$_WORKTRUNK_CMD" "$@"; echo "$?" > "$exit_code_file")
 

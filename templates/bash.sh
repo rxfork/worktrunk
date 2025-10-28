@@ -26,8 +26,8 @@ if command -v wt >/dev/null 2>&1; then
                 # EXEC directive - extract command (may contain newlines)
                 exec_cmd="${chunk#__WORKTRUNK_EXEC__}"
             else
-                # Regular output - print it (preserving newlines)
-                printf '%s' "$chunk"
+                # Regular output - print it with newline
+                printf '%s\n' "$chunk"
             fi
         done < <(command "$_WORKTRUNK_CMD" "$@"; echo "$?" > "$exit_code_file")
 

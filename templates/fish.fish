@@ -59,11 +59,11 @@ if type -q {{ cmd_prefix }}
                     echo "[DEBUG] EXEC directive: $exec_cmd" >&2
                 end
             else if test -n "$chunk"
-                # Regular output - print it (preserving newlines)
+                # Regular output - print it with newline
                 if test $debug_mode -eq 1
                     echo "[DEBUG] Message chunk" >&2
                 end
-                printf '%s' $chunk
+                printf '%s\n' $chunk
             end
         end < (begin; command $_WORKTRUNK_CMD $argv; echo $status > $exit_code_file; end | psub)
 

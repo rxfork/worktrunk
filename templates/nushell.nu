@@ -24,8 +24,8 @@ if (which wt | is-not-empty) {
                 # TODO: Use str replace instead of hard-coded offset (fragile if prefix changes)
                 $exec_cmd = ($chunk | str substring 18..)
             } else if ($chunk | str length) > 0 {
-                # Regular output - print it (preserving newlines)
-                print -n $chunk
+                # Regular output - print it with newline
+                print $chunk
             }
         }
 
