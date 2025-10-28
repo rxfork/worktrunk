@@ -1,8 +1,10 @@
 use config::{Config, ConfigError, File};
-use etcetera::base_strategy::{BaseStrategy, choose_base_strategy};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use toml;
+
+#[cfg(not(test))]
+use etcetera::base_strategy::choose_base_strategy;
 
 /// Configuration for worktree path formatting and LLM integration.
 ///
@@ -196,12 +198,28 @@ impl WorktrunkConfig {
 }
 
 fn get_config_path() -> Option<PathBuf> {
+    // Check for test override first (WORKTRUNK_CONFIG_PATH env var)
+    if let Ok(path) = std::env::var("WORKTRUNK_CONFIG_PATH") {
+        return Some(PathBuf::from(path));
+    }
+
+    // In test builds, WORKTRUNK_CONFIG_PATH must be set to prevent polluting user config
+    #[cfg(test)]
+    panic!(
+        "WORKTRUNK_CONFIG_PATH not set in test. Tests must use TestRepo which sets this automatically, \
+        or set it manually to an isolated test config path."
+    );
+
+    // Production: use standard config location
     // choose_base_strategy uses:
     // - XDG on Linux (respects XDG_CONFIG_HOME, falls back to ~/.config)
     // - XDG on macOS (~/.config instead of ~/Library/Application Support)
     // - Windows conventions on Windows (%APPDATA%)
-    let strategy = choose_base_strategy().ok()?;
-    Some(strategy.config_dir().join("worktrunk").join("config.toml"))
+    #[cfg(not(test))]
+    {
+        let strategy = choose_base_strategy().ok()?;
+        Some(strategy.config_dir().join("worktrunk").join("config.toml"))
+    }
 }
 
 /// Expand template variables in a string
@@ -402,12 +420,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_default_config() {
-        let config = WorktrunkConfig::default();
-        assert_eq!(config.worktree_path, "../{main-worktree}.{branch}");
-    }
-
-    #[test]
     fn test_config_serialization() {
         let config = WorktrunkConfig::default();
         let toml = toml::to_string(&config).unwrap();
@@ -417,10 +429,11 @@ mod tests {
     }
 
     #[test]
-    fn test_load_config_defaults() {
-        // Without a config file or env vars, should return defaults
-        let config = WorktrunkConfig::load().unwrap();
+    fn test_default_config() {
+        let config = WorktrunkConfig::default();
         assert_eq!(config.worktree_path, "../{main-worktree}.{branch}");
+        assert_eq!(config.commit_generation.command, None);
+        assert!(config.approved_commands.is_empty());
     }
 
     #[test]
@@ -646,26 +659,32 @@ mod tests {
 
     #[test]
     fn test_approve_command() {
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("test-config.toml");
         let mut config = WorktrunkConfig::default();
 
         // First approval
         assert!(!config.is_command_approved("github.com/user/repo", "npm install"));
         config
-            .approve_command(
+            .approve_command_to(
                 "github.com/user/repo".to_string(),
                 "npm install".to_string(),
+                &config_path,
             )
-            .ok(); // Ignore save errors in tests
+            .unwrap();
         assert!(config.is_command_approved("github.com/user/repo", "npm install"));
 
         // Duplicate approval shouldn't add twice
         let count_before = config.approved_commands.len();
         config
-            .approve_command(
+            .approve_command_to(
                 "github.com/user/repo".to_string(),
                 "npm install".to_string(),
+                &config_path,
             )
-            .ok();
+            .unwrap();
         assert_eq!(config.approved_commands.len(), count_before);
     }
 

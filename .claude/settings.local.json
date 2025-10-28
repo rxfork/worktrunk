@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/maximilian/.config/worktrunk/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

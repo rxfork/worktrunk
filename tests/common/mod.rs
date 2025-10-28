@@ -32,6 +32,8 @@ pub struct TestRepo {
     root: PathBuf,
     pub worktrees: HashMap<String, PathBuf>,
     remote: Option<PathBuf>, // Path to bare remote repo if created
+    /// Isolated config file for this test (prevents pollution of user's config)
+    test_config_path: PathBuf,
 }
 
 impl TestRepo {
@@ -46,11 +48,15 @@ impl TestRepo {
             .canonicalize()
             .expect("Failed to canonicalize temp path");
 
+        // Create isolated config path for this test
+        let test_config_path = temp_dir.path().join("test-config.toml");
+
         let repo = Self {
             temp_dir,
             root,
             worktrees: HashMap::new(),
             remote: None,
+            test_config_path,
         };
 
         // Initialize git repo with isolated environment
@@ -98,6 +104,9 @@ impl TestRepo {
     ///
     /// Removes potentially interfering environment variables and sets
     /// deterministic git environment for CLI tests.
+    ///
+    /// This also sets `WORKTRUNK_CONFIG_PATH` to an isolated test config
+    /// to prevent tests from polluting the user's real config file.
     pub fn clean_cli_env(&self, cmd: &mut Command) {
         // Remove git-related env vars that might interfere
         for (key, _) in std::env::vars() {
@@ -109,11 +118,21 @@ impl TestRepo {
         self.configure_git_cmd(cmd);
         // Force color output for snapshot testing (captures ANSI codes)
         cmd.env("CLICOLOR_FORCE", "1");
+        // Set isolated config path to prevent polluting user's config
+        cmd.env("WORKTRUNK_CONFIG_PATH", &self.test_config_path);
     }
 
     /// Get the root path of the repository
     pub fn root_path(&self) -> &Path {
         &self.root
+    }
+
+    /// Get the path to the isolated test config file
+    ///
+    /// This config path is automatically set via WORKTRUNK_CONFIG_PATH when using
+    /// `clean_cli_env()`, ensuring tests don't pollute the user's real config.
+    pub fn test_config_path(&self) -> &Path {
+        &self.test_config_path
     }
 
     /// Get the path to a named worktree

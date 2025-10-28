@@ -1,10 +1,8 @@
 use crate::common::{TestRepo, make_snapshot_cmd, resolve_git_dir, setup_snapshot_settings};
 use insta_cmd::assert_cmd_snapshot;
 use std::fs;
-use std::path::Path;
 use std::thread;
 use std::time::Duration;
-use tempfile::TempDir;
 
 // Sleep duration constants for background command tests
 // These allow time for background processes to complete and write output files
@@ -19,14 +17,12 @@ const SLEEP_BACKGROUND_COMMAND: Duration = Duration::from_secs(1);
 const SLEEP_EXTENDED: Duration = Duration::from_secs(2);
 
 /// Helper to create snapshot with normalized paths and SHAs
-/// If temp_home is provided, sets HOME environment variable to that path
-fn snapshot_switch(test_name: &str, repo: &TestRepo, args: &[&str], temp_home: Option<&Path>) {
+///
+/// Tests should write to repo.test_config_path() to pre-approve commands.
+fn snapshot_switch(test_name: &str, repo: &TestRepo, args: &[&str]) {
     let settings = setup_snapshot_settings(repo);
     settings.bind(|| {
         let mut cmd = make_snapshot_cmd(repo, "switch", args, None);
-        if let Some(home) = temp_home {
-            cmd.env("HOME", home);
-        }
         assert_cmd_snapshot!(test_name, cmd);
     });
 }
@@ -41,17 +37,11 @@ fn test_post_create_no_config() {
     repo.commit("Initial commit");
 
     // Switch without project config should work normally
-    snapshot_switch(
-        "post_create_no_config",
-        &repo,
-        &["--create", "feature"],
-        None,
-    );
+    snapshot_switch("post_create_no_config", &repo, &["--create", "feature"]);
 }
 
 #[test]
 fn test_post_create_single_command() {
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -66,11 +56,9 @@ fn test_post_create_single_command() {
 
     repo.commit("Add config");
 
-    // Pre-approve the command by setting up the user config in temp HOME
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
+    // Pre-approve the command by writing to the isolated test config
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -78,20 +66,18 @@ project = "test-repo"
 command = "echo 'Setup complete'"
 "#,
     )
-    .expect("Failed to write user config");
+    .expect("Failed to write test config");
 
     // Command should execute without prompting
     snapshot_switch(
         "post_create_single_command",
         &repo,
         &["--create", "feature"],
-        Some(temp_home.path()),
     );
 }
 
 #[test]
 fn test_post_create_multiple_commands_array() {
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -107,10 +93,8 @@ fn test_post_create_multiple_commands_array() {
     repo.commit("Add config with multiple commands");
 
     // Pre-approve both commands in temp HOME
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -129,13 +113,11 @@ command = "echo 'Second'"
         "post_create_multiple_commands_array",
         &repo,
         &["--create", "feature"],
-        Some(temp_home.path()),
     );
 }
 
 #[test]
 fn test_post_create_named_commands() {
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -154,10 +136,8 @@ setup = "echo 'Running setup'"
     repo.commit("Add config with named commands");
 
     // Pre-approve both commands in temp HOME
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -176,13 +156,11 @@ command = "echo 'Running setup'"
         "post_create_named_commands",
         &repo,
         &["--create", "feature"],
-        Some(temp_home.path()),
     );
 }
 
 #[test]
 fn test_post_create_failing_command() {
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -198,10 +176,8 @@ fn test_post_create_failing_command() {
     repo.commit("Add config with failing command");
 
     // Pre-approve the command in temp HOME
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -216,13 +192,11 @@ command = "exit 1"
         "post_create_failing_command",
         &repo,
         &["--create", "feature"],
-        Some(temp_home.path()),
     );
 }
 
 #[test]
 fn test_post_create_template_expansion() {
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -242,12 +216,10 @@ fn test_post_create_template_expansion() {
 
     repo.commit("Add config with templates");
 
-    // Pre-approve all commands in temp HOME
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
+    // Pre-approve all commands in isolated test config
     let repo_name = "test-repo";
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -267,14 +239,13 @@ project = "test-repo"
 command = "echo 'Root: {repo_root}' >> info.txt"
 "#,
     )
-    .expect("Failed to write user config");
+    .expect("Failed to write test config");
 
     // Commands should execute with expanded templates
     snapshot_switch(
         "post_create_template_expansion",
         &repo,
         &["--create", "feature/test"],
-        Some(temp_home.path()),
     );
 
     // Verify template expansion actually worked by checking the output file
@@ -311,7 +282,6 @@ command = "echo 'Root: {repo_root}' >> info.txt"
 
 #[test]
 fn test_post_start_single_background_command() {
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -327,10 +297,8 @@ fn test_post_start_single_background_command() {
     repo.commit("Add background command");
 
     // Pre-approve the command
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -345,7 +313,6 @@ command = "sleep 1 && echo 'Background task done' > background.txt"
         "post_start_single_background",
         &repo,
         &["--create", "feature"],
-        Some(temp_home.path()),
     );
 
     // Verify log file was created
@@ -367,7 +334,6 @@ command = "sleep 1 && echo 'Background task done' > background.txt"
 
 #[test]
 fn test_post_start_multiple_background_commands() {
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -386,10 +352,8 @@ task2 = "echo 'Task 2 running' > task2.txt"
     repo.commit("Add multiple background commands");
 
     // Pre-approve both commands
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -408,7 +372,6 @@ command = "echo 'Task 2 running' > task2.txt"
         "post_start_multiple_background",
         &repo,
         &["--create", "feature"],
-        Some(temp_home.path()),
     );
 
     // Wait for background commands
@@ -422,7 +385,6 @@ command = "echo 'Task 2 running' > task2.txt"
 
 #[test]
 fn test_both_post_create_and_post_start() {
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -442,10 +404,8 @@ server = "sleep 0.5 && echo 'Server running' > server.txt"
     repo.commit("Add both command types");
 
     // Pre-approve all commands
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -460,12 +420,7 @@ command = "sleep 0.5 && echo 'Server running' > server.txt"
     .expect("Failed to write user config");
 
     // Post-create should run first (blocking), then post-start (background)
-    snapshot_switch(
-        "both_create_and_start",
-        &repo,
-        &["--create", "feature"],
-        Some(temp_home.path()),
-    );
+    snapshot_switch("both_create_and_start", &repo, &["--create", "feature"]);
 
     // Setup file should exist immediately (post-create is blocking)
     let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
@@ -501,7 +456,7 @@ fn test_invalid_toml() {
     repo.commit("Add invalid config");
 
     // Should continue without executing commands, showing warning
-    snapshot_switch("invalid_toml", &repo, &["--create", "feature"], None);
+    snapshot_switch("invalid_toml", &repo, &["--create", "feature"]);
 }
 
 // ============================================================================
@@ -510,7 +465,6 @@ fn test_invalid_toml() {
 
 #[test]
 fn test_post_start_log_file_captures_output() {
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -526,10 +480,8 @@ fn test_post_start_log_file_captures_output() {
     repo.commit("Add command with stdout/stderr");
 
     // Pre-approve the command
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -543,7 +495,6 @@ command = "echo 'stdout output' && echo 'stderr output' >&2"
         "post_start_log_captures_output",
         &repo,
         &["--create", "feature"],
-        Some(temp_home.path()),
     );
 
     // Give background command time to complete
@@ -587,7 +538,6 @@ command = "echo 'stdout output' && echo 'stderr output' >&2"
 
 #[test]
 fn test_post_start_invalid_command_handling() {
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -603,10 +553,8 @@ fn test_post_start_invalid_command_handling() {
     repo.commit("Add invalid command");
 
     // Pre-approve the command
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -621,7 +569,6 @@ command = "echo 'unclosed quote"
         "post_start_invalid_command",
         &repo,
         &["--create", "feature"],
-        Some(temp_home.path()),
     );
 
     // Verify worktree was created despite command error
@@ -634,7 +581,6 @@ command = "echo 'unclosed quote"
 
 #[test]
 fn test_post_start_multiple_commands_separate_logs() {
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -654,10 +600,8 @@ task3 = "echo 'TASK3_OUTPUT'"
     repo.commit("Add three background commands");
 
     // Pre-approve all commands
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -675,12 +619,7 @@ command = "echo 'TASK3_OUTPUT'"
     )
     .expect("Failed to write user config");
 
-    snapshot_switch(
-        "post_start_separate_logs",
-        &repo,
-        &["--create", "feature"],
-        Some(temp_home.path()),
-    );
+    snapshot_switch("post_start_separate_logs", &repo, &["--create", "feature"]);
 
     // Give background commands time to complete
     thread::sleep(SLEEP_FAST_COMMAND);
@@ -740,7 +679,6 @@ command = "echo 'TASK3_OUTPUT'"
 
 #[test]
 fn test_execute_flag_with_post_start_commands() {
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -756,10 +694,8 @@ fn test_execute_flag_with_post_start_commands() {
     repo.commit("Add background command");
 
     // Pre-approve the command
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -779,7 +715,6 @@ command = "echo 'Background task' > background.txt"
             "--execute",
             "echo 'Execute flag' > execute.txt",
         ],
-        Some(temp_home.path()),
     );
 
     let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
@@ -802,7 +737,6 @@ command = "echo 'Background task' > background.txt"
 
 #[test]
 fn test_post_start_complex_shell_commands() {
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -818,10 +752,8 @@ fn test_post_start_complex_shell_commands() {
     repo.commit("Add complex shell command");
 
     // Pre-approve the command
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -831,12 +763,7 @@ command = "echo 'line1\nline2\nline3' | grep line2 > filtered.txt"
     )
     .expect("Failed to write user config");
 
-    snapshot_switch(
-        "post_start_complex_shell",
-        &repo,
-        &["--create", "feature"],
-        Some(temp_home.path()),
-    );
+    snapshot_switch("post_start_complex_shell", &repo, &["--create", "feature"]);
 
     // Wait for background command
     thread::sleep(SLEEP_FAST_COMMAND);

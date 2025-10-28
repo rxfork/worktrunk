@@ -5,7 +5,6 @@ use std::fs;
 use std::process::Command;
 use std::thread;
 use std::time::Duration;
-use tempfile::TempDir;
 
 /// Map shell display names to actual binary names
 fn get_shell_binary(shell: &str) -> &str {
@@ -28,21 +27,10 @@ fn is_shell_available(shell: &str) -> bool {
 }
 
 /// Execute a shell script in the given shell and return stdout
-/// Optionally set a custom HOME directory
-fn execute_shell_script_with_home(
-    repo: &TestRepo,
-    shell: &str,
-    script: &str,
-    home: Option<&std::path::Path>,
-) -> String {
+fn execute_shell_script(repo: &TestRepo, shell: &str, script: &str) -> String {
     let binary = get_shell_binary(shell);
     let mut cmd = Command::new(binary);
     repo.clean_cli_env(&mut cmd);
-
-    // Set HOME if provided
-    if let Some(home_path) = home {
-        cmd.env("HOME", home_path);
-    }
 
     // Additional shell-specific isolation to prevent user config interference
     cmd.env_remove("BASH_ENV");
@@ -136,7 +124,6 @@ fn test_e2e_post_start_background_command(#[case] shell: &str) {
         return;
     }
 
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -152,10 +139,8 @@ fn test_e2e_post_start_background_command(#[case] shell: &str) {
     repo.commit("Add post-start config");
 
     // Pre-approve the command
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -184,7 +169,7 @@ command = "sleep 0.5 && echo 'Background task done' > bg_marker.txt"
         init_code
     );
 
-    let output = execute_shell_script_with_home(&repo, shell, &script, Some(temp_home.path()));
+    let output = execute_shell_script(&repo, shell, &script);
 
     // Verify that:
     // 1. The switch command completed (shell returned)
@@ -263,7 +248,6 @@ fn test_bash_post_start_multiple_parallel_commands() {
         return;
     }
 
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -282,10 +266,8 @@ task2 = "sleep 0.5 && echo 'Task 2' > task2.txt"
     repo.commit("Add multiple post-start commands");
 
     // Pre-approve commands
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -297,7 +279,7 @@ project = "test-repo"
 command = "sleep 0.5 && echo 'Task 2' > task2.txt"
 "#,
     )
-    .expect("Failed to write user config");
+    .expect("Failed to write test config");
 
     let init_code = generate_init_code(&repo, "bash");
     let bin_path = get_cargo_bin("wt")
@@ -316,7 +298,7 @@ command = "sleep 0.5 && echo 'Task 2' > task2.txt"
         bin_path, init_code
     );
 
-    let output = execute_shell_script_with_home(&repo, "bash", &script, Some(temp_home.path()));
+    let output = execute_shell_script(&repo, "bash", &script);
 
     // Verify shell returned immediately (didn't wait for background tasks)
     assert!(
@@ -352,7 +334,6 @@ fn test_bash_post_create_blocks() {
         return;
     }
 
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -368,10 +349,8 @@ fn test_bash_post_create_blocks() {
     repo.commit("Add post-create command");
 
     // Pre-approve command
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -379,7 +358,7 @@ project = "test-repo"
 command = "echo 'Setup done' > setup.txt"
 "#,
     )
-    .expect("Failed to write user config");
+    .expect("Failed to write test config");
 
     let init_code = generate_init_code(&repo, "bash");
     let bin_path = get_cargo_bin("wt")
@@ -403,7 +382,7 @@ command = "echo 'Setup done' > setup.txt"
         bin_path, init_code
     );
 
-    let output = execute_shell_script_with_home(&repo, "bash", &script, Some(temp_home.path()));
+    let output = execute_shell_script(&repo, "bash", &script);
 
     // Verify we switched to the worktree
     assert!(
@@ -436,7 +415,6 @@ fn test_fish_post_start_background() {
         return;
     }
 
-    let temp_home = TempDir::new().unwrap();
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -454,10 +432,8 @@ fish_bg = "sleep 0.5 && echo 'Fish background done' > fish_bg.txt"
     repo.commit("Add fish background command");
 
     // Pre-approve command
-    let user_config_dir = temp_home.path().join(".config/worktrunk");
-    fs::create_dir_all(&user_config_dir).expect("Failed to create user config dir");
     fs::write(
-        user_config_dir.join("config.toml"),
+        repo.test_config_path(),
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [[approved-commands]]
@@ -465,7 +441,7 @@ project = "test-repo"
 command = "sleep 0.5 && echo 'Fish background done' > fish_bg.txt"
 "#,
     )
-    .expect("Failed to write user config");
+    .expect("Failed to write test config");
 
     let init_code = generate_init_code(&repo, "fish");
     let bin_path = get_cargo_bin("wt")
@@ -485,7 +461,7 @@ command = "sleep 0.5 && echo 'Fish background done' > fish_bg.txt"
         bin_path, init_code
     );
 
-    let output = execute_shell_script_with_home(&repo, "fish", &script, Some(temp_home.path()));
+    let output = execute_shell_script(&repo, "fish", &script);
 
     // Verify fish shell returned immediately
     assert!(
