@@ -2,7 +2,7 @@
 
 use std::io::{self, Write};
 use std::path::Path;
-use worktrunk::styling::{GREEN, SUCCESS_EMOJI, println, stdout, stderr};
+use worktrunk::styling::{GREEN, SUCCESS_EMOJI, println, stderr, stdout};
 
 /// Interactive output mode for human users
 ///

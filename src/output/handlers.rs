@@ -121,57 +121,22 @@ pub fn execute_command_in_worktree(
     worktree_path: &std::path::Path,
     command: &str,
 ) -> Result<(), GitError> {
-    use std::io::{BufRead, BufReader, Write};
     use std::process::{Command, Stdio};
-    use worktrunk::styling::println;
 
     // Flush stdout before executing command to ensure all our messages appear
     // before the child process output
     super::flush()?;
 
-    // Spawn the command, capturing stdout and stderr so we can write them in order
-    let mut child = Command::new("sh")
+    // Run the command with inherited stdio - child stdout and stderr both appear on our stdout and stderr
+    // All output goes through the terminal, which handles the display ordering
+    let status = Command::new("sh")
         .arg("-c")
         .arg(command)
         .current_dir(worktree_path)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
         .git_context("Failed to execute command")?;
-
-    // Read and immediately write output line-by-line to maintain interleaving
-    // Both child stdout and stderr go to our stdout (not stderr as before)
-    // This ensures all output goes to the same FD and appears in order
-    let stdout = child.stdout.take().unwrap();
-    let stderr = child.stderr.take().unwrap();
-
-    // Use threads to read both streams concurrently
-    let stdout_thread = std::thread::spawn(move || {
-        let reader = BufReader::new(stdout);
-        for line in reader.lines() {
-            if let Ok(line) = line {
-                println!("{}", line);
-                let _ = worktrunk::styling::stdout().flush();
-            }
-        }
-    });
-
-    let stderr_thread = std::thread::spawn(move || {
-        let reader = BufReader::new(stderr);
-        for line in reader.lines() {
-            if let Ok(line) = line {
-                println!("{}", line);
-                let _ = worktrunk::styling::stdout().flush();
-            }
-        }
-    });
-
-    // Wait for output threads to complete
-    let _ = stdout_thread.join();
-    let _ = stderr_thread.join();
-
-    // Wait for command to complete
-    let status = child.wait().git_context("Failed to wait for command")?;
 
     if !status.success() {
         return Err(GitError::CommandFailed(format!(

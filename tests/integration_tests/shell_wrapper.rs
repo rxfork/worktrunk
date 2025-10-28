@@ -87,23 +87,23 @@ fn exec_through_bash_wrapper(repo: &TestRepo, subcommand: &str, args: &[&str]) -
 
     // Source the wrapper
     script.push_str(&wrapper_script);
-    script.push_str("\n");
+    script.push('\n');
 
     // Run the command
     script.push_str("wt ");
     script.push_str(subcommand);
     for arg in args {
-        script.push_str(" ");
+        script.push(' ');
         // Quote arguments that need special handling (spaces, semicolons, etc.)
         if arg.contains(' ') || arg.contains(';') || arg.contains('\'') {
-            script.push_str("'");
+            script.push('\'');
             script.push_str(&arg.replace('\'', "'\\''"));
-            script.push_str("'");
+            script.push('\'');
         } else {
             script.push_str(arg);
         }
     }
-    script.push_str("\n");
+    script.push('\n');
 
     // Execute through bash
     let mut cmd = Command::new("bash");
@@ -160,23 +160,23 @@ fn exec_through_fish_wrapper(repo: &TestRepo, subcommand: &str, args: &[&str]) -
 
     // Source the wrapper
     script.push_str(&wrapper_script);
-    script.push_str("\n");
+    script.push('\n');
 
     // Run the command
     script.push_str("wt ");
     script.push_str(subcommand);
     for arg in args {
-        script.push_str(" ");
+        script.push(' ');
         // Quote arguments that need special handling (spaces, semicolons, etc.)
         if arg.contains(' ') || arg.contains(';') || arg.contains('\'') {
-            script.push_str("'");
+            script.push('\'');
             script.push_str(&arg.replace('\'', "'\\''"));
-            script.push_str("'");
+            script.push('\'');
         } else {
             script.push_str(arg);
         }
     }
-    script.push_str("\n");
+    script.push('\n');
 
     // Execute through fish
     let mut cmd = Command::new("fish");
