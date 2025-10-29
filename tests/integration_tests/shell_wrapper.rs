@@ -148,6 +148,68 @@ fn build_shell_script(shell: &str, repo: &TestRepo, subcommand: &str, args: &[&s
     }
 }
 
+/// Execute a command in a PTY (pseudo-terminal)
+///
+/// This provides the most accurate test environment - child processes see a real TTY
+/// and behave exactly as they would in a user's terminal (streaming, colors, etc.)
+#[cfg(test)]
+fn exec_in_pty(
+    shell: &str,
+    script: &str,
+    working_dir: &std::path::Path,
+    env_vars: &[(String, String)],
+) -> (String, i32) {
+    use portable_pty::{CommandBuilder, PtySize, native_pty_system};
+    use std::io::Read;
+
+    let pty_system = native_pty_system();
+    let pair = pty_system
+        .openpty(PtySize {
+            rows: 48,
+            cols: 200,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .expect("Failed to open PTY");
+
+    // Spawn the shell inside the PTY
+    let mut cmd = CommandBuilder::new(shell);
+    cmd.arg("-c");
+    cmd.arg(script);
+    cmd.cwd(working_dir);
+
+    // Add environment variables
+    for (key, value) in env_vars {
+        cmd.env(key, value);
+    }
+
+    let mut child = pair
+        .slave
+        .spawn_command(cmd)
+        .expect("Failed to spawn command in PTY");
+    drop(pair.slave); // Close slave in parent
+
+    // Read everything the "terminal" would display
+    let mut reader = pair
+        .master
+        .try_clone_reader()
+        .expect("Failed to clone PTY reader");
+
+    let mut buf = String::new();
+    reader
+        .read_to_string(&mut buf)
+        .expect("Failed to read from PTY"); // Blocks until child exits & PTY closes
+
+    let status = child.wait().expect("Failed to wait for child process");
+
+    (normalize_newlines(&buf), status.exit_code() as i32)
+}
+
+/// Normalize line endings (CRLF -> LF)
+fn normalize_newlines(s: &str) -> String {
+    s.replace("\r\n", "\n")
+}
+
 /// Execute a command through a shell wrapper
 ///
 /// This simulates what actually happens when users run `wt switch`, etc. in their shell:
@@ -175,23 +237,47 @@ fn exec_through_wrapper_from(
 ) -> ShellOutput {
     let script = build_shell_script(shell, repo, subcommand, args);
 
-    let mut cmd = Command::new(shell);
-    cmd.arg("-c").arg(&script).current_dir(working_dir);
+    // PTY execution - provides exact terminal behavior for all shells
+    // Note: Fish's psub (process substitution) uses file-backed buffers, which causes
+    // different temporal ordering than bash/zsh. Child command output may appear before
+    // the progress messages that spawned them. This is actual fish behavior, not a test bug.
 
-    // Configure git environment
-    repo.clean_cli_env(&mut cmd);
+    // Collect environment variables that clean_cli_env would set
+    let env_vars = vec![
+        ("CLICOLOR_FORCE".to_string(), "1".to_string()),
+        (
+            "WORKTRUNK_CONFIG_PATH".to_string(),
+            repo.test_config_path().to_string_lossy().to_string(),
+        ),
+        // Git config from configure_git_cmd
+        ("GIT_AUTHOR_NAME".to_string(), "Test User".to_string()),
+        (
+            "GIT_AUTHOR_EMAIL".to_string(),
+            "test@example.com".to_string(),
+        ),
+        ("GIT_COMMITTER_NAME".to_string(), "Test User".to_string()),
+        (
+            "GIT_COMMITTER_EMAIL".to_string(),
+            "test@example.com".to_string(),
+        ),
+        (
+            "GIT_AUTHOR_DATE".to_string(),
+            "2025-10-28T12:00:00Z".to_string(),
+        ),
+        (
+            "GIT_COMMITTER_DATE".to_string(),
+            "2025-10-28T12:00:00Z".to_string(),
+        ),
+        ("LANG".to_string(), "C".to_string()),
+        ("LC_ALL".to_string(), "C".to_string()),
+        ("SOURCE_DATE_EPOCH".to_string(), "1761609600".to_string()),
+    ];
 
-    let output = cmd
-        .output()
-        .unwrap_or_else(|_| panic!("Failed to execute {} wrapper", shell));
-
-    // With 2>&1 in the script, both streams are merged to stdout
-    // This preserves temporal locality (output appears when operations complete)
-    let combined = String::from_utf8_lossy(&output.stdout).to_string();
+    let (combined, exit_code) = exec_in_pty(shell, &script, working_dir, &env_vars);
 
     ShellOutput {
         combined,
-        exit_code: output.status.code().unwrap_or(1),
+        exit_code,
     }
 }
 

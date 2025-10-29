@@ -16,7 +16,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpWc0lh5/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpirklUY/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -36,17 +36,13 @@ if type -q wt
     # Helper function to parse wt output and handle directives
     # Directives are NUL-terminated to support multi-line commands
     #
-    # Note: Uses psub for process substitution to preserve NUL bytes.
-    # This is reliable for simple read-only cases but psub has known
-    # limitations in complex scenarios (see fish-shell issue #1040).
-    # Current usage is safe as we only read from psub output sequentially.
+    # IMPORTANT: No "begin...end" block on the left side of the pipe!
+    # Fish runs only one piece of fish script at a time; a block on the LHS
+    # would serialize the pipeline (RHS wouldn't run until LHS finishes).
+    # By keeping the LHS as a plain external command, the RHS can consume
+    # the stream concurrently, preserving temporal ordering.
     function _wt_exec
         set -l exec_cmd ""
-        set -l exit_code_file (mktemp)
-        or begin
-            echo "Failed to create temp file" >&2
-            return 1
-        end
 
         # Debug mode: set WORKTRUNK_DEBUG=1 to see what's happening
         set -l debug_mode 0
@@ -55,13 +51,12 @@ if type -q wt
             echo "[DEBUG] Starting _wt_exec with args: $argv" >&2
         end
 
-        # Use psub (process substitution) to preserve NUL bytes
-        # Command substitution $(...)  strips NUL bytes, but psub preserves them
-        # Redirect stderr to stdout (2>&1) to capture child process output
-        # (child output goes to stderr per output system architecture)
-        # Redirect directly from psub output, and save exit code to temp file
+        # CRITICAL: Do NOT add "2>&1" here!
+        # We want child stderr to remain a TTY (via Stdio::inherit() in Rust)
+        # so that child processes stream output in real-time with colors/progress bars.
+        # Only worktrunk's stdout (directives + messages) flows through this pipe.
         set -l chunk_count 0
-        while read -z chunk
+        command $_WORKTRUNK_CMD $argv | while read -z chunk
             set chunk_count (math $chunk_count + 1)
             if test $debug_mode -eq 1
                 echo "[DEBUG] Chunk $chunk_count length: "(string length -- $chunk) >&2
@@ -90,15 +85,18 @@ if type -q wt
                 end
                 printf '%s\n' $chunk
             end
-        end < (begin; command $_WORKTRUNK_CMD $argv 2>&1; echo $status > $exit_code_file; end | psub)
+        end
+
+        # CRITICAL: Capture $pipestatus IMMEDIATELY after the pipe, before ANY other commands!
+        # Every command (including 'if', 'test', 'echo') clobbers $pipestatus
+        set -l codes $pipestatus
+        set -l exit_code $codes[1]
 
         if test $debug_mode -eq 1
             echo "[DEBUG] Finished reading, total chunks: $chunk_count" >&2
+            echo "[DEBUG] Pipeline status codes: $codes" >&2
+            echo "[DEBUG] Exit code: $exit_code" >&2
         end
-
-        # Read exit code from temp file
-        set -l exit_code (cat $exit_code_file 2>/dev/null; or echo 0)
-        rm -f $exit_code_file
 
         # Execute command if one was specified
         # Exit code semantics: Returns wt's exit code, not the executed command's.
