@@ -1,5 +1,5 @@
 use anstyle::Style;
-use clap::{CommandFactory, Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use std::process;
 use worktrunk::config::WorktrunkConfig;
 use worktrunk::git::{GitError, GitResultExt, Repository};
@@ -51,13 +51,32 @@ enum ConfigCommand {
     List,
 }
 
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum HookType {
+    PostCreate,
+    PostStart,
+    PreMerge,
+    PostMerge,
+}
+
+impl HookType {
+    /// Returns the kebab-case name for display and error messages
+    pub fn as_str(self) -> &'static str {
+        match self {
+            HookType::PostCreate => "post-create",
+            HookType::PostStart => "post-start",
+            HookType::PreMerge => "pre-merge",
+            HookType::PostMerge => "post-merge",
+        }
+    }
+}
+
 #[derive(Subcommand)]
 enum DevCommand {
     /// Run a project hook for testing
     RunHook {
         /// Hook type to run
-        #[arg(value_parser = ["post-create", "post-start", "pre-merge", "post-merge"])]
-        hook_type: String,
+        hook_type: HookType,
 
         /// Skip command approval prompts
         #[arg(short, long)]
@@ -370,7 +389,7 @@ fn main() {
             ConfigCommand::List => handle_config_list(),
         },
         Commands::Dev { action } => match action {
-            DevCommand::RunHook { hook_type, force } => handle_dev_run_hook(&hook_type, force),
+            DevCommand::RunHook { hook_type, force } => handle_dev_run_hook(hook_type, force),
         },
         Commands::List { format, branches } => handle_list(format, branches),
         Commands::Switch {

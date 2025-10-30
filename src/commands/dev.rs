@@ -5,8 +5,11 @@ use worktrunk::styling::{AnstyleStyle, HINT, HINT_EMOJI};
 use super::merge::{execute_post_merge_commands, run_pre_merge_commands};
 use super::worktree::{execute_post_create_commands, execute_post_start_commands_sequential};
 
+// Re-export HookType from main
+pub use crate::HookType;
+
 /// Handle `wt dev run-hook` command
-pub fn handle_dev_run_hook(hook_type: &str, force: bool) -> Result<(), GitError> {
+pub fn handle_dev_run_hook(hook_type: HookType, force: bool) -> Result<(), GitError> {
     // Derive context from current environment
     let repo = Repository::current();
     let worktree_path = std::env::current_dir()
@@ -25,16 +28,16 @@ pub fn handle_dev_run_hook(hook_type: &str, force: bool) -> Result<(), GitError>
 
     // Execute the hook based on type
     match hook_type {
-        "post-create" => {
-            check_hook_configured(&project_config.post_create_command, "post-create")?;
+        HookType::PostCreate => {
+            check_hook_configured(&project_config.post_create_command, hook_type)?;
             execute_post_create_commands(&worktree_path, &repo, &config, &branch, force)
         }
-        "post-start" => {
-            check_hook_configured(&project_config.post_start_command, "post-start")?;
+        HookType::PostStart => {
+            check_hook_configured(&project_config.post_start_command, hook_type)?;
             execute_post_start_commands_sequential(&worktree_path, &repo, &config, &branch, force)
         }
-        "pre-merge" => {
-            check_hook_configured(&project_config.pre_merge_command, "pre-merge")?;
+        HookType::PreMerge => {
+            check_hook_configured(&project_config.pre_merge_command, hook_type)?;
             let target_branch = repo.default_branch().unwrap_or_else(|_| "main".to_string());
             run_pre_merge_commands(
                 &project_config,
@@ -46,8 +49,8 @@ pub fn handle_dev_run_hook(hook_type: &str, force: bool) -> Result<(), GitError>
                 force,
             )
         }
-        "post-merge" => {
-            check_hook_configured(&project_config.post_merge_command, "post-merge")?;
+        HookType::PostMerge => {
+            check_hook_configured(&project_config.post_merge_command, hook_type)?;
             let target_branch = repo.default_branch().unwrap_or_else(|_| "main".to_string());
             execute_post_merge_commands(
                 &worktree_path,
@@ -58,10 +61,6 @@ pub fn handle_dev_run_hook(hook_type: &str, force: bool) -> Result<(), GitError>
                 force,
             )
         }
-        _ => Err(GitError::CommandFailed(format!(
-            "Unknown hook type: {}",
-            hook_type
-        ))),
     }
 }
 
@@ -88,8 +87,9 @@ fn load_project_config(repo: &Repository) -> Result<ProjectConfig, GitError> {
     }
 }
 
-fn check_hook_configured<T>(hook: &Option<T>, hook_name: &str) -> Result<(), GitError> {
+fn check_hook_configured<T>(hook: &Option<T>, hook_type: HookType) -> Result<(), GitError> {
     if hook.is_none() {
+        let hook_name = hook_type.as_str();
         eprintln!(
             "{HINT_EMOJI} {HINT}No {hook_name} commands configured in project config{HINT:#}"
         );
