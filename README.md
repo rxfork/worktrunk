@@ -33,6 +33,17 @@ Worktrees enable multiple branches checked out simultaneously. Each worktree is 
 
 Worktrunk provides shell integration that makes `wt switch` actually change directories. No manual `cd` commands or path tracking required.
 
+## Philosophy
+
+Worktrunk is an opinionated tool that automates the feature branch workflow:
+
+1. **Short-lived worktrees**: Create → work → merge → auto-cleanup
+2. **Linear history**: Fast-forward only, squash when needed
+3. **Automation over control**: Hooks run by default, changes are staged automatically
+4. **LLM integration**: Optional AI-generated commit messages
+
+If you prefer manual control over every git operation, standard `git worktree` commands may be a better fit. Worktrunk optimizes for the 90% case where you want to work on a feature, merge it, and move on.
+
 ## Installation
 
 ```bash
