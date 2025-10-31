@@ -94,16 +94,16 @@ pub fn format_header_line(layout: &LayoutConfig) {
     let dim = Style::new().dimmed();
     let mut line = StyledLine::new();
 
-    push_header(&mut line, "Branch", widths.branch, dim);
-    push_optional_header(&mut line, "Age", widths.time, dim);
-    push_optional_header(&mut line, "Cmts", widths.ahead_behind, dim);
-    push_optional_header(&mut line, "Cmt +/-", widths.branch_diff.total, dim);
+    push_optional_header(&mut line, "Branch", widths.branch, dim);
     push_optional_header(&mut line, "WT +/-", widths.working_diff.total, dim);
-    push_optional_header(&mut line, "Remote", widths.upstream, dim);
-    push_header(&mut line, "Commit", 8, dim);
-    push_optional_header(&mut line, "Message", widths.message, dim);
+    push_optional_header(&mut line, "Cmts", widths.ahead_behind, dim);
     push_optional_header(&mut line, "State", widths.states, dim);
-    line.push_styled("Path", dim);
+    push_optional_header(&mut line, "Path", widths.path, dim);
+    push_optional_header(&mut line, "Cmt +/-", widths.branch_diff.total, dim);
+    push_optional_header(&mut line, "Remote", widths.upstream, dim);
+    push_optional_header(&mut line, "Age", widths.time, dim);
+    push_optional_header(&mut line, "Commit", widths.commit, dim);
+    push_optional_header(&mut line, "Message", widths.message, dim);
 
     println!("{}", line.render());
 }
@@ -160,29 +160,41 @@ pub fn format_list_item_line(
 
     // Start building the line
     let mut line = StyledLine::new();
+    let mut first_column = true;
+
+    // Helper to add gap before column if not first
+    let mut push_gap_if_needed = |line: &mut StyledLine| {
+        if !first_column {
+            push_gap(line);
+        }
+        first_column = false;
+    };
 
     // Branch name
-    let branch_text = format!("{:width$}", item.branch_name(), width = widths.branch);
-    if let Some(style) = text_style {
-        line.push_styled(branch_text, style);
-    } else {
-        line.push_raw(branch_text);
+    if widths.branch > 0 {
+        push_gap_if_needed(&mut line);
+        let branch_text = format!("{:width$}", item.branch_name(), width = widths.branch);
+        if let Some(style) = text_style {
+            line.push_styled(branch_text, style);
+        } else {
+            line.push_raw(branch_text);
+        }
     }
-    push_gap(&mut line);
 
-    // Age (Time)
-    if widths.time > 0 {
-        let time_str = format!(
-            "{:width$}",
-            format_relative_time(commit.timestamp),
-            width = widths.time
-        );
-        line.push_styled(time_str, Style::new().dimmed());
-        push_gap(&mut line);
+    // Working tree diff (worktrees only)
+    if widths.working_diff.total > 0 {
+        push_gap_if_needed(&mut line);
+        if let Some(info) = worktree_info {
+            let (wt_added, wt_deleted) = info.working_tree_diff;
+            push_diff(&mut line, wt_added, wt_deleted, &widths.working_diff);
+        } else {
+            push_blank(&mut line, widths.working_diff.total);
+        }
     }
 
     // Ahead/behind (commits difference)
     if widths.ahead_behind > 0 {
+        push_gap_if_needed(&mut line);
         if !item.is_primary() {
             if counts.ahead > 0 || counts.behind > 0 {
                 let ahead_behind_text = format!(
@@ -200,32 +212,53 @@ pub fn format_list_item_line(
         } else {
             push_blank(&mut line, widths.ahead_behind);
         }
-        push_gap(&mut line);
+    }
+
+    // States (worktrees only)
+    if widths.states > 0 {
+        push_gap_if_needed(&mut line);
+        if let Some(info) = worktree_info {
+            let states = format_all_states(info);
+            if !states.is_empty() {
+                let states_text = format!("{:width$}", states, width = widths.states);
+                line.push_raw(states_text);
+            } else {
+                push_blank(&mut line, widths.states);
+            }
+        } else {
+            push_blank(&mut line, widths.states);
+        }
+    }
+
+    // Path (worktrees only)
+    if widths.path > 0 {
+        push_gap_if_needed(&mut line);
+        if let Some(info) = worktree_info {
+            let path_str = shorten_path(&info.worktree.path, &layout.common_prefix);
+            let path_text = format!("{:width$}", path_str, width = widths.path);
+            if let Some(style) = text_style {
+                line.push_styled(path_text, style);
+            } else {
+                line.push_raw(path_text);
+            }
+        } else {
+            push_blank(&mut line, widths.path);
+        }
     }
 
     // Branch diff (line diff in commits)
     if widths.branch_diff.total > 0 {
+        push_gap_if_needed(&mut line);
         if !item.is_primary() {
             push_diff(&mut line, branch_diff.0, branch_diff.1, &widths.branch_diff);
         } else {
             push_blank(&mut line, widths.branch_diff.total);
         }
-        push_gap(&mut line);
-    }
-
-    // Working tree diff (worktrees only)
-    if widths.working_diff.total > 0 {
-        if let Some(info) = worktree_info {
-            let (wt_added, wt_deleted) = info.working_tree_diff;
-            push_diff(&mut line, wt_added, wt_deleted, &widths.working_diff);
-        } else {
-            push_blank(&mut line, widths.working_diff.total);
-        }
-        push_gap(&mut line);
     }
 
     // Upstream tracking
     if widths.upstream > 0 {
+        push_gap_if_needed(&mut line);
         if let Some((remote_name, upstream_ahead, upstream_behind)) = upstream.active() {
             let mut upstream_segment = StyledLine::new();
             upstream_segment.push_styled(remote_name, Style::new().dimmed());
@@ -238,47 +271,33 @@ pub fn format_list_item_line(
         } else {
             push_blank(&mut line, widths.upstream);
         }
-        push_gap(&mut line);
     }
 
-    // Commit (short HEAD) - always dimmed (reference info)
-    line.push_styled(short_head, Style::new().dimmed());
-    push_gap(&mut line);
+    // Age (Time)
+    if widths.time > 0 {
+        push_gap_if_needed(&mut line);
+        let time_str = format!(
+            "{:width$}",
+            format_relative_time(commit.timestamp),
+            width = widths.time
+        );
+        line.push_styled(time_str, Style::new().dimmed());
+    }
+
+    // Commit (short HEAD) - dimmed reference info
+    if widths.commit > 0 {
+        push_gap_if_needed(&mut line);
+        line.push_styled(short_head, Style::new().dimmed());
+    }
 
     // Message
     if widths.message > 0 {
+        push_gap_if_needed(&mut line);
         let msg = truncate_at_word_boundary(&commit.commit_message, layout.max_message_len);
         let msg_start = line.width();
         line.push_styled(msg, Style::new().dimmed());
         // Pad to correct visual width (not character count - important for unicode!)
         line.pad_to(msg_start + widths.message);
-        push_gap(&mut line);
-    }
-
-    // States (worktrees only)
-    if widths.states > 0 {
-        if let Some(info) = worktree_info {
-            let states = format_all_states(info);
-            if !states.is_empty() {
-                let states_text = format!("{:width$}", states, width = widths.states);
-                line.push_raw(states_text);
-            } else {
-                push_blank(&mut line, widths.states);
-            }
-        } else {
-            push_blank(&mut line, widths.states);
-        }
-        push_gap(&mut line);
-    }
-
-    // Path (worktrees only)
-    if let Some(info) = worktree_info {
-        let path_str = shorten_path(&info.worktree.path, &layout.common_prefix);
-        if let Some(style) = text_style {
-            line.push_styled(path_str, style);
-        } else {
-            line.push_raw(path_str);
-        }
     }
 
     println!("{}", line.render());
@@ -287,186 +306,7 @@ pub fn format_list_item_line(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::list::layout::{ColumnWidths, LayoutConfig};
-    use crate::commands::list::model::{
-        AheadBehind, BranchDiffTotals, CommitDetails, UpstreamStatus, WorktreeInfo,
-    };
-    use crate::display::shorten_path;
-    use std::path::PathBuf;
-    use worktrunk::styling::StyledLine;
-
-    #[test]
-    fn test_column_alignment_with_all_columns() {
-        // Create test data with all columns populated
-        let info = WorktreeInfo {
-            worktree: worktrunk::git::Worktree {
-                path: PathBuf::from("/test/path"),
-                head: "abc12345".to_string(),
-                branch: Some("test-branch".to_string()),
-                bare: false,
-                detached: false,
-                locked: Some("test lck".to_string()), // "(locked: test lck)" = 18 chars
-                prunable: None,
-            },
-            commit: CommitDetails {
-                timestamp: 0,
-                commit_message: "Test message".to_string(),
-            },
-            counts: AheadBehind {
-                ahead: 3,
-                behind: 2,
-            },
-            working_tree_diff: (100, 50),
-            branch_diff: BranchDiffTotals { diff: (200, 30) },
-            is_primary: false,
-            upstream: UpstreamStatus::from_parts(Some("origin".to_string()), 4, 0),
-            worktree_state: None,
-        };
-
-        let layout = LayoutConfig {
-            widths: ColumnWidths {
-                branch: 11,
-                time: 13,
-                message: 12,
-                ahead_behind: 5,
-                working_diff: crate::commands::list::layout::DiffWidths {
-                    total: 8,
-                    added_digits: 3,
-                    deleted_digits: 2,
-                },
-                branch_diff: crate::commands::list::layout::DiffWidths {
-                    total: 8,
-                    added_digits: 3,
-                    deleted_digits: 2,
-                },
-                upstream: 12,
-                states: 18,
-            },
-            common_prefix: PathBuf::from("/test"),
-            max_message_len: 12,
-        };
-
-        // Build header line manually (mimicking format_header_line logic)
-        let mut header = StyledLine::new();
-        header.push_raw(format!("{:width$}", "Branch", width = layout.widths.branch));
-        header.push_raw("  ");
-        header.push_raw(format!("{:width$}", "Age", width = layout.widths.time));
-        header.push_raw("  ");
-        header.push_raw(format!(
-            "{:width$}",
-            "Cmts",
-            width = layout.widths.ahead_behind
-        ));
-        header.push_raw("  ");
-        header.push_raw(format!(
-            "{:width$}",
-            "Cmt +/-",
-            width = layout.widths.branch_diff.total
-        ));
-        header.push_raw("  ");
-        header.push_raw(format!(
-            "{:width$}",
-            "WT +/-",
-            width = layout.widths.working_diff.total
-        ));
-        header.push_raw("  ");
-        header.push_raw(format!(
-            "{:width$}",
-            "Remote",
-            width = layout.widths.upstream
-        ));
-        header.push_raw("  ");
-        header.push_raw("Commit  ");
-        header.push_raw("  ");
-        header.push_raw(format!(
-            "{:width$}",
-            "Message",
-            width = layout.widths.message
-        ));
-        header.push_raw("  ");
-        header.push_raw(format!("{:width$}", "State", width = layout.widths.states));
-        header.push_raw("  ");
-        header.push_raw("Path");
-
-        // Build data line manually (mimicking format_worktree_line logic)
-        let mut data = StyledLine::new();
-        data.push_raw(format!(
-            "{:width$}",
-            "test-branch",
-            width = layout.widths.branch
-        ));
-        data.push_raw("  ");
-        data.push_raw(format!(
-            "{:width$}",
-            "9 months ago",
-            width = layout.widths.time
-        ));
-        data.push_raw("  ");
-        // Ahead/behind
-        let ahead_behind_text = format!("{:width$}", "↑3 ↓2", width = layout.widths.ahead_behind);
-        data.push_raw(ahead_behind_text);
-        data.push_raw("  ");
-        // Branch diff
-        let mut branch_diff_segment = StyledLine::new();
-        branch_diff_segment.push_raw("+200 -30");
-        branch_diff_segment.pad_to(layout.widths.branch_diff.total);
-        for seg in branch_diff_segment.segments {
-            data.push(seg);
-        }
-        data.push_raw("  ");
-        // Working diff
-        let mut working_diff_segment = StyledLine::new();
-        working_diff_segment.push_raw("+100 -50");
-        working_diff_segment.pad_to(layout.widths.working_diff.total);
-        for seg in working_diff_segment.segments {
-            data.push(seg);
-        }
-        data.push_raw("  ");
-        // Upstream
-        let mut upstream_segment = StyledLine::new();
-        upstream_segment.push_raw("origin ↑4 ↓0");
-        upstream_segment.pad_to(layout.widths.upstream);
-        for seg in upstream_segment.segments {
-            data.push(seg);
-        }
-        data.push_raw("  ");
-        // Commit (fixed 8 chars)
-        data.push_raw("abc12345");
-        data.push_raw("  ");
-        // Message
-        data.push_raw(format!(
-            "{:width$}",
-            "Test message",
-            width = layout.widths.message
-        ));
-        data.push_raw("  ");
-        // State
-        let states = format_all_states(&info);
-        data.push_raw(format!("{:width$}", states, width = layout.widths.states));
-        data.push_raw("  ");
-        // Path
-        data.push_raw(shorten_path(&info.worktree.path, &layout.common_prefix));
-
-        // Verify both lines have columns at the same positions
-        // We'll check this by verifying specific column start positions
-        let header_str = header.render();
-        let data_str = data.render();
-
-        // Remove ANSI codes for position checking (our test data doesn't have styles anyway)
-        assert!(header_str.contains("Branch"));
-        assert!(data_str.contains("test-branch"));
-
-        // The key test: both lines should have the same visual width up to "Path" column
-        // (Path is variable width, so we only check up to there)
-        let header_width_without_path = header.width() - "Path".len();
-        let data_width_without_path =
-            data.width() - shorten_path(&info.worktree.path, &layout.common_prefix).len();
-
-        assert_eq!(
-            header_width_without_path, data_width_without_path,
-            "Header and data rows should have same width before Path column"
-        );
-    }
+    // Note: Column alignment is tested via integration tests which capture actual output
 
     #[test]
     fn test_format_diff_column_pads_to_total_width() {

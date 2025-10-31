@@ -6,12 +6,29 @@ use super::model::ListItem;
 
 /// Helper: Try to allocate space for a column. Returns the allocated width if successful.
 /// Updates `remaining` by subtracting the allocated width + spacing.
-fn try_allocate(remaining: &mut usize, ideal_width: usize, spacing: usize) -> usize {
-    if ideal_width == 0 || *remaining < ideal_width + spacing {
+/// If is_first is true, doesn't require spacing before the column.
+///
+/// The spacing is consumed from the budget (subtracted from `remaining`) but not returned
+/// as part of the column's width, since the spacing appears before the column content.
+fn try_allocate(
+    remaining: &mut usize,
+    ideal_width: usize,
+    spacing: usize,
+    is_first: bool,
+) -> usize {
+    if ideal_width == 0 {
         return 0;
     }
-    *remaining = remaining.saturating_sub(ideal_width + spacing);
-    ideal_width
+    let required = if is_first {
+        ideal_width
+    } else {
+        ideal_width + spacing // Gap before column + column content
+    };
+    if *remaining < required {
+        return 0;
+    }
+    *remaining = remaining.saturating_sub(required);
+    ideal_width // Return just the column width
 }
 
 /// Width information for diff columns (e.g., "+128 -147")
@@ -41,6 +58,8 @@ pub struct ColumnWidths {
     pub branch_diff: DiffWidths,
     pub upstream: usize,
     pub states: usize,
+    pub commit: usize,
+    pub path: usize,
 }
 
 pub struct LayoutConfig {
@@ -175,6 +194,8 @@ pub fn calculate_column_widths(items: &[ListItem]) -> ColumnWidths {
         },
         upstream: final_upstream,
         states: final_states,
+        commit: 8, // Fixed width for short commit hash
+        path: 0,   // Path width calculated later in responsive layout
     }
 }
 
@@ -202,35 +223,27 @@ pub fn calculate_responsive_layout(items: &[ListItem]) -> LayoutConfig {
         .max()
         .unwrap_or(20); // fallback to 20 if no paths
 
-    // Essential columns (always shown):
-    // - branch: variable
-    // - short HEAD: 8 chars
-    // - path: variable (calculated above)
-    // - spacing: 2 chars between columns
-
     let spacing = 2;
-    let short_head = 8;
-
-    // Calculate base width needed
-    let base_width = ideal_widths.branch + spacing + short_head + spacing + max_path_width;
-
-    // Available width for optional columns
-    let available = terminal_width.saturating_sub(base_width);
+    let commit_width = 8; // Short commit hash
 
     // Priority order for columns (from high to low):
-    // 1. time (15-20 chars)
-    // 2. message (20-50 chars, flexible)
-    // 3. ahead_behind - commits difference
-    // 4. working_diff - line diff in working tree
-    // 5. branch_diff - line diff in commits
-    // 6. upstream
-    // 7. states
+    // 1. branch - identity (what is this?)
+    // 2. working_diff - uncommitted changes (CRITICAL: do I need to commit?)
+    // 3. ahead_behind - commits difference (CRITICAL: am I ahead/behind?)
+    // 4. states - special states like [rebasing] (rare but urgent when present)
+    // 5. path - location (where is this?)
+    // 6. branch_diff - line diff in commits (work volume understanding)
+    // 7. upstream - tracking configuration (sync context)
+    // 8. time - recency (nice-to-have context)
+    // 9. commit - hash (reference info, rarely needed)
+    // 10. message - description (nice-to-have, space-hungry)
     //
     // Each column is shown if it has any data (ideal_width > 0) and fits in remaining space.
+    // All columns participate in priority allocation - nothing is "essential".
 
-    let mut remaining = available;
+    let mut remaining = terminal_width;
     let mut widths = ColumnWidths {
-        branch: ideal_widths.branch,
+        branch: 0,
         time: 0,
         message: 0,
         ahead_behind: 0,
@@ -238,63 +251,78 @@ pub fn calculate_responsive_layout(items: &[ListItem]) -> LayoutConfig {
         branch_diff: DiffWidths::zero(),
         upstream: 0,
         states: 0,
+        commit: 0,
+        path: 0,
     };
 
-    // Time column (high priority, ~15 chars)
-    widths.time = try_allocate(&mut remaining, ideal_widths.time, spacing);
+    // Branch column (highest priority - identity)
+    widths.branch = try_allocate(&mut remaining, ideal_widths.branch, spacing, true);
 
-    // Message column (flexible, 20-50 chars)
-    let max_message_len = if remaining >= 50 + spacing {
-        remaining = remaining.saturating_sub(50 + spacing);
-        50
-    } else if remaining >= 30 + spacing {
-        let msg_len = remaining.saturating_sub(spacing).min(ideal_widths.message);
-        remaining = remaining.saturating_sub(msg_len + spacing);
-        msg_len
-    } else if remaining >= 20 + spacing {
-        let msg_len = 20;
-        remaining = remaining.saturating_sub(msg_len + spacing);
-        msg_len
-    } else {
-        0
-    };
-
-    if max_message_len > 0 {
-        widths.message = max_message_len.min(ideal_widths.message);
-    }
-
-    // Ahead/behind column (if it has data and fits)
-    widths.ahead_behind = try_allocate(&mut remaining, ideal_widths.ahead_behind, spacing);
-
-    // Working diff column (if it has data and fits)
-    let allocated_width = try_allocate(&mut remaining, ideal_widths.working_diff.total, spacing);
+    // Working diff column (critical - uncommitted changes)
+    let allocated_width = try_allocate(
+        &mut remaining,
+        ideal_widths.working_diff.total,
+        spacing,
+        false,
+    );
     if allocated_width > 0 {
         widths.working_diff = ideal_widths.working_diff;
     }
 
-    // Branch diff column (if it has data and fits)
-    let allocated_width = try_allocate(&mut remaining, ideal_widths.branch_diff.total, spacing);
+    // Ahead/behind column (critical sync status)
+    widths.ahead_behind = try_allocate(&mut remaining, ideal_widths.ahead_behind, spacing, false);
+
+    // States column (rare but urgent when present)
+    widths.states = try_allocate(&mut remaining, ideal_widths.states, spacing, false);
+
+    // Path column (location - important for navigation)
+    widths.path = try_allocate(&mut remaining, max_path_width, spacing, false);
+
+    // Branch diff column (work volume)
+    let allocated_width = try_allocate(
+        &mut remaining,
+        ideal_widths.branch_diff.total,
+        spacing,
+        false,
+    );
     if allocated_width > 0 {
         widths.branch_diff = ideal_widths.branch_diff;
     }
 
-    // Upstream column (if it has data and fits)
-    widths.upstream = try_allocate(&mut remaining, ideal_widths.upstream, spacing);
+    // Upstream column (sync configuration)
+    widths.upstream = try_allocate(&mut remaining, ideal_widths.upstream, spacing, false);
 
-    // States column (if it has data and fits)
-    widths.states = try_allocate(&mut remaining, ideal_widths.states, spacing);
+    // Time column (contextual information)
+    widths.time = try_allocate(&mut remaining, ideal_widths.time, spacing, false);
 
-    // Expand message column with any leftover space (up to 100 chars total)
-    let final_max_message_len = if widths.message > 0 && remaining > 0 {
-        let max_expansion = 100_usize.saturating_sub(max_message_len);
-        let expansion = remaining.saturating_sub(spacing).min(max_expansion);
-        let new_len = max_message_len + expansion;
-        let allocated_len = new_len.min(ideal_widths.message);
-        widths.message = allocated_len;
-        allocated_len // Return the actual allocated width, not new_len
+    // Commit column (reference hash - rarely needed)
+    widths.commit = try_allocate(&mut remaining, commit_width, spacing, false);
+
+    // Message column (flexible width: min 20, preferred 50, max 100)
+    const MIN_MESSAGE: usize = 20;
+    const PREFERRED_MESSAGE: usize = 50;
+    const MAX_MESSAGE: usize = 100;
+
+    let message_width = if remaining >= PREFERRED_MESSAGE + spacing {
+        PREFERRED_MESSAGE
+    } else if remaining >= MIN_MESSAGE + spacing {
+        remaining.saturating_sub(spacing).min(ideal_widths.message)
     } else {
-        max_message_len
+        0
     };
+
+    if message_width > 0 {
+        remaining = remaining.saturating_sub(message_width + spacing);
+        widths.message = message_width.min(ideal_widths.message);
+
+        // Expand with any leftover space (up to MAX_MESSAGE total)
+        if remaining > 0 {
+            let expansion = remaining.min(MAX_MESSAGE.saturating_sub(widths.message));
+            widths.message += expansion;
+        }
+    }
+
+    let final_max_message_len = widths.message;
 
     LayoutConfig {
         widths,
