@@ -8,8 +8,83 @@ mod spacing_test;
 
 use layout::calculate_responsive_layout;
 use model::{ListData, ListItem, gather_list_data};
-use render::{format_header_line, format_list_item_line};
+use render::{
+    format_ahead_behind_plain, format_ci_status_plain, format_diff_plain, format_header_line,
+    format_list_item_line,
+};
 use worktrunk::git::{GitError, Repository};
+
+/// Helper to enrich common display fields shared between worktrees and branches
+fn enrich_common_fields(
+    counts: &model::AheadBehind,
+    branch_diff: &model::BranchDiffTotals,
+    upstream: &model::UpstreamStatus,
+    pr_status: &Option<ci_status::PrStatus>,
+) -> (
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+) {
+    let commits_display = format_ahead_behind_plain(counts.ahead, counts.behind);
+
+    let (added, deleted) = branch_diff.diff;
+    let branch_diff_display = format_diff_plain(added, deleted);
+
+    let upstream_display = upstream
+        .active()
+        .and_then(|(_, upstream_ahead, upstream_behind)| {
+            format_ahead_behind_plain(upstream_ahead, upstream_behind)
+        });
+
+    let ci_status_display = pr_status.as_ref().map(format_ci_status_plain);
+
+    (
+        commits_display,
+        branch_diff_display,
+        upstream_display,
+        ci_status_display,
+    )
+}
+
+/// Enrich a ListItem with display fields for json-pretty format
+fn enrich_with_display_fields(mut item: ListItem) -> ListItem {
+    match &mut item {
+        ListItem::Worktree(info) => {
+            let (commits_display, branch_diff_display, upstream_display, ci_status_display) =
+                enrich_common_fields(
+                    &info.counts,
+                    &info.branch_diff,
+                    &info.upstream,
+                    &info.pr_status,
+                );
+
+            info.commits_display = commits_display;
+            info.branch_diff_display = branch_diff_display;
+            info.upstream_display = upstream_display;
+            info.ci_status_display = ci_status_display;
+
+            // Working tree specific field
+            let (added, deleted) = info.working_tree_diff;
+            info.working_diff_display = format_diff_plain(added, deleted);
+        }
+        ListItem::Branch(info) => {
+            let (commits_display, branch_diff_display, upstream_display, ci_status_display) =
+                enrich_common_fields(
+                    &info.counts,
+                    &info.branch_diff,
+                    &info.upstream,
+                    &info.pr_status,
+                );
+
+            info.commits_display = commits_display;
+            info.branch_diff_display = branch_diff_display;
+            info.upstream_display = upstream_display;
+            info.ci_status_display = ci_status_display;
+        }
+    }
+    item
+}
 
 pub fn handle_list(
     format: crate::OutputFormat,
@@ -27,7 +102,10 @@ pub fn handle_list(
 
     match format {
         crate::OutputFormat::Json => {
-            let json = serde_json::to_string_pretty(&items).map_err(|e| {
+            let enriched_items: Vec<_> =
+                items.into_iter().map(enrich_with_display_fields).collect();
+
+            let json = serde_json::to_string_pretty(&enriched_items).map_err(|e| {
                 GitError::CommandFailed(format!("Failed to serialize to JSON: {}", e))
             })?;
             println!("{}", json);

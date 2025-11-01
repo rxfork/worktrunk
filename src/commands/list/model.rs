@@ -20,6 +20,18 @@ pub struct WorktreeInfo {
     pub upstream: UpstreamStatus,
     pub worktree_state: Option<String>,
     pub pr_status: Option<PrStatus>,
+
+    // Display fields for json-pretty format (with ANSI colors)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub commits_display: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub working_diff_display: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub branch_diff_display: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub upstream_display: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ci_status_display: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -35,6 +47,16 @@ pub struct BranchInfo {
     #[serde(flatten)]
     pub upstream: UpstreamStatus,
     pub pr_status: Option<PrStatus>,
+
+    // Display fields for json-pretty format (with ANSI colors)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub commits_display: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub branch_diff_display: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub upstream_display: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ci_status_display: Option<String>,
 }
 
 #[derive(serde::Serialize, Clone)]
@@ -252,6 +274,10 @@ impl BranchInfo {
             branch_diff,
             upstream,
             pr_status,
+            commits_display: None,
+            branch_diff_display: None,
+            upstream_display: None,
+            ci_status_display: None,
         })
     }
 }
@@ -295,6 +321,11 @@ impl WorktreeInfo {
             upstream,
             worktree_state,
             pr_status,
+            commits_display: None,
+            working_diff_display: None,
+            branch_diff_display: None,
+            upstream_display: None,
+            ci_status_display: None,
         })
     }
 }

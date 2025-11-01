@@ -1,0 +1,121 @@
+---
+source: tests/integration_tests/list.rs
+info:
+  program: wt
+  args:
+    - list
+    - "--format=json"
+  env:
+    CLICOLOR_FORCE: "1"
+    COLUMNS: "150"
+    GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
+    GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
+    GIT_CONFIG_GLOBAL: /dev/null
+    GIT_CONFIG_SYSTEM: /dev/null
+    GIT_EDITOR: ""
+    LANG: C
+    LC_ALL: C
+    SOURCE_DATE_EPOCH: "1761609600"
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmp2EXKU6/test-config.toml
+---
+success: true
+exit_code: 0
+----- stdout -----
+[
+  {
+    "type": "worktree",
+    "worktree": {
+      "path": "[REPO]",
+      "head": "[SHA]",
+      "branch": "main",
+      "bare": false,
+      "detached": false,
+      "locked": null,
+      "prunable": null
+    },
+    "timestamp": 0,
+    "commit_message": "Main commit 2",
+    "ahead": 0,
+    "behind": 0,
+    "working_tree_diff": [
+      0,
+      0
+    ],
+    "branch_diff": [
+      0,
+      0
+    ],
+    "is_primary": true,
+    "upstream_remote": null,
+    "upstream_ahead": 0,
+    "upstream_behind": 0,
+    "worktree_state": null,
+    "pr_status": null
+  },
+  {
+    "type": "worktree",
+    "worktree": {
+      "path": "[WORKTREE_FEATURE_AHEAD]",
+      "head": "[SHA]",
+      "branch": "feature-ahead",
+      "bare": false,
+      "detached": false,
+      "locked": null,
+      "prunable": null
+    },
+    "timestamp": 0,
+    "commit_message": "Feature commit 2",
+    "ahead": 2,
+    "behind": 2,
+    "working_tree_diff": [
+      1,
+      1
+    ],
+    "branch_diff": [
+      1,
+      0
+    ],
+    "is_primary": false,
+    "upstream_remote": null,
+    "upstream_ahead": 0,
+    "upstream_behind": 0,
+    "worktree_state": null,
+    "pr_status": null,
+    "commits_display": "[GREEN]↑2[RESET] [DIM][RED]↓2[RESET]",
+    "working_diff_display": "[GREEN]+1[RESET] [RED]-1[RESET]",
+    "branch_diff_display": "[GREEN]+1[RESET]"
+  },
+  {
+    "type": "worktree",
+    "worktree": {
+      "path": "[WORKTREE_FEATURE_BEHIND]",
+      "head": "[SHA]",
+      "branch": "feature-behind",
+      "bare": false,
+      "detached": false,
+      "locked": null,
+      "prunable": null
+    },
+    "timestamp": 0,
+    "commit_message": "Initial commit on main",
+    "ahead": 0,
+    "behind": 2,
+    "working_tree_diff": [
+      0,
+      0
+    ],
+    "branch_diff": [
+      0,
+      0
+    ],
+    "is_primary": false,
+    "upstream_remote": null,
+    "upstream_ahead": 0,
+    "upstream_behind": 0,
+    "worktree_state": null,
+    "pr_status": null,
+    "commits_display": "[DIM][RED]↓2[RESET]"
+  }
+]
+
+----- stderr -----

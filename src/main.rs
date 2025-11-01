@@ -22,7 +22,7 @@ use output::{handle_remove_output, handle_switch_output};
 pub enum OutputFormat {
     /// Human-readable table format
     Table,
-    /// JSON format
+    /// JSON format with colored unicode display fields
     Json,
 }
 

@@ -6,6 +6,80 @@ use super::ci_status::{CiStatus, PrStatus};
 use super::layout::{DiffWidths, LayoutConfig};
 use super::model::{ListItem, WorktreeInfo};
 
+/// Format ahead/behind counts as plain text with ANSI colors (for json-pretty)
+pub fn format_ahead_behind_plain(ahead: usize, behind: usize) -> Option<String> {
+    match (ahead, behind) {
+        (0, 0) => None,
+        (a, 0) => Some(format!("{}↑{}{}", ADDITION, a, ADDITION.render_reset())),
+        (0, b) => {
+            let dim_deletion = DELETION.dimmed();
+            Some(format!(
+                "{}↓{}{}",
+                dim_deletion,
+                b,
+                dim_deletion.render_reset()
+            ))
+        }
+        (a, b) => {
+            let dim_deletion = DELETION.dimmed();
+            Some(format!(
+                "{}↑{}{} {}↓{}{}",
+                ADDITION,
+                a,
+                ADDITION.render_reset(),
+                dim_deletion,
+                b,
+                dim_deletion.render_reset()
+            ))
+        }
+    }
+}
+
+/// Format diff values as plain text with ANSI colors (for json-pretty)
+pub fn format_diff_plain(added: usize, deleted: usize) -> Option<String> {
+    match (added, deleted) {
+        (0, 0) => None,
+        (a, 0) => Some(format!("{}+{}{}", ADDITION, a, ADDITION.render_reset())),
+        (0, d) => Some(format!("{}-{}{}", DELETION, d, DELETION.render_reset())),
+        (a, d) => Some(format!(
+            "{}+{}{} {}-{}{}",
+            ADDITION,
+            a,
+            ADDITION.render_reset(),
+            DELETION,
+            d,
+            DELETION.render_reset()
+        )),
+    }
+}
+
+/// Format CI status as plain text with ANSI colors (for json-pretty)
+pub fn format_ci_status_plain(pr_status: &PrStatus) -> String {
+    let color = match pr_status.ci_status {
+        CiStatus::Passed => AnsiColor::Green,
+        CiStatus::Running => AnsiColor::Blue,
+        CiStatus::Failed => AnsiColor::Red,
+        CiStatus::Conflicts => AnsiColor::Yellow,
+        CiStatus::NoCI => AnsiColor::BrightBlack,
+    };
+
+    let style = if pr_status.is_stale {
+        Style::new().fg_color(Some(Color::Ansi(color))).dimmed()
+    } else {
+        Style::new().fg_color(Some(Color::Ansi(color)))
+    };
+
+    let status_str = match pr_status.ci_status {
+        CiStatus::Passed => "passed",
+        CiStatus::Running => "running",
+        CiStatus::Failed => "failed",
+        CiStatus::Conflicts => "conflicts",
+        CiStatus::NoCI => "no-ci",
+    };
+
+    format!("{}● {}{}", style, status_str, style.render_reset())
+}
+
 /// Format arrow-based counts (e.g., "↑6 ↓1") with alignment
 /// Down arrows always appear at the same column position by reserving space for ahead part
 fn format_arrow_column(
@@ -426,6 +500,7 @@ pub fn format_list_item_line(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use worktrunk::styling::StyledLine;
 
     #[test]
     fn test_format_diff_column_pads_to_total_width() {

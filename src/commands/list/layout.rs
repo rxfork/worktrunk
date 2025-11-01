@@ -404,6 +404,11 @@ mod tests {
             upstream: UpstreamStatus::from_parts(Some("origin".to_string()), 4, 0),
             worktree_state: None,
             pr_status: None,
+            commits_display: None,
+            working_diff_display: None,
+            branch_diff_display: None,
+            upstream_display: None,
+            ci_status_display: None,
         };
 
         let widths = calculate_column_widths(&[super::ListItem::Worktree(info1)]);

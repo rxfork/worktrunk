@@ -53,6 +53,12 @@ fn snapshot_list_json(test_name: &str, repo: &TestRepo) {
     // Normalize timestamps to fixed value
     settings.add_filter(r#""timestamp": \d+"#, r#""timestamp": 0"#);
 
+    // Normalize ANSI escape codes to readable placeholders
+    settings.add_filter(r"\\u001b\[32m", "[GREEN]"); // ADDITION color
+    settings.add_filter(r"\\u001b\[31m", "[RED]"); // DELETION color
+    settings.add_filter(r"\\u001b\[2m", "[DIM]"); // Dimming
+    settings.add_filter(r"\\u001b\[0m", "[RESET]"); // Style reset
+
     // Normalize Windows paths to Unix style
     settings.add_filter(r"\\\\", "/");
 
@@ -266,4 +272,54 @@ fn test_list_with_branches_flag_only_branches() {
     create_branch(&repo, "branch-gamma");
 
     snapshot_list_with_branches("with_branches_flag_only_branches", &repo);
+}
+
+#[test]
+fn test_list_json_with_display_fields() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit on main");
+
+    // Create feature branch with commits (ahead of main)
+    repo.add_worktree("feature-ahead", "feature-ahead");
+
+    // Make commits in the feature worktree
+    let feature_path = repo.worktree_path("feature-ahead");
+    std::fs::write(feature_path.join("feature.txt"), "feature content")
+        .expect("Failed to write file");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "."])
+        .current_dir(feature_path)
+        .output()
+        .expect("Failed to git add");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "Feature commit 1"])
+        .current_dir(feature_path)
+        .output()
+        .expect("Failed to commit");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "--allow-empty", "-m", "Feature commit 2"])
+        .current_dir(feature_path)
+        .output()
+        .expect("Failed to commit");
+
+    // Add uncommitted changes to show working_diff_display
+    std::fs::write(feature_path.join("uncommitted.txt"), "uncommitted")
+        .expect("Failed to write file");
+    std::fs::write(feature_path.join("feature.txt"), "modified content")
+        .expect("Failed to write file");
+
+    // Create another feature that will be behind after main advances
+    repo.add_worktree("feature-behind", "feature-behind");
+
+    // Make more commits on main (so feature-behind is behind)
+    repo.commit("Main commit 1");
+    repo.commit("Main commit 2");
+
+    snapshot_list_json("json_with_display_fields", &repo);
 }
