@@ -49,6 +49,10 @@ fn format_arrow_column(
             // Reserve full space when behind is zero
             segment.push_raw(" ".repeat(1 + widths.deleted_digits));
         }
+
+        // Pad to total width if header is wider than data
+        // (e.g., "Commits" header = 7, but data "↓50" = 5)
+        segment.pad_to(widths.total);
     } else {
         segment.push_raw(" ".repeat(widths.total));
     }
@@ -614,5 +618,39 @@ mod tests {
                 "Arrow column ({ahead}, {behind}) [{description}] should always be width 7"
             );
         }
+    }
+
+    #[test]
+    fn test_arrow_column_with_header_wider_than_data() {
+        // Reproduces the actual bug: when header is wider than data
+        // - No ahead values (max_ahead_digits = 0)
+        // - Max behind is 50 (max_behind_digits = 2)
+        // - data_width = 1 + 0 + 1 + 1 + 2 = 5
+        // - header "Commits" = 7
+        // - total = max(5, 7) = 7
+        use super::super::layout::DiffWidths;
+        use super::format_arrow_column;
+        use worktrunk::styling::{ADDITION, DELETION};
+
+        let widths = DiffWidths {
+            total: 7,          // To fit "Commits" header
+            added_digits: 0,   // No ahead values
+            deleted_digits: 2, // Max behind is 50
+        };
+
+        let dim_deletion = DELETION.dimmed();
+
+        // Empty column should be 7 spaces
+        let empty = format_arrow_column(0, 0, &widths, ADDITION, dim_deletion);
+        assert_eq!(empty.width(), 7, "Empty column should be 7 spaces");
+
+        // Column with only behind should also be 7!
+        let behind_only = format_arrow_column(0, 50, &widths, ADDITION, dim_deletion);
+        assert_eq!(
+            behind_only.width(),
+            7,
+            "Column with behind=50 should be 7 chars (currently {} - THIS IS THE BUG)",
+            behind_only.width()
+        );
     }
 }
