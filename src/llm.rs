@@ -496,4 +496,142 @@ mod tests {
             "Repo: myrepo\nBranch: feature\nTarget: main\nB\nA\n"
         );
     }
+
+    #[test]
+    fn test_build_commit_prompt_with_sophisticated_jinja() {
+        // Test advanced jinja features: filters, length, conditionals, whitespace control
+        let config = CommitGenerationConfig {
+            command: None,
+            args: vec![],
+            template: Some(
+                r#"=== {{ repo | upper }} ===
+Branch: {{ branch }}
+{%- if recent_commits %}
+Commits: {{ recent_commits | length }}
+{%- for c in recent_commits %}
+  - {{ loop.index }}. {{ c }}
+{%- endfor %}
+{%- else %}
+No recent commits
+{%- endif %}
+
+Diff follows:
+{{ git_diff }}"#
+                    .to_string(),
+            ),
+            template_file: None,
+            squash_template: None,
+            squash_template_file: None,
+        };
+        let commits = vec![
+            "feat: add auth".to_string(),
+            "fix: bug".to_string(),
+            "docs: update".to_string(),
+        ];
+        let result = build_commit_prompt(
+            &config,
+            "my diff content",
+            "feature-x",
+            Some(&commits),
+            "myapp",
+        );
+        assert!(result.is_ok());
+        let prompt = result.unwrap();
+
+        // Verify filters work (upper)
+        assert!(prompt.contains("=== MYAPP ==="));
+
+        // Verify length filter
+        assert!(prompt.contains("Commits: 3"));
+
+        // Verify loop.index
+        assert!(prompt.contains("  - 1. feat: add auth"));
+        assert!(prompt.contains("  - 2. fix: bug"));
+        assert!(prompt.contains("  - 3. docs: update"));
+
+        // Verify whitespace control (no blank lines after "Branch:")
+        assert!(prompt.contains("Branch: feature-x\nCommits: 3"));
+
+        // Verify diff is included
+        assert!(prompt.contains("Diff follows:\nmy diff content"));
+    }
+
+    #[test]
+    fn test_build_commit_prompt_with_sophisticated_jinja_no_commits() {
+        // Test the else branch of conditionals
+        let config = CommitGenerationConfig {
+            command: None,
+            args: vec![],
+            template: Some(
+                r#"Repo: {{ repo | upper }}
+{%- if recent_commits %}
+Has commits: {{ recent_commits | length }}
+{%- else %}
+No recent commits
+{%- endif %}"#
+                    .to_string(),
+            ),
+            template_file: None,
+            squash_template: None,
+            squash_template_file: None,
+        };
+        let result = build_commit_prompt(&config, "diff", "main", None, "test");
+        assert!(result.is_ok());
+        let prompt = result.unwrap();
+
+        assert!(prompt.contains("Repo: TEST"));
+        assert!(prompt.contains("No recent commits"));
+        assert!(!prompt.contains("Has commits"));
+    }
+
+    #[test]
+    fn test_build_squash_prompt_with_sophisticated_jinja() {
+        // Test sophisticated jinja in squash templates
+        let config = CommitGenerationConfig {
+            command: None,
+            args: vec![],
+            template: None,
+            template_file: None,
+            squash_template: Some(
+                r#"Squashing {{ commits | length }} commit(s) from {{ branch }} to {{ target_branch }}
+{% if commits | length > 1 -%}
+Multiple commits detected:
+{%- for c in commits %}
+  {{ loop.index }}/{{ loop.length }}: {{ c }}
+{%- endfor %}
+{%- else -%}
+Single commit: {{ commits[0] }}
+{%- endif %}"#
+                    .to_string(),
+            ),
+            squash_template_file: None,
+        };
+
+        // Test with multiple commits
+        let commits = vec![
+            "commit A".to_string(),
+            "commit B".to_string(),
+            "commit C".to_string(),
+        ];
+        let result = build_squash_prompt(&config, "main", &commits, "feature", "repo");
+        assert!(result.is_ok());
+        let prompt = result.unwrap();
+
+        // Commits are reversed for chronological order, so we expect C, B, A
+        assert!(prompt.contains("Squashing 3 commit(s) from feature to main"));
+        assert!(prompt.contains("Multiple commits detected:"));
+        assert!(prompt.contains("1/3: commit C")); // First in chronological order
+        assert!(prompt.contains("2/3: commit B"));
+        assert!(prompt.contains("3/3: commit A")); // Last in chronological order
+
+        // Test with single commit
+        let single_commit = vec!["solo commit".to_string()];
+        let result = build_squash_prompt(&config, "main", &single_commit, "feature", "repo");
+        assert!(result.is_ok());
+        let prompt = result.unwrap();
+
+        assert!(prompt.contains("Squashing 1 commit(s)"));
+        assert!(prompt.contains("Single commit: solo commit"));
+        assert!(!prompt.contains("Multiple commits detected"));
+    }
 }
