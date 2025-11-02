@@ -371,9 +371,9 @@ pub fn format_list_item_line(
         }
     });
 
-    // Override styling if removable (dim the row)
+    // Override styling if removable (dim the row, preserving existing color)
     let text_style = if removable {
-        Some(Style::new().dimmed())
+        Some(text_style.unwrap_or_default().dimmed())
     } else {
         text_style
     };
