@@ -16,7 +16,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpb12hgn/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpYlKodK/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -337,16 +337,6 @@ _arguments "${_arguments_options[@]}" : \
 '*::worktrees -- Worktree names or branches to remove (defaults to current worktree if none specified):_default' \
 && ret=0
 ;;
-(push)
-_arguments "${_arguments_options[@]}" : \
-'--allow-merge-commits[Allow pushing merge commits (non-linear history)]' \
-'-v[Enable verbose output (show git commands and debug info)]' \
-'--verbose[Enable verbose output (show git commands and debug info)]' \
-'-h[Print help]' \
-'--help[Print help]' \
-'::target -- Target branch (defaults to default branch):_default' \
-&& ret=0
-;;
 (merge)
 _arguments "${_arguments_options[@]}" : \
 '--no-squash[Disable squashing commits (by default, commits are squashed into one before merging)]' \
@@ -395,7 +385,6 @@ _wt_commands() {
 'list:List all worktrees' \
 'switch:Switch to a worktree' \
 'remove:Finish current worktree, returning to primary if current' \
-'push:Push changes between worktrees' \
 'merge:Merge worktree into target branch' \
 'completion:Generate shell completion script (deprecated - use init instead)' \
 'complete:Internal completion helper (hidden)' \
@@ -498,11 +487,6 @@ _wt__list_commands() {
 _wt__merge_commands() {
     local commands; commands=()
     _describe -t commands 'wt merge commands' commands "$@"
-}
-(( $+functions[_wt__push_commands] )) ||
-_wt__push_commands() {
-    local commands; commands=()
-    _describe -t commands 'wt push commands' commands "$@"
 }
 (( $+functions[_wt__remove_commands] )) ||
 _wt__remove_commands() {

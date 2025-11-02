@@ -15,7 +15,7 @@ use commands::{
     ConfigAction, Shell, handle_complete, handle_completion, handle_config_help,
     handle_config_init, handle_config_list, handle_config_refresh_cache, handle_configure_shell,
     handle_dev_commit, handle_dev_push, handle_dev_rebase, handle_dev_run_hook, handle_dev_squash,
-    handle_init, handle_list, handle_merge, handle_push, handle_remove, handle_switch,
+    handle_init, handle_list, handle_merge, handle_remove, handle_switch,
 };
 use output::{handle_remove_output, handle_switch_output};
 
@@ -202,16 +202,6 @@ enum Commands {
     Remove {
         /// Worktree names or branches to remove (defaults to current worktree if none specified)
         worktrees: Vec<String>,
-    },
-
-    /// Push changes between worktrees
-    Push {
-        /// Target branch (defaults to default branch)
-        target: Option<String>,
-
-        /// Allow pushing merge commits (non-linear history)
-        #[arg(long)]
-        allow_merge_commits: bool,
     },
 
     /// Merge worktree into target branch
@@ -534,10 +524,6 @@ fn main() {
                 })()
             }
         }
-        Commands::Push {
-            target,
-            allow_merge_commits,
-        } => handle_push(target.as_deref(), allow_merge_commits, "Pushed to"),
         Commands::Merge {
             target,
             squash_enabled,

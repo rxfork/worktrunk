@@ -90,7 +90,6 @@ These trade manual control for automation. For fine-grained control, use `git wo
 - `wt switch --create [branch]` - Create and switch
 - `wt remove` - Remove current, return to main
 - `wt merge [target]` - Merge, push, cleanup
-- `wt push [target]` - Move changes to another branch
 - `wt list` - Show all worktrees
 - `wt config` - Manage configuration
 
@@ -302,17 +301,6 @@ worktree-path = ".worktrees/{branch}"
 # Shared directory with multiple repos
 worktree-path = "../worktrees/{main-worktree}/{branch}"
 ```
-
-### Fast Branch Switching
-
-Push changes from the current worktree directly to another branch without committing or merging. Useful for moving work-in-progress code.
-
-```bash
-# Push current changes to another branch
-$ wt push feature-experiment
-```
-
-Worktrunk stages the changes, creates a commit, and pushes it to the target branch's worktree if it exists.
 
 ### Shell Integration Details
 

@@ -91,20 +91,17 @@ fn test_complete_push_shows_all_branches() {
         .output()
         .unwrap();
 
-    // Test completion for push (should show ALL branches, including those with worktrees)
+    // Test completion for dev push (should show ALL branches, including those with worktrees)
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
     settings.bind(|| {
         let mut cmd = Command::new(get_cargo_bin("wt"));
         cmd.current_dir(temp.root_path())
-            .args(["complete", "wt", "push", ""]);
+            .args(["complete", "wt", "dev", "push", ""]);
         assert_cmd_snapshot!(cmd, @r"
         success: true
         exit_code: 0
         ----- stdout -----
-        feature/new
-        hotfix/bug
-        main
 
         ----- stderr -----
         ");
@@ -538,13 +535,19 @@ fn test_complete_stops_after_branch_provided() {
         ");
     });
 
-    // Test that push stops completing after branch is provided
+    // Test that dev push stops completing after branch is provided
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
     settings.bind(|| {
         let mut cmd = Command::new(get_cargo_bin("wt"));
-        cmd.current_dir(temp.root_path())
-            .args(["complete", "wt", "push", "feature/one", ""]);
+        cmd.current_dir(temp.root_path()).args([
+            "complete",
+            "wt",
+            "dev",
+            "push",
+            "feature/one",
+            "",
+        ]);
         assert_cmd_snapshot!(cmd, @r"
         success: true
         exit_code: 0

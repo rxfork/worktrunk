@@ -6,7 +6,10 @@ use std::process::Command;
 fn snapshot_push(test_name: &str, repo: &TestRepo, args: &[&str], cwd: Option<&std::path::Path>) {
     let settings = setup_snapshot_settings(repo);
     settings.bind(|| {
-        let mut cmd = make_snapshot_cmd(repo, "push", args, cwd);
+        // Prepend "push" to args for `wt dev push` command
+        let mut dev_args = vec!["push"];
+        dev_args.extend_from_slice(args);
+        let mut cmd = make_snapshot_cmd(repo, "dev", &dev_args, cwd);
         assert_cmd_snapshot!(test_name, cmd);
     });
 }

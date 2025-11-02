@@ -16,7 +16,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmp4mPiBI/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpo3IbDR/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -178,9 +178,6 @@ _wt() {
             wt,merge)
                 cmd="wt__merge"
                 ;;
-            wt,push)
-                cmd="wt__push"
-                ;;
             wt,remove)
                 cmd="wt__remove"
                 ;;
@@ -224,7 +221,7 @@ _wt() {
 
     case "${cmd}" in
         wt)
-            opts="-v -h -V --verbose --help --version init config dev list switch remove push merge completion complete"
+            opts="-v -h -V --verbose --help --version init config dev list switch remove merge completion complete"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -471,20 +468,6 @@ _wt() {
             ;;
         wt__merge)
             opts="-k -f -v -h --no-squash --keep --no-verify --force --tracked-only --verbose --help [TARGET]"
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        wt__push)
-            opts="-v -h --allow-merge-commits --verbose --help [TARGET]"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
