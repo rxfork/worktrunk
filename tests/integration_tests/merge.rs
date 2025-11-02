@@ -1968,7 +1968,7 @@ fn test_merge_no_commit_with_clean_tree() {
         success: true
         exit_code: 0
         ----- stdout -----
-        🔄 [36mMerging 1 commit to [1m[36mmain[0m[0m @ [SHA]
+        🔄 [36mMerging 1 commit to [1m[36mmain[0m[0m @ [SHA] (no squashing needed, no rebasing needed)
 
         * [SHA][33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature[m[33m)[m Add feature file
 
@@ -1976,7 +1976,6 @@ fn test_merge_no_commit_with_clean_tree() {
          1 file changed, 1 insertion(+)
 
         ✅ [32mMerged to [1m[32mmain[0m (1 commit, 1 file, [32m+1[0m)  [0m
-
         ✅ [32mKept worktree (use 'wt remove' to clean up)[0m
 
         ----- stderr -----
@@ -2076,7 +2075,7 @@ fn test_merge_no_commit_no_squash_no_remove_redundant() {
         success: true
         exit_code: 0
         ----- stdout -----
-        🔄 [36mMerging 1 commit to [1m[36mmain[0m[0m @ [SHA]
+        🔄 [36mMerging 1 commit to [1m[36mmain[0m[0m @ [SHA] (no squashing needed, no rebasing needed)
 
         * [SHA][33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature[m[33m)[m Add feature file
 
@@ -2084,7 +2083,6 @@ fn test_merge_no_commit_no_squash_no_remove_redundant() {
          1 file changed, 1 insertion(+)
 
         ✅ [32mMerged to [1m[32mmain[0m (1 commit, 1 file, [32m+1[0m)  [0m
-
         ✅ [32mKept worktree (use 'wt remove' to clean up)[0m
 
         ----- stderr -----
