@@ -208,9 +208,11 @@ pub(crate) fn execute_streaming(
         .map_err(|e| io::Error::other(format!("Failed to wait for command: {}", e)))?;
 
     if !status.success() {
+        // Get the exit code if available (None means terminated by signal on some platforms)
+        let code = status.code().unwrap_or(1);
         return Err(io::Error::other(format!(
-            "Command failed with exit code: {}",
-            status
+            "CHILD_EXIT_CODE:{} Command failed with exit code: {}",
+            code, status
         )));
     }
 
@@ -257,9 +259,8 @@ pub fn execute_command_in_worktree(
     stderr().flush().ok(); // Ignore flush errors - reset is best-effort, command execution should proceed
 
     // Execute with stdout→stderr redirect for deterministic ordering
-    // Convert io::Error to GitError::CommandFailed to preserve error message formatting
-    execute_streaming(command, worktree_path, true)
-        .map_err(|e| GitError::CommandFailed(e.to_string()))?;
+    // io::Error is automatically converted to GitError, parsing exit codes via From impl
+    execute_streaming(command, worktree_path, true)?;
 
     // Flush to ensure all output appears before we continue
     super::flush()?;

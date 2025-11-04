@@ -720,6 +720,13 @@ fn main() {
     if let Err(e) = result {
         // Error messages are already formatted with emoji and colors
         eprintln!("{}", e);
-        process::exit(1);
+
+        // Preserve exit code from child processes (especially for signals like SIGINT)
+        let exit_code = match &e {
+            GitError::ChildProcessExited { code, .. } => *code,
+            GitError::HookCommandFailed { exit_code, .. } => exit_code.unwrap_or(1),
+            _ => 1,
+        };
+        process::exit(exit_code);
     }
 }

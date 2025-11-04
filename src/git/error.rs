@@ -19,6 +19,7 @@ pub enum GitError {
         hook_type: HookType,
         command_name: Option<String>,
         error: String,
+        exit_code: Option<i32>,
     },
     /// Working tree has uncommitted changes
     UncommittedChanges,
@@ -43,6 +44,8 @@ pub enum GitError {
     MergeCommitsFound,
     /// Command was not approved by user
     CommandNotApproved,
+    /// Child process exited with non-zero code (preserves exit code for signals)
+    ChildProcessExited { code: i32, message: String },
     /// Push operation failed
     PushFailed { error: String },
     /// Rebase resulted in a conflict or incomplete state
@@ -87,6 +90,7 @@ impl std::fmt::Display for GitError {
                 hook_type,
                 command_name,
                 error,
+                exit_code: _,
             } => {
                 let error_bold = ERROR.bold();
                 match command_name {
@@ -202,6 +206,12 @@ impl std::fmt::Display for GitError {
                 Ok(()) // on_skip callback handles the printing
             }
 
+            // Child process exited with non-zero code
+            // Just display the message - main.rs will use the exit code
+            GitError::ChildProcessExited { code: _, message } => {
+                write!(f, "{}", message)
+            }
+
             // Push failed
             GitError::PushFailed { error } => {
                 write!(f, "{ERROR_EMOJI} {ERROR}Push failed: {error}{ERROR:#}")
@@ -242,8 +252,23 @@ impl std::error::Error for GitError {}
 
 // Automatic conversion from io::Error to GitError
 // This eliminates the need for manual .map_err() on output functions
+// Parses exit codes from error messages to preserve signal information
+//
+// Protocol: execute_streaming() embeds exit codes in error messages as:
+//   "CHILD_EXIT_CODE:{code} {original_message}"
+// This allows passing exit codes through io::Error (which doesn't carry codes)
+// while preserving the full error context.
 impl From<std::io::Error> for GitError {
     fn from(e: std::io::Error) -> Self {
-        GitError::CommandFailed(e.to_string())
+        let msg = e.to_string();
+        // Parse exit code from error message (format: "CHILD_EXIT_CODE:130 Command failed...")
+        if let Some(rest) = msg.strip_prefix("CHILD_EXIT_CODE:")
+            && let Some(space_idx) = rest.find(' ')
+            && let Ok(code) = rest[..space_idx].parse::<i32>()
+        {
+            let message = rest[space_idx + 1..].to_string();
+            return GitError::ChildProcessExited { code, message };
+        }
+        GitError::CommandFailed(msg)
     }
 }

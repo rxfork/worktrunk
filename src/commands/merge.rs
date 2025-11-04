@@ -511,10 +511,16 @@ pub fn run_pre_merge_commands(
         crate::output::progress(format_bash_with_gutter(&prepared.expanded, ""))?;
 
         if let Err(e) = execute_command_in_worktree(worktree_path, &prepared.expanded) {
+            // Extract exit code from ChildProcessExited to preserve signal information
+            let exit_code = match &e {
+                GitError::ChildProcessExited { code, .. } => Some(*code),
+                _ => None,
+            };
             return Err(GitError::HookCommandFailed {
                 hook_type: HookType::PreMerge,
                 command_name: prepared.name.clone(),
                 error: e.to_string(),
+                exit_code,
             });
         }
 
@@ -637,10 +643,16 @@ pub fn run_pre_commit_commands(
         crate::output::progress(format_bash_with_gutter(&prepared.expanded, ""))?;
 
         if let Err(e) = execute_command_in_worktree(worktree_path, &prepared.expanded) {
+            // Extract exit code from ChildProcessExited to preserve signal information
+            let exit_code = match &e {
+                GitError::ChildProcessExited { code, .. } => Some(*code),
+                _ => None,
+            };
             return Err(GitError::HookCommandFailed {
                 hook_type: HookType::PreCommit,
                 command_name: prepared.name.clone(),
                 error: e.to_string(),
+                exit_code,
             });
         }
     }
