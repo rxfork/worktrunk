@@ -147,10 +147,11 @@ enum Commands {
     #[command(after_help = "\
 COLUMNS:
   Branch: Branch name
+  Status: Quick status symbols (see STATUS SYMBOLS below)
   Working ±: Uncommitted changes vs HEAD (+added -deleted lines, staged + unstaged)
   Main ↕: Commit count ahead↑/behind↓ relative to main (commits in HEAD vs main)
   Main ± (--full): Line diffs in commits ahead of main (+added -deleted)
-  State: Status indicators (see STATE VALUES below)
+  State: Status indicators (see STATE COLUMN below)
   Path: Worktree directory location
   Remote ↕: Commits ahead↑/behind↓ relative to tracking branch (e.g. origin/branch)
   CI (--full): CI pipeline status (tries PR/MR checks first, falls back to branch workflows)
@@ -165,7 +166,19 @@ COLUMNS:
   Age: Time since last commit (relative)
   Message: Last commit message (truncated)
 
-STATE VALUES:
+STATUS SYMBOLS:
+  =  Merge conflicts (unmerged paths in working tree)
+  ↑  Ahead of main branch
+  ↓  Behind main branch
+  ⇡  Ahead of remote tracking branch
+  ⇣  Behind remote tracking branch
+  ?  Untracked files present
+  !  Modified files (unstaged changes)
+  +  Staged files (ready to commit)
+  »  Renamed files
+  ✘  Deleted files
+
+STATE COLUMN:
   (matches main): Working tree identical to main
   (no commits): No commits ahead, clean working tree
   (conflicts): Merge conflicts with main

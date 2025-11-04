@@ -355,6 +355,22 @@ pub fn format_list_item_line(
                     line.push_raw(branch_text);
                 }
             }
+            (ColumnKind::Status, _) => {
+                if let Some(info) = worktree_info {
+                    let status_text = if is_last {
+                        info.status_symbols.clone()
+                    } else {
+                        format!("{:width$}", info.status_symbols, width = column.width)
+                    };
+                    if let Some(style) = text_style {
+                        line.push_styled(status_text, style);
+                    } else {
+                        line.push_raw(status_text);
+                    }
+                } else if !is_last {
+                    push_blank(&mut line, column.width);
+                }
+            }
             (ColumnKind::WorkingDiff, ColumnFormat::Diff { digits, variant }) => {
                 if let Some(info) = worktree_info {
                     let (wt_added, wt_deleted) = info.working_tree_diff;
