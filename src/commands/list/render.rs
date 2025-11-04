@@ -362,11 +362,8 @@ pub fn format_list_item_line(
                     } else {
                         format!("{:width$}", info.status_symbols, width = column.width)
                     };
-                    if let Some(style) = text_style {
-                        line.push_styled(status_text, style);
-                    } else {
-                        line.push_raw(status_text);
-                    }
+                    // Status column never inherits row color
+                    line.push_raw(status_text);
                 } else if !is_last {
                     push_blank(&mut line, column.width);
                 }
