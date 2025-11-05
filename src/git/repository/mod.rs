@@ -194,20 +194,35 @@ impl Repository {
         }
     }
 
-    /// Resolve a worktree name, expanding "@" to the current branch.
+    /// Resolve a worktree name, expanding "@" to the current branch and "-" to the previous branch.
     ///
     /// # Arguments
-    /// * `name` - The worktree name to resolve (or "@" for current HEAD)
+    /// * `name` - The worktree name to resolve:
+    ///   - "@" for current HEAD
+    ///   - "-" for previous branch (via git reflog @{-1})
+    ///   - any other string is returned as-is
     ///
     /// # Returns
-    /// - `Ok(name)` if not "@"
+    /// - `Ok(name)` if not "@" or "-"
     /// - `Ok(current_branch)` if "@" and on a branch
+    /// - `Ok(previous_branch)` if "-" and reflog has a previous checkout
     /// - `Err(DetachedHead)` if "@" and in detached HEAD state
+    /// - `Err` if "-" but no previous branch in reflog
     pub fn resolve_worktree_name(&self, name: &str) -> Result<String, GitError> {
-        if name == "@" {
-            self.current_branch()?.ok_or(GitError::DetachedHead)
-        } else {
-            Ok(name.to_string())
+        match name {
+            "@" => self.current_branch()?.ok_or(GitError::DetachedHead),
+            "-" => {
+                // Use git's reflog to get the previous branch
+                let output = self
+                    .run_command(&["rev-parse", "--abbrev-ref", "@{-1}"])
+                    .map_err(|_| {
+                        GitError::CommandFailed(
+                            "No previous branch found in reflog. Use 'wt list' to see available worktrees.".to_string(),
+                        )
+                    })?;
+                Ok(output.trim().to_string())
+            }
+            _ => Ok(name.to_string()),
         }
     }
 

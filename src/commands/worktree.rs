@@ -157,7 +157,7 @@ pub fn handle_switch(
 ) -> Result<(SwitchResult, String), GitError> {
     let repo = Repository::current();
 
-    // Resolve "@" to current branch
+    // Resolve special branch names ("@" for current, "-" for previous)
     let resolved_branch = repo.resolve_worktree_name(branch)?;
 
     // Resolve base if provided
@@ -214,11 +214,10 @@ pub fn handle_switch(
     // Build git worktree add command
     let mut args = vec!["worktree", "add", worktree_path.to_str().unwrap()];
 
-    // Resolve the base branch if creating a new branch
-    let resolved_base = if create {
-        // Default to default branch if no base specified
-        match base {
-            Some(b) => Some(b.to_string()),
+    // Use the resolved base, or default to default branch if creating without a base
+    let base_for_creation = if create {
+        match resolved_base {
+            Some(b) => Some(b),
             None => Some(repo.resolve_target_branch(None)?),
         }
     } else {
@@ -229,7 +228,7 @@ pub fn handle_switch(
     if create {
         args.push("-b");
         args.push(&resolved_branch);
-        if let Some(ref base_branch) = resolved_base {
+        if let Some(ref base_branch) = base_for_creation {
             args.push(base_branch);
         }
     } else {
@@ -264,7 +263,7 @@ pub fn handle_switch(
         SwitchResult::CreatedWorktree {
             path: worktree_path,
             created_branch: create,
-            base_branch: resolved_base,
+            base_branch: base_for_creation,
         },
         resolved_branch,
     ))

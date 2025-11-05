@@ -417,3 +417,52 @@ fn test_switch_primary_on_different_branch() {
         &["existing-branch"],
     );
 }
+
+#[test]
+fn test_switch_previous_branch() {
+    use std::process::Command;
+
+    let repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    // Create two branches and establish checkout history in git's reflog
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["branch", "feature-a"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to create feature-a");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["branch", "feature-b"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to create feature-b");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["switch", "feature-a"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to switch to feature-a");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["switch", "feature-b"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to switch to feature-b");
+
+    // Now wt switch - should resolve to feature-a (the previous branch)
+    snapshot_switch("switch_previous_branch", &repo, &["-"]);
+}
+
+#[test]
+fn test_switch_previous_branch_no_history() {
+    let repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    // No checkout history, so wt switch - should fail with helpful error
+    snapshot_switch("switch_previous_branch_no_history", &repo, &["-"]);
+}

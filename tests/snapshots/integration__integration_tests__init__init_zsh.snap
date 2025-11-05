@@ -16,7 +16,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmptILqJ8/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpF1Pxjb/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -335,7 +335,7 @@ _arguments "${_arguments_options[@]}" : \
 '--verbose[Enable verbose output (show git commands and debug info)]' \
 '-h[Print help]' \
 '--help[Print help]' \
-':branch -- Branch name, worktree path, or '\''@'\'' for current HEAD:_default' \
+':branch -- Branch name, worktree path, '\''@'\'' for current HEAD, or '\''-'\'' for previous branch:_default' \
 && ret=0
 ;;
 (remove)

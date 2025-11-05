@@ -273,6 +273,9 @@ Switch to existing worktree:
 Create new worktree from main:
   wt switch --create new-feature
 
+Switch to previous worktree:
+  wt switch -
+
 Create from specific base:
   wt switch --create hotfix --base production
 
@@ -282,7 +285,7 @@ Create and run command:
 Skip hooks during creation:
   wt switch --create temp --no-verify")]
     Switch {
-        /// Branch name, worktree path, or '@' for current HEAD
+        /// Branch name, worktree path, '@' for current HEAD, or '-' for previous branch
         branch: String,
 
         /// Create a new branch
