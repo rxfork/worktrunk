@@ -4,15 +4,14 @@ use worktrunk::config::{Command, CommandPhase, ProjectConfig, WorktrunkConfig};
 use worktrunk::git::{GitError, GitResultExt, Repository};
 use worktrunk::styling::{
     AnstyleStyle, CYAN, CYAN_BOLD, ERROR, ERROR_EMOJI, GREEN_BOLD, HINT, HINT_EMOJI, WARNING,
-    WARNING_BOLD, format_bash_with_gutter, format_with_gutter,
+    format_with_gutter,
 };
 
 use super::command_approval::approve_command_batch;
-use super::command_executor::{CommandContext, prepare_project_commands};
 use super::context::CommandEnv;
+use super::hooks::{HookFailureStrategy, HookPipeline};
 use super::project_config::load_project_config;
 use super::worktree::handle_push;
-use crate::output::execute_command_in_worktree;
 
 /// Context for collecting merge commands
 struct MergeCommandCollector<'a> {
@@ -475,7 +474,7 @@ pub fn run_pre_merge_commands(
     };
 
     let repo_root = repo.worktree_base()?;
-    let ctx = CommandContext::new(
+    let pipeline = HookPipeline::new(
         repo,
         config,
         current_branch,
@@ -483,36 +482,17 @@ pub fn run_pre_merge_commands(
         &repo_root,
         force,
     );
-    let commands = prepare_project_commands(
+
+    pipeline.run_sequential(
         pre_merge_config,
-        &ctx,
+        CommandPhase::PreMerge,
         true, // auto_trust: commands already approved in batch
         &[("target", target_branch)],
-        CommandPhase::PreMerge,
-    )?;
-    for prepared in commands {
-        let label = crate::commands::format_command_label("pre-merge", prepared.name.as_deref());
-        crate::output::progress(format!("{CYAN}{label}:{CYAN:#}"))?;
-        crate::output::gutter(format_bash_with_gutter(&prepared.expanded, ""))?;
-
-        if let Err(e) = execute_command_in_worktree(worktree_path, &prepared.expanded) {
-            // Extract exit code from ChildProcessExited to preserve signal information
-            let exit_code = match &e {
-                GitError::ChildProcessExited { code, .. } => Some(*code),
-                _ => None,
-            };
-            return Err(GitError::HookCommandFailed {
-                hook_type: HookType::PreMerge,
-                command_name: prepared.name.clone(),
-                error: e.to_string(),
-                exit_code,
-            });
-        }
-
-        // No need to flush here - the redirect in execute_command_in_worktree ensures ordering
-    }
-
-    Ok(())
+        "pre-merge",
+        HookFailureStrategy::FailFast {
+            hook_type: HookType::PreMerge,
+        },
+    )
 }
 
 /// Execute post-merge commands sequentially in the main worktree (blocking)
@@ -524,8 +504,6 @@ pub fn execute_post_merge_commands(
     target_branch: &str,
     force: bool,
 ) -> Result<(), GitError> {
-    use worktrunk::styling::WARNING;
-
     // Load project config from the main worktree path directly
     let project_config = match load_project_config(repo)? {
         Some(cfg) => cfg,
@@ -536,7 +514,7 @@ pub fn execute_post_merge_commands(
         return Ok(());
     };
 
-    let ctx = CommandContext::new(
+    let pipeline = HookPipeline::new(
         repo,
         config,
         branch,
@@ -544,39 +522,15 @@ pub fn execute_post_merge_commands(
         main_worktree_path,
         force,
     );
-    let commands = prepare_project_commands(
+
+    pipeline.run_sequential(
         post_merge_config,
-        &ctx,
+        CommandPhase::PostMerge,
         true, // auto_trust: commands already approved in batch
         &[("target", target_branch)],
-        CommandPhase::PostMerge,
-    )?;
-
-    if commands.is_empty() {
-        return Ok(());
-    }
-
-    // Execute each command sequentially in the main worktree
-    for prepared in commands {
-        let label = crate::commands::format_command_label("post-merge", prepared.name.as_deref());
-        crate::output::progress(format!("{CYAN}{label}:{CYAN:#}"))?;
-        crate::output::gutter(format_bash_with_gutter(&prepared.expanded, ""))?;
-
-        if let Err(e) = execute_command_in_worktree(main_worktree_path, &prepared.expanded) {
-            let message = match &prepared.name {
-                Some(name) => format!(
-                    "{WARNING}Command {WARNING_BOLD}{name}{WARNING_BOLD:#} failed: {e}{WARNING:#}"
-                ),
-                None => format!("{WARNING}Command failed: {e}{WARNING:#}"),
-            };
-            crate::output::warning(message)?;
-            // Continue with other commands even if one fails
-        }
-    }
-
-    crate::output::flush()?;
-
-    Ok(())
+        "post-merge",
+        HookFailureStrategy::Warn,
+    )
 }
 
 /// Run pre-commit commands sequentially (blocking, fail-fast)
@@ -596,7 +550,7 @@ pub fn run_pre_commit_commands(
     };
 
     let repo_root = repo.worktree_base()?;
-    let ctx = CommandContext::new(
+    let pipeline = HookPipeline::new(
         repo,
         config,
         current_branch,
@@ -605,47 +559,19 @@ pub fn run_pre_commit_commands(
         force,
     );
 
-    // Build extra variables - include target if provided
-    let extra_vars: Vec<(&str, &str)> = if let Some(target) = target_branch {
-        vec![("target", target)]
-    } else {
-        vec![]
-    };
+    let extra_vars: Vec<(&str, &str)> = target_branch
+        .into_iter()
+        .map(|target| ("target", target))
+        .collect();
 
-    let commands = prepare_project_commands(
+    pipeline.run_sequential(
         pre_commit_config,
-        &ctx,
+        CommandPhase::PreCommit,
         auto_trust,
         &extra_vars,
-        CommandPhase::PreCommit,
-    )?;
-
-    if commands.is_empty() {
-        return Ok(());
-    }
-
-    // Execute each command sequentially
-    for prepared in commands {
-        let label = crate::commands::format_command_label("pre-commit", prepared.name.as_deref());
-        crate::output::progress(format!("{CYAN}{label}:{CYAN:#}"))?;
-        crate::output::gutter(format_bash_with_gutter(&prepared.expanded, ""))?;
-
-        if let Err(e) = execute_command_in_worktree(worktree_path, &prepared.expanded) {
-            // Extract exit code from ChildProcessExited to preserve signal information
-            let exit_code = match &e {
-                GitError::ChildProcessExited { code, .. } => Some(*code),
-                _ => None,
-            };
-            return Err(GitError::HookCommandFailed {
-                hook_type: HookType::PreCommit,
-                command_name: prepared.name.clone(),
-                error: e.to_string(),
-                exit_code,
-            });
-        }
-    }
-
-    crate::output::flush()?;
-
-    Ok(())
+        "pre-commit",
+        HookFailureStrategy::FailFast {
+            hook_type: HookType::PreCommit,
+        },
+    )
 }

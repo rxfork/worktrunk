@@ -101,15 +101,10 @@
 use std::path::PathBuf;
 use worktrunk::config::{CommandPhase, WorktrunkConfig};
 use worktrunk::git::{GitError, GitResultExt, Repository};
-use worktrunk::styling::{
-    CYAN, CYAN_BOLD, GREEN, GREEN_BOLD, WARNING, WARNING_BOLD, format_bash_with_gutter,
-    format_with_gutter,
-};
+use worktrunk::styling::{CYAN, CYAN_BOLD, GREEN, GREEN_BOLD, WARNING, format_with_gutter};
 
-use super::command_executor::{CommandContext, prepare_project_commands};
+use super::hooks::{HookFailureStrategy, HookPipeline};
 use super::project_config::load_project_config;
-use crate::commands::process::spawn_detached;
-use crate::output::execute_command_in_worktree;
 
 /// Result of a worktree switch operation
 pub enum SwitchResult {
@@ -488,40 +483,15 @@ pub fn execute_post_create_commands(
     };
 
     let repo_root = repo.worktree_base()?;
-    let ctx = CommandContext::new(repo, config, branch, worktree_path, &repo_root, force);
-    let commands = prepare_project_commands(
+    let pipeline = HookPipeline::new(repo, config, branch, worktree_path, &repo_root, force);
+    pipeline.run_sequential(
         post_create_config,
-        &ctx,
+        CommandPhase::PostCreate,
         false,
         &[],
-        CommandPhase::PostCreate,
-    )?;
-
-    if commands.is_empty() {
-        return Ok(());
-    }
-
-    // Execute each command sequentially
-    for prepared in commands {
-        let label = crate::commands::format_command_label("post-create", prepared.name.as_deref());
-        crate::output::progress(format!("{CYAN}{label}:{CYAN:#}"))?;
-        crate::output::gutter(format_bash_with_gutter(&prepared.expanded, ""))?;
-
-        if let Err(e) = execute_command_in_worktree(worktree_path, &prepared.expanded) {
-            let message = match &prepared.name {
-                Some(name) => format!(
-                    "{WARNING}Command {WARNING_BOLD}{name}{WARNING_BOLD:#} failed: {e}{WARNING:#}"
-                ),
-                None => format!("{WARNING}Command failed: {e}{WARNING:#}"),
-            };
-            crate::output::warning(message)?;
-            // Continue with other commands even if one fails
-        }
-    }
-
-    crate::output::flush()?;
-
-    Ok(())
+        "post-create",
+        HookFailureStrategy::Warn,
+    )
 }
 
 /// Spawn post-start commands in parallel as background processes (non-blocking)
@@ -542,43 +512,14 @@ pub fn spawn_post_start_commands(
     };
 
     let repo_root = repo.worktree_base()?;
-    let ctx = CommandContext::new(repo, config, branch, worktree_path, &repo_root, force);
-    let commands =
-        prepare_project_commands(post_start_config, &ctx, false, &[], CommandPhase::PostStart)?;
-
-    if commands.is_empty() {
-        return Ok(());
-    }
-
-    // Spawn each command as a detached background process
-    for prepared in commands {
-        let label = crate::commands::format_command_label("post-start", prepared.name.as_deref());
-        crate::output::progress(format!("{CYAN}{label}:{CYAN:#}"))?;
-        crate::output::gutter(format_bash_with_gutter(&prepared.expanded, ""))?;
-
-        let name = prepared.name.as_deref().unwrap_or("cmd");
-        match spawn_detached(worktree_path, &prepared.expanded, name) {
-            Ok(_log_path) => {
-                // Background command spawned successfully
-                // Log file path not shown - only needed for debugging failures
-            }
-            Err(e) => {
-                let message = match &prepared.name {
-                    Some(name) => {
-                        format!("{WARNING}Failed to spawn '{name}': {e}{WARNING:#}")
-                    }
-                    None => {
-                        format!("{WARNING}Failed to spawn command: {e}{WARNING:#}")
-                    }
-                };
-                crate::output::warning(message)?;
-            }
-        }
-    }
-
-    crate::output::flush()?;
-
-    Ok(())
+    let pipeline = HookPipeline::new(repo, config, branch, worktree_path, &repo_root, force);
+    pipeline.spawn_detached(
+        post_start_config,
+        CommandPhase::PostStart,
+        false,
+        &[],
+        "post-start",
+    )
 }
 
 /// Execute post-start commands sequentially (blocking) - for testing
@@ -599,34 +540,15 @@ pub fn execute_post_start_commands_sequential(
     };
 
     let repo_root = repo.worktree_base()?;
-    let ctx = CommandContext::new(repo, config, branch, worktree_path, &repo_root, force);
-    let commands =
-        prepare_project_commands(post_start_config, &ctx, false, &[], CommandPhase::PostStart)?;
-
-    if commands.is_empty() {
-        return Ok(());
-    }
-
-    // Execute sequentially for testing
-    for prepared in commands {
-        let label = crate::commands::format_command_label("post-start", prepared.name.as_deref());
-        crate::output::progress(format!("{CYAN}{label}:{CYAN:#}"))?;
-        crate::output::gutter(format_bash_with_gutter(&prepared.expanded, ""))?;
-
-        if let Err(e) = execute_command_in_worktree(worktree_path, &prepared.expanded) {
-            let message = match &prepared.name {
-                Some(name) => {
-                    format!("{WARNING}Failed to execute '{name}': {e}{WARNING:#}")
-                }
-                None => format!("{WARNING}Command failed: {e}{WARNING:#}"),
-            };
-            crate::output::warning(message)?;
-        }
-    }
-
-    crate::output::flush()?;
-
-    Ok(())
+    let pipeline = HookPipeline::new(repo, config, branch, worktree_path, &repo_root, force);
+    pipeline.run_sequential(
+        post_start_config,
+        CommandPhase::PostStart,
+        false,
+        &[],
+        "post-start",
+        HookFailureStrategy::Warn,
+    )
 }
 
 /// Push changes to target branch

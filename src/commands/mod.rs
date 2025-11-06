@@ -5,6 +5,7 @@ pub mod completion;
 pub mod config;
 pub mod configure_shell;
 pub mod context;
+mod hooks;
 pub mod init;
 pub mod list;
 pub mod merge;
