@@ -232,6 +232,24 @@ fn exec_in_pty(
     // Spawn the shell inside the PTY
     let mut cmd = CommandBuilder::new(shell);
 
+    // Clear inherited environment for test isolation
+    // This prevents user environment (ZELLIJ, TMUX, custom aliases, etc.) from
+    // affecting test behavior or causing side effects (e.g., renaming Zellij tabs)
+    cmd.env_clear();
+
+    // Set minimal required environment for shells to function
+    // HOME and PATH are preserved for rustup/cargo and finding git/commands
+    cmd.env(
+        "HOME",
+        std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string()),
+    );
+    cmd.env(
+        "PATH",
+        std::env::var("PATH").unwrap_or_else(|_| "/usr/bin:/bin".to_string()),
+    );
+    cmd.env("USER", "testuser");
+    cmd.env("SHELL", shell);
+
     // For zsh, isolate from user rc files to prevent TTY access issues
     // User startup files (~/.zshenv, ~/.zshrc) can touch /dev/tty (e.g., stty, zle,
     // compinit, GPG_TTY=$(tty)) which causes SIGTTIN/TTOU/TSTP signals when the
@@ -255,7 +273,7 @@ fn exec_in_pty(
     cmd.arg(script);
     cmd.cwd(working_dir);
 
-    // Add environment variables
+    // Add test-specific environment variables
     for (key, value) in env_vars {
         cmd.env(key, value);
     }
