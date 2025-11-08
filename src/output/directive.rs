@@ -103,8 +103,8 @@ impl DirectiveOutput {
 
     /// Format a switch success message for directive mode
     ///
-    /// In directive mode, the shell wrapper will actually change directories,
-    /// so we indicate the path with ": {path}"
+    /// Directive mode mirrors the interactive wording ("at {path}") so the
+    /// shell wrapper and direct CLI output stay consistent.
     pub fn format_switch_success(
         &self,
         branch: &str,
@@ -112,7 +112,7 @@ impl DirectiveOutput {
         created_branch: bool,
         base_branch: Option<&str>,
     ) -> String {
-        super::format_switch_success_message(branch, path, created_branch, base_branch, true)
+        super::format_switch_success_message(branch, path, created_branch, base_branch)
     }
 }
 

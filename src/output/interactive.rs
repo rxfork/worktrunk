@@ -103,7 +103,7 @@ impl InteractiveOutput {
         created_branch: bool,
         base_branch: Option<&str>,
     ) -> String {
-        super::format_switch_success_message(branch, path, created_branch, base_branch, false)
+        super::format_switch_success_message(branch, path, created_branch, base_branch)
     }
 }
 

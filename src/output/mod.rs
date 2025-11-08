@@ -74,17 +74,16 @@ pub use handlers::{
 
 use std::path::Path;
 
-/// Format a switch success message with mode-specific location phrase
+/// Format a switch success message with a consistent location phrase
 ///
-/// The message format differs between interactive and directive modes:
-/// - Interactive: "Created new worktree for {branch} from {base} at {path}"
-/// - Directive: "Created new worktree for {branch} from {base}: {path}"
+/// Both interactive and directive modes now use the human-friendly
+/// `"Created new worktree for {branch} from {base} at {path}"` wording so
+/// users see the same message regardless of how worktrunk is invoked.
 pub(crate) fn format_switch_success_message(
     branch: &str,
     path: &Path,
     created_branch: bool,
     base_branch: Option<&str>,
-    use_past_tense: bool,
 ) -> String {
     use worktrunk::styling::{GREEN, GREEN_BOLD};
 
@@ -93,16 +92,15 @@ pub(crate) fn format_switch_success_message(
     } else {
         "Switched to worktree for"
     };
-    let location = if use_past_tense { ":" } else { " at" };
 
     // Re-establish GREEN after each green_bold reset to prevent color leak
     match base_branch {
         Some(base) => format!(
-            "{GREEN}{action} {GREEN_BOLD}{branch}{GREEN_BOLD:#}{GREEN} from {GREEN_BOLD}{base}{GREEN_BOLD:#}{GREEN}{location} {GREEN_BOLD}{}{GREEN_BOLD:#}{GREEN:#}",
+            "{GREEN}{action} {GREEN_BOLD}{branch}{GREEN_BOLD:#}{GREEN} from {GREEN_BOLD}{base}{GREEN_BOLD:#}{GREEN} at {GREEN_BOLD}{}{GREEN_BOLD:#}{GREEN:#}",
             path.display()
         ),
         None => format!(
-            "{GREEN}{action} {GREEN_BOLD}{branch}{GREEN_BOLD:#}{GREEN}{location} {GREEN_BOLD}{}{GREEN_BOLD:#}{GREEN:#}",
+            "{GREEN}{action} {GREEN_BOLD}{branch}{GREEN_BOLD:#}{GREEN} at {GREEN_BOLD}{}{GREEN_BOLD:#}{GREEN:#}",
             path.display()
         ),
     }

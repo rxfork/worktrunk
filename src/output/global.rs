@@ -179,10 +179,10 @@ pub fn terminate_output() -> io::Result<()> {
     })
 }
 
-/// Format a switch success message (mode-specific)
+/// Format a switch success message (identical across modes)
 ///
-/// In interactive mode: "at {path}" (can't actually change directory)
-/// In directive mode: ": {path}" (shell will change it)
+/// Both modes now report `"at {path}"` so users see the same wording whether
+/// they invoke worktrunk directly or through the shell wrapper.
 pub fn format_switch_success(
     branch: &str,
     path: &Path,
