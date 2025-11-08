@@ -12,10 +12,11 @@ info:
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
     GIT_CONFIG_SYSTEM: /dev/null
+    GIT_EDITOR: ""
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmp0566RD/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpZyxEdr/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -172,7 +173,7 @@ end
 # Static completions (commands and flags)
 # Print an optspec for argparse to handle cmd's options that are independent of any subcommand.
 function __fish_wt_global_optspecs
-	string join \n v/verbose internal h/help V/version
+	string join \n source v/verbose internal h/help V/version
 end
 
 function __fish_wt_needs_command

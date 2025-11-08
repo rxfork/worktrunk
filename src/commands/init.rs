@@ -68,6 +68,20 @@ pub fn handle_init(shell: shell::Shell, cli_cmd: &mut Command) -> Result<(), Str
             line.to_string()
         };
 
+        // For Fish: Add --source to global optspecs so argparse recognizes it
+        // --source is shell-wrapper-only but Fish's argparse needs to know about it
+        // for completion to work when users type "wt --source <TAB>"
+        let line = if matches!(shell, shell::Shell::Fish)
+            && line.contains("string join \\n v/verbose internal")
+        {
+            line.replace(
+                "string join \\n v/verbose internal",
+                "string join \\n source v/verbose internal",
+            )
+        } else {
+            line
+        };
+
         println!("{}", line);
     }
 
