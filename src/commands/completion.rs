@@ -53,16 +53,45 @@ fn should_complete_positional_arg(args: &[String], start_index: usize) -> bool {
     true
 }
 
+/// Find the subcommand position by skipping global flags
+///
+/// Note: `--source` is handled by the shell wrapper (templates/*.sh) and stripped before
+/// reaching the main Rust binary, but the completion function passes COMP_WORDS directly
+/// to `wt complete`, so completion sees the raw command line with `--source` still present.
+fn find_subcommand_index(args: &[String]) -> Option<usize> {
+    let mut i = 1; // Start after "wt"
+    while i < args.len() {
+        let arg = &args[i];
+        // Skip global flags (--source is shell-only, others are defined in cli.rs)
+        if arg == "--source" || arg == "--internal" || arg == "-v" || arg == "--verbose" {
+            i += 1;
+        } else if !arg.starts_with('-') {
+            // Found the subcommand
+            return Some(i);
+        } else {
+            // Unknown flag, stop searching (fail-safe behavior)
+            return None;
+        }
+    }
+    None
+}
+
 fn parse_completion_context(args: &[String]) -> CompletionContext {
     // args format: ["wt", "switch", "partial"]
+    // or: ["wt", "--source", "switch", "partial"]
     // or: ["wt", "switch", "--create", "new", "--base", "partial"]
-    // or: ["wt", "dev", "run-hook", "partial"]
+    // or: ["wt", "beta", "run-hook", "partial"]
 
     if args.len() < 2 {
         return CompletionContext::Unknown;
     }
 
-    let subcommand = &args[1];
+    let subcommand_index = match find_subcommand_index(args) {
+        Some(idx) => idx,
+        None => return CompletionContext::Unknown,
+    };
+
+    let subcommand = &args[subcommand_index];
 
     // Check if the previous argument was a flag that expects a value
     // If so, we're completing that flag's value
@@ -74,8 +103,8 @@ fn parse_completion_context(args: &[String]) -> CompletionContext {
     }
 
     // Handle beta subcommand
-    if subcommand == "beta" && args.len() >= 3 {
-        let beta_subcommand = &args[2];
+    if subcommand == "beta" && args.len() > subcommand_index + 1 {
+        let beta_subcommand = &args[subcommand_index + 1];
         if beta_subcommand == "run-hook" {
             // Complete hook types for the positional argument
             return CompletionContext::DevRunHook;
@@ -99,7 +128,7 @@ fn parse_completion_context(args: &[String]) -> CompletionContext {
         _ => return CompletionContext::Unknown,
     };
 
-    if should_complete_positional_arg(args, 2) {
+    if should_complete_positional_arg(args, subcommand_index + 1) {
         context
     } else {
         CompletionContext::Unknown
@@ -154,8 +183,61 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_find_subcommand_index() {
+        let args = vec!["wt".to_string(), "switch".to_string()];
+        assert_eq!(find_subcommand_index(&args), Some(1));
+    }
+
+    #[test]
+    fn test_find_subcommand_index_with_source() {
+        let args = vec![
+            "wt".to_string(),
+            "--source".to_string(),
+            "switch".to_string(),
+        ];
+        assert_eq!(find_subcommand_index(&args), Some(2));
+    }
+
+    #[test]
+    fn test_find_subcommand_index_with_verbose() {
+        let args = vec!["wt".to_string(), "-v".to_string(), "switch".to_string()];
+        assert_eq!(find_subcommand_index(&args), Some(2));
+    }
+
+    #[test]
+    fn test_find_subcommand_index_with_multiple_flags() {
+        let args = vec![
+            "wt".to_string(),
+            "--source".to_string(),
+            "-v".to_string(),
+            "switch".to_string(),
+        ];
+        assert_eq!(find_subcommand_index(&args), Some(3));
+    }
+
+    #[test]
+    fn test_find_subcommand_index_no_subcommand() {
+        let args = vec!["wt".to_string()];
+        assert_eq!(find_subcommand_index(&args), None);
+    }
+
+    #[test]
     fn test_parse_completion_context_switch() {
         let args = vec!["wt".to_string(), "switch".to_string(), "feat".to_string()];
+        assert_eq!(
+            parse_completion_context(&args),
+            CompletionContext::SwitchBranch
+        );
+    }
+
+    #[test]
+    fn test_parse_completion_context_switch_with_source() {
+        let args = vec![
+            "wt".to_string(),
+            "--source".to_string(),
+            "switch".to_string(),
+            "feat".to_string(),
+        ];
         assert_eq!(
             parse_completion_context(&args),
             CompletionContext::SwitchBranch
@@ -298,5 +380,64 @@ mod tests {
         // "wt beta <cursor>" - should not complete
         let args = vec!["wt".to_string(), "beta".to_string()];
         assert_eq!(parse_completion_context(&args), CompletionContext::Unknown);
+    }
+
+    #[test]
+    fn test_parse_completion_context_base_flag_with_source() {
+        let args = vec![
+            "wt".to_string(),
+            "--source".to_string(),
+            "switch".to_string(),
+            "--create".to_string(),
+            "new".to_string(),
+            "--base".to_string(),
+            "dev".to_string(),
+        ];
+        assert_eq!(parse_completion_context(&args), CompletionContext::BaseFlag);
+    }
+
+    #[test]
+    fn test_parse_completion_context_beta_run_hook_with_source() {
+        let args = vec![
+            "wt".to_string(),
+            "--source".to_string(),
+            "beta".to_string(),
+            "run-hook".to_string(),
+            "po".to_string(),
+        ];
+        assert_eq!(
+            parse_completion_context(&args),
+            CompletionContext::DevRunHook
+        );
+    }
+
+    #[test]
+    fn test_parse_completion_context_merge_with_verbose_and_source() {
+        let args = vec![
+            "wt".to_string(),
+            "-v".to_string(),
+            "--source".to_string(),
+            "merge".to_string(),
+            "de".to_string(),
+        ];
+        assert_eq!(
+            parse_completion_context(&args),
+            CompletionContext::MergeTarget
+        );
+    }
+
+    #[test]
+    fn test_find_subcommand_index_unknown_flag() {
+        // Unknown flags cause completion to bail out (fail-safe behavior)
+        let args = vec!["wt".to_string(), "--typo".to_string(), "switch".to_string()];
+        assert_eq!(find_subcommand_index(&args), None);
+    }
+
+    #[test]
+    fn test_find_subcommand_index_empty_after_flag() {
+        // Empty string after flag (cursor immediately after --source with no subcommand yet)
+        // Empty string doesn't start with '-', so it's treated as the subcommand position
+        let args = vec!["wt".to_string(), "--source".to_string(), "".to_string()];
+        assert_eq!(find_subcommand_index(&args), Some(2));
     }
 }
