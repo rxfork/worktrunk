@@ -663,7 +663,7 @@ pub fn handle_push(
             .trim()
             .to_string();
 
-        // Get formatted diff stat
+        // Get formatted diff stat (full terminal width - no gutter in error display)
         let term_width = crate::display::get_terminal_width();
         let files_formatted = repo
             .run_command(&[
@@ -772,13 +772,14 @@ pub fn handle_push(
         ])?;
         crate::output::gutter(format_with_gutter(&log_output, "", None))?;
 
-        // Show diff statistics with color (use terminal width for proper formatting)
+        // Show diff statistics with color (use terminal width minus gutter overhead)
         let term_width = crate::display::get_terminal_width();
+        let stat_width = term_width.saturating_sub(worktrunk::styling::GUTTER_OVERHEAD);
         let diff_stat = repo.run_command(&[
             "diff",
             "--color=always",
             "--stat",
-            &format!("--stat-width={}", term_width),
+            &format!("--stat-width={}", stat_width),
             &format!("{}..HEAD", target_branch),
         ])?;
 

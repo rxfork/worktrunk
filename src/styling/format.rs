@@ -11,6 +11,18 @@ use super::highlighting::bash_token_style;
 /// Default terminal width fallback if detection fails
 const DEFAULT_TERMINAL_WIDTH: usize = 80;
 
+/// Width overhead added by format_with_gutter()
+///
+/// The gutter formatting adds:
+/// - 1 column: colored space (gutter)
+/// - 2 columns: regular spaces for padding
+///
+/// Total: 3 columns
+///
+/// When passing widths to tools like git --stat-width, subtract this overhead
+/// so the final output (content + gutter) fits within the terminal width.
+pub const GUTTER_OVERHEAD: usize = 3;
+
 /// Strip ANSI escape codes from a string using strip-ansi-escapes
 fn strip_ansi_codes(s: &str) -> String {
     strip_ansi_escapes::strip_str(s)
