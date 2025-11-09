@@ -5,7 +5,7 @@ use worktrunk::styling::{ADDITION, CURRENT, DELETION, StyledLine, println};
 
 use super::ci_status::{CiStatus, PrStatus};
 use super::columns::{ColumnKind, DiffVariant};
-use super::layout::{ColumnFormat, ColumnLayout, DiffDigits, LayoutConfig};
+use super::layout::{ColumnFormat, ColumnLayout, DiffColumnConfig, LayoutConfig};
 use super::model::{
     AheadBehind, CommitDetails, ListItem, PositionMask, UpstreamStatus, WorktreeInfo,
 };
@@ -115,15 +115,6 @@ fn diff_render_config(variant: DiffVariant) -> DiffRenderConfig {
             align: ValueAlign::Left,
         },
     }
-}
-
-struct DiffColumnConfig {
-    digits: DiffDigits,
-    total_width: usize,
-    variant: DiffVariant,
-    positive_style: Style,
-    negative_style: Style,
-    always_show_zeros: bool,
 }
 
 fn format_diff_like_column(
@@ -364,7 +355,7 @@ fn render_list_cell(
             else {
                 return StyledLine::new();
             };
-            render_diff_cell(column, added, deleted, ADDITION, DELETION, false)
+            render_diff_cell(column, added, deleted)
         }
         ColumnKind::AheadBehind => {
             if ctx.item.is_primary() {
@@ -375,21 +366,13 @@ fn render_list_cell(
             if ahead == 0 && behind == 0 {
                 return StyledLine::new();
             }
-            let dim_deletion = DELETION.dimmed();
-            render_diff_cell(column, ahead, behind, ADDITION, dim_deletion, false)
+            render_diff_cell(column, ahead, behind)
         }
         ColumnKind::BranchDiff => {
             if ctx.item.is_primary() {
                 return StyledLine::new();
             }
-            render_diff_cell(
-                column,
-                ctx.branch_diff.0,
-                ctx.branch_diff.1,
-                ADDITION,
-                DELETION,
-                false,
-            )
+            render_diff_cell(column, ctx.branch_diff.0, ctx.branch_diff.1)
         }
         ColumnKind::Path => {
             let Some(info) = ctx.worktree_info else {
@@ -408,8 +391,7 @@ fn render_list_cell(
             let Some((_, ahead, behind)) = ctx.upstream.active() else {
                 return StyledLine::new();
             };
-            let dim_deletion = DELETION.dimmed();
-            render_diff_cell(column, ahead, behind, ADDITION, dim_deletion, true)
+            render_diff_cell(column, ahead, behind)
         }
         ColumnKind::Time => {
             let mut cell = StyledLine::new();
@@ -437,30 +419,14 @@ fn render_list_cell(
     }
 }
 
-fn render_diff_cell(
-    column: &ColumnLayout,
-    positive: usize,
-    negative: usize,
-    positive_style: Style,
-    negative_style: Style,
-    always_show_zeros: bool,
-) -> StyledLine {
-    let ColumnFormat::Diff { digits, variant } = column.format else {
+fn render_diff_cell(column: &ColumnLayout, positive: usize, negative: usize) -> StyledLine {
+    let ColumnFormat::Diff(config) = column.format else {
         return StyledLine::new();
     };
 
-    format_diff_like_column(
-        positive,
-        negative,
-        DiffColumnConfig {
-            digits,
-            total_width: column.width,
-            variant,
-            positive_style,
-            negative_style,
-            always_show_zeros,
-        },
-    )
+    debug_assert_eq!(config.total_width, column.width);
+
+    format_diff_like_column(positive, negative, config)
 }
 
 /// Render a list item (worktree or branch) as a formatted line
@@ -484,6 +450,7 @@ pub fn format_list_item_line(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::commands::list::layout::DiffDigits;
     use worktrunk::styling::StyledLine;
 
     #[test]

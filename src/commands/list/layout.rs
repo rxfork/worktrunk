@@ -114,8 +114,10 @@
 //! - `try_allocate()`: Attempts to allocate space, returns 0 if insufficient
 
 use crate::display::{find_common_prefix, get_terminal_width};
+use anstyle::Style;
 use std::path::{Path, PathBuf};
 use unicode_width::UnicodeWidthStr;
+use worktrunk::styling::{ADDITION, DELETION};
 
 use super::{
     columns::{COLUMN_SPECS, ColumnKind, ColumnSpec, DiffVariant},
@@ -285,10 +287,17 @@ impl From<DiffWidths> for DiffDigits {
 #[derive(Clone, Copy, Debug)]
 pub enum ColumnFormat {
     Text,
-    Diff {
-        digits: DiffDigits,
-        variant: DiffVariant,
-    },
+    Diff(DiffColumnConfig),
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct DiffColumnConfig {
+    pub digits: DiffDigits,
+    pub total_width: usize,
+    pub variant: DiffVariant,
+    pub positive_style: Style,
+    pub negative_style: Style,
+    pub always_show_zeros: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -326,17 +335,58 @@ impl ColumnIdeal {
         }
     }
 
-    fn diff(widths: DiffWidths, variant: DiffVariant) -> Option<Self> {
+    fn diff(widths: DiffWidths, variant: DiffVariant, kind: ColumnKind) -> Option<Self> {
         if widths.total == 0 {
-            None
-        } else {
-            Some(Self {
-                width: widths.total,
-                format: ColumnFormat::Diff {
-                    digits: widths.into(),
-                    variant,
-                },
-            })
+            return None;
+        }
+
+        let styles = diff_styles_for_kind(kind);
+
+        Some(Self {
+            width: widths.total,
+            format: ColumnFormat::Diff(DiffColumnConfig {
+                digits: widths.into(),
+                total_width: widths.total,
+                variant,
+                positive_style: styles.positive_style,
+                negative_style: styles.negative_style,
+                always_show_zeros: styles.always_show_zeros,
+            }),
+        })
+    }
+}
+
+#[derive(Clone, Copy)]
+struct DiffRenderStyle {
+    positive_style: Style,
+    negative_style: Style,
+    always_show_zeros: bool,
+}
+
+fn diff_styles_for_kind(kind: ColumnKind) -> DiffRenderStyle {
+    match kind {
+        ColumnKind::WorkingDiff | ColumnKind::BranchDiff => DiffRenderStyle {
+            positive_style: ADDITION,
+            negative_style: DELETION,
+            always_show_zeros: false,
+        },
+        ColumnKind::AheadBehind => DiffRenderStyle {
+            positive_style: ADDITION,
+            negative_style: DELETION.dimmed(),
+            always_show_zeros: false,
+        },
+        ColumnKind::Upstream => DiffRenderStyle {
+            positive_style: ADDITION,
+            negative_style: DELETION.dimmed(),
+            always_show_zeros: true,
+        },
+        _ => {
+            debug_assert!(false, "diff_styles_for_kind called for non-diff column");
+            DiffRenderStyle {
+                positive_style: ADDITION,
+                negative_style: DELETION,
+                always_show_zeros: false,
+            }
         }
     }
 }
@@ -369,10 +419,24 @@ fn ideal_for_column(
         ColumnKind::CiStatus => ColumnIdeal::text(widths.ci_status),
         ColumnKind::Commit => ColumnIdeal::text(commit_width),
         ColumnKind::Message => None,
-        ColumnKind::WorkingDiff => ColumnIdeal::diff(widths.working_diff, DiffVariant::Signs),
-        ColumnKind::AheadBehind => ColumnIdeal::diff(widths.ahead_behind, DiffVariant::Arrows),
-        ColumnKind::BranchDiff => ColumnIdeal::diff(widths.branch_diff, DiffVariant::Signs),
-        ColumnKind::Upstream => ColumnIdeal::diff(widths.upstream, DiffVariant::Arrows),
+        ColumnKind::WorkingDiff => ColumnIdeal::diff(
+            widths.working_diff,
+            DiffVariant::Signs,
+            ColumnKind::WorkingDiff,
+        ),
+        ColumnKind::AheadBehind => ColumnIdeal::diff(
+            widths.ahead_behind,
+            DiffVariant::Arrows,
+            ColumnKind::AheadBehind,
+        ),
+        ColumnKind::BranchDiff => ColumnIdeal::diff(
+            widths.branch_diff,
+            DiffVariant::Signs,
+            ColumnKind::BranchDiff,
+        ),
+        ColumnKind::Upstream => {
+            ColumnIdeal::diff(widths.upstream, DiffVariant::Arrows, ColumnKind::Upstream)
+        }
     }
 }
 
