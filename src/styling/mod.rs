@@ -30,6 +30,14 @@ pub use format::{GUTTER_OVERHEAD, format_bash_with_gutter, format_with_gutter};
 pub use highlighting::format_toml;
 pub use line::{StyledLine, StyledString};
 
+/// Wrap text with an OSC 8 hyperlink
+///
+/// OSC 8 format: \x1b]8;;URL\x1b\\TEXT\x1b]8;;\x1b\\
+/// See: <https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda>
+pub fn hyperlink(text: &str, url: &str) -> String {
+    format!("\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\", url, text)
+}
+
 // Re-export for tests
 #[cfg(test)]
 use format::wrap_text_at_width;
@@ -381,5 +389,22 @@ command = "npm install"
             result.len() > 1,
             "Should wrap into multiple lines when visual width (52) > max_width (30)"
         );
+    }
+
+    #[test]
+    fn test_hyperlink() {
+        let text = "Click me";
+        let url = "https://github.com/user/repo/pull/123";
+        let result = super::hyperlink(text, url);
+
+        // OSC 8 format: \x1b]8;;URL\x1b\\TEXT\x1b]8;;\x1b\\
+        let expected = format!("\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\", url, text);
+        assert_eq!(result, expected);
+
+        // Verify structure
+        assert!(result.starts_with("\x1b]8;;"));
+        assert!(result.contains(url));
+        assert!(result.contains(text));
+        assert!(result.ends_with("\x1b]8;;\x1b\\"));
     }
 }

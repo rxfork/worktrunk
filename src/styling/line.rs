@@ -5,6 +5,11 @@
 use anstyle::Style;
 use unicode_width::UnicodeWidthStr;
 
+/// Strip ANSI escape codes (SGR and OSC) to get visual text for width calculation
+fn strip_ansi_codes(text: &str) -> String {
+    String::from_utf8_lossy(&strip_ansi_escapes::strip(text)).to_string()
+}
+
 /// A piece of text with an optional style
 #[derive(Clone, Debug)]
 pub struct StyledString {
@@ -28,9 +33,10 @@ impl StyledString {
         Self::new(text, Some(style))
     }
 
-    /// Returns the visual width (unicode-aware, no ANSI codes)
+    /// Returns the visual width (unicode-aware, ANSI codes stripped)
     pub fn width(&self) -> usize {
-        self.text.width()
+        let clean_text = strip_ansi_codes(&self.text);
+        clean_text.width()
     }
 
     /// Renders to a string with ANSI escape codes
@@ -90,5 +96,56 @@ impl StyledLine {
     /// Renders the entire line with ANSI escape codes
     pub fn render(&self) -> String {
         self.segments.iter().map(|s| s.render()).collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_width_strips_osc_hyperlinks() {
+        // Text with OSC 8 hyperlink should have visual width of just the text
+        let url = "https://github.com/user/repo/pull/123";
+        let text_content = "●";
+        let hyperlinked = format!("\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\", url, text_content);
+
+        let styled_str = StyledString::raw(&hyperlinked);
+        assert_eq!(
+            styled_str.width(),
+            1,
+            "Hyperlinked '●' should have width 1, not {}",
+            styled_str.width()
+        );
+    }
+
+    #[test]
+    fn test_width_strips_sgr_codes() {
+        // Text with SGR color codes should have visual width of just the text
+        let colored = "\x1b[32m●\x1b[0m"; // Green ●
+
+        let styled_str = StyledString::raw(colored);
+        assert_eq!(
+            styled_str.width(),
+            1,
+            "Colored '●' should have width 1, not {}",
+            styled_str.width()
+        );
+    }
+
+    #[test]
+    fn test_width_with_combined_ansi_codes() {
+        // Text with both color and hyperlink
+        let url = "https://example.com";
+        let combined = format!("\x1b[33m\x1b]8;;{}\x1b\\● passed\x1b]8;;\x1b\\\x1b[0m", url);
+
+        let styled_str = StyledString::raw(&combined);
+        // "● passed" = 1 + 1 (space) + 6 = 8
+        assert_eq!(
+            styled_str.width(),
+            8,
+            "Combined styled text should have width 8, not {}",
+            styled_str.width()
+        );
     }
 }

@@ -93,12 +93,39 @@ impl PrStatus {
             CiStatus::NoCI => "no-ci",
         };
 
-        format!("{}● {}{}", style, status_str, style.render_reset())
+        // Create base text
+        let text = format!("● {}", status_str);
+
+        // Wrap with hyperlink if URL is available
+        let content = if let Some(ref url) = self.url {
+            use worktrunk::styling::hyperlink;
+            hyperlink(&text, url)
+        } else {
+            text
+        };
+
+        format!("{}{}{}", style, content, style.render_reset())
     }
 
     fn render_indicator(&self) -> StyledLine {
         let mut segment = StyledLine::new();
-        segment.push_styled("●".to_string(), self.style());
+        let indicator = "●";
+
+        // If we have a URL, wrap the indicator with an OSC 8 hyperlink
+        if let Some(ref url) = self.url {
+            use worktrunk::styling::hyperlink;
+            // Create styled indicator with hyperlink
+            let styled_indicator = format!(
+                "{}{}{}",
+                self.style(),
+                hyperlink(indicator, url),
+                self.style().render_reset()
+            );
+            segment.push_raw(styled_indicator);
+        } else {
+            segment.push_styled(indicator.to_string(), self.style());
+        }
+
         segment
     }
 }

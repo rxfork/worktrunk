@@ -24,6 +24,9 @@ pub struct PrStatus {
     pub ci_status: CiStatus,
     /// True if local HEAD differs from PR HEAD (unpushed changes)
     pub is_stale: bool,
+    /// URL to the PR/MR (if available)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
 }
 
 impl PrStatus {
@@ -98,14 +101,19 @@ impl PrStatus {
             return None;
         }
 
-        // Get PR info for the branch
+        // Use `gh pr list --head` instead of `gh pr view` to handle numeric branch names correctly.
+        // When branch name is all digits (e.g., "4315"), `gh pr view` interprets it as a PR number,
+        // but `gh pr list --head` correctly treats it as a branch name.
         let mut cmd = Command::new("gh");
         cmd.args([
             "pr",
-            "view",
+            "list",
+            "--head",
             branch,
+            "--limit",
+            "1",
             "--json",
-            "state,headRefOid,mergeStateStatus,statusCheckRollup",
+            "state,headRefOid,mergeStateStatus,statusCheckRollup,url",
         ]);
 
         // Remove environment variables that force color output
@@ -124,7 +132,9 @@ impl PrStatus {
             return None;
         }
 
-        let pr_info: GitHubPrInfo = serde_json::from_slice(&output.stdout).ok()?;
+        // gh pr list returns an array, take the first (and only) item
+        let pr_list: Vec<GitHubPrInfo> = serde_json::from_slice(&output.stdout).ok()?;
+        let pr_info = pr_list.first()?;
 
         // Only process open PRs
         if pr_info.state != "OPEN" {
@@ -147,6 +157,7 @@ impl PrStatus {
         Some(PrStatus {
             ci_status,
             is_stale,
+            url: pr_info.url.clone(),
         })
     }
 
@@ -196,6 +207,7 @@ impl PrStatus {
         Some(PrStatus {
             ci_status,
             is_stale,
+            url: None, // GitLab MR URL not currently fetched
         })
     }
 
@@ -257,6 +269,7 @@ impl PrStatus {
         Some(PrStatus {
             ci_status,
             is_stale,
+            url: None, // Workflow runs don't have a PR URL
         })
     }
 
@@ -298,6 +311,7 @@ impl PrStatus {
         Some(PrStatus {
             ci_status,
             is_stale,
+            url: None, // GitLab pipeline URL not currently fetched
         })
     }
 }
@@ -311,6 +325,7 @@ struct GitHubPrInfo {
     merge_state_status: Option<String>,
     #[serde(rename = "statusCheckRollup")]
     status_check_rollup: Option<Vec<GitHubCheck>>,
+    url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
