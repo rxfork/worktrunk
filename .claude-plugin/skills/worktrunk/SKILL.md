@@ -1,11 +1,19 @@
 ---
-name: worktrunk-config
-description: This skill should be used when helping users configure Worktrunk, either personal settings (user config at ~/.config/worktrunk/config.toml) or project-specific hooks (project config at .config/wt.toml). Use when users ask to "set up LLM", "configure hooks", "automate npm install", or similar configuration tasks.
+name: worktrunk
+description: Guidance for Worktrunk, a CLI tool for managing git worktrees. Covers configuration (user config at ~/.config/worktrunk/config.toml and project hooks at .config/wt.toml), usage, and troubleshooting. Use for "setting up LLM", "configuring hooks", "automating tasks", or general worktrunk questions.
 ---
 
-# Worktrunk Configuration
+# Worktrunk
 
-This skill guides configuration of Worktrunk for both personal settings and project-specific automation.
+Help users work with Worktrunk, a CLI tool for managing git worktrees.
+
+## Available Documentation
+
+- **SKILL.md**: Configuration workflows and common patterns
+- **README.md**: Features, installation, examples, FAQ
+- **reference/*.md**: Detailed configuration and hook specifications
+
+For general usage, consult README.md. For configuration, follow the workflows below.
 
 ## Two Types of Configuration
 
@@ -174,19 +182,15 @@ wt config init
 wt config --help
 ```
 
-## When to Load Reference Files
+## Loading Additional Documentation
 
-Reference files contain detailed procedures. Load them when:
-- User asks about specific configuration aspects
-- Troubleshooting configuration issues
-- Need detailed examples or validation rules
-- Want comprehensive hook type reference
+Load **README.md** for general features, installation, commands, and examples.
 
-Use grep patterns to find specific sections:
+Load **reference files** for detailed configuration, hook specifications, and troubleshooting.
+
+Find specific sections with grep:
 ```bash
-# Find LLM setup details
+grep -A 20 "## Installation" README.md
 grep -A 20 "## LLM Setup" references/user-config.md
-
-# Find hook type details
 grep -A 30 "### post-create-command" references/project-config.md
 ```
