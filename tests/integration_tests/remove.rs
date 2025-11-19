@@ -259,3 +259,21 @@ fn test_remove_foreground() {
         None,
     );
 }
+
+#[test]
+fn test_remove_no_delete_branch() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+    repo.setup_remote("main");
+
+    // Create a worktree
+    let _worktree_path = repo.add_worktree("feature-keep", "feature-keep");
+
+    // Remove worktree but keep the branch using --no-delete-branch flag
+    snapshot_remove(
+        "remove_no_delete_branch",
+        &repo,
+        &["--no-delete-branch", "feature-keep"],
+        None,
+    );
+}

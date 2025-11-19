@@ -360,12 +360,12 @@ pub fn handle_standalone_ask_approvals(force: bool, show_all: bool) -> Result<()
         if force {
             // When using --force, commands aren't saved to config
             crate::output::success(format!(
-                "{GREEN}Commands approved (not saved with --force){GREEN:#}"
+                "{GREEN}Commands approved; not saved (--force){GREEN:#}"
             ))?;
         } else {
             // Interactive approval - commands were saved to config (unless save failed)
             crate::output::success(format!(
-                "{GREEN}Commands approved and saved to config{GREEN:#}"
+                "{GREEN}Commands approved & saved to config{GREEN:#}"
             ))?;
         }
     } else {

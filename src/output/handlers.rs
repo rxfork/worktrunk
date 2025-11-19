@@ -135,35 +135,28 @@ pub fn execute_user_command(command: &str) -> Result<(), GitError> {
 
 /// Build shell command for background worktree removal
 ///
-/// Constructs a command that:
-/// 1. Removes the worktree using `git worktree remove`
-/// 2. Conditionally deletes the branch if it's fully merged
-///
-/// The command replicates the same safety checks done in handle_remove_output:
-/// - Uses `git merge-base --is-ancestor` to check if branch is merged
-/// - Only deletes with `-D` if the branch is an ancestor of the target
+/// `should_delete_branch` indicates whether to delete the branch after removing the worktree.
+/// This decision is computed upfront (checking if branch is merged) before spawning the background process.
 fn build_remove_command(
     worktree_path: &std::path::Path,
     branch_name: &str,
-    no_delete_branch: bool,
-    target_branch: &str,
+    should_delete_branch: bool,
 ) -> String {
     use shell_escape::escape;
 
     let worktree_path_str = worktree_path.to_string_lossy();
     let worktree_escaped = escape(worktree_path_str.as_ref().into());
     let branch_escaped = escape(branch_name.into());
-    let target_escaped = escape(target_branch.into());
 
-    if no_delete_branch {
+    if should_delete_branch {
+        // Remove worktree and delete branch
+        format!(
+            "git worktree remove {} && git branch -D {}",
+            worktree_escaped, branch_escaped
+        )
+    } else {
         // Just remove the worktree
         format!("git worktree remove {}", worktree_escaped)
-    } else {
-        // Remove worktree and conditionally delete branch if merged
-        format!(
-            "git worktree remove {} && if git merge-base --is-ancestor {} {}; then git branch -D {}; fi",
-            worktree_escaped, branch_escaped, target_escaped, branch_escaped
-        )
     }
 }
 
@@ -193,14 +186,37 @@ pub fn handle_remove_output(
 
     if background {
         // Background mode: spawn detached process
-        let check_target = target_branch.as_deref().unwrap_or("HEAD");
-        let remove_command =
-            build_remove_command(worktree_path, branch_name, *no_delete_branch, check_target);
 
-        // Show simple progress message (log location documented in --help)
-        super::progress(format!(
-            "{CYAN}Removing {CYAN_BOLD}{branch_name}{CYAN_BOLD:#}{CYAN} in background{CYAN:#}"
-        ))?;
+        // Determine if we should delete the branch (check once upfront)
+        let should_delete_branch = if *no_delete_branch {
+            false
+        } else {
+            // Check if branch is fully merged to target
+            let check_target = target_branch.as_deref().unwrap_or("HEAD");
+            let deletion_repo = worktrunk::git::Repository::at(primary_path);
+            deletion_repo
+                .run_command(&["merge-base", "--is-ancestor", branch_name, check_target])
+                .is_ok()
+        };
+
+        // Show progress message based on what we'll do
+        let action = if *no_delete_branch {
+            format!(
+                "{CYAN}Removing {CYAN_BOLD}{branch_name}{CYAN_BOLD:#}{CYAN} in background; retaining branch (--no-delete-branch){CYAN:#}"
+            )
+        } else if should_delete_branch {
+            format!(
+                "{CYAN}Removing {CYAN_BOLD}{branch_name}{CYAN_BOLD:#}{CYAN} & branch in background{CYAN:#}"
+            )
+        } else {
+            format!(
+                "{CYAN}Removing {CYAN_BOLD}{branch_name}{CYAN_BOLD:#}{CYAN} in background; retaining unmerged branch{CYAN:#}"
+            )
+        };
+        super::progress(action)?;
+
+        // Build command with the decision we already made
+        let remove_command = build_remove_command(worktree_path, branch_name, should_delete_branch);
 
         // Spawn the removal in background - runs from primary_path (where we cd'd to)
         spawn_detached(&repo, primary_path, &remove_command, branch_name, "remove")?;

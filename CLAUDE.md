@@ -74,6 +74,53 @@ Output messages should acknowledge user-supplied arguments (flags, options, valu
 "Committing with default message... (3 files, +45, -12)"
 ```
 
+### Message Consistency Patterns
+
+Use consistent punctuation and structure for related messages:
+
+**Semicolon for qualifiers:** Separate the action from a qualifier/reason:
+```rust
+// Action; qualifier (flag)
+"Removing feature in background; retaining branch (--no-delete-branch)"
+"Commands approved; not saved (--force)"
+```
+
+**Ampersand for conjunctions:** Use `&` for combined actions:
+```rust
+// Action & additional action
+"Removing feature & branch in background"
+"Commands approved & saved to config"
+```
+
+**Explicit flag acknowledgment:** Show flags in parentheses when they change behavior:
+```rust
+// ✅ GOOD - shows the flag explicitly
+"Removing feature in background; retaining branch (--no-delete-branch)"
+// ❌ BAD - doesn't acknowledge user's explicit choice
+"Removing feature in background; retaining branch"
+```
+
+**Parallel structure:** Related messages should follow the same pattern:
+```rust
+// ✅ GOOD - parallel structure distinguishes user choice from system decision
+"Removing feature & branch in background"                                // Merged (will delete)
+"Removing feature in background; retaining unmerged branch"              // Unmerged (system keeps)
+"Removing feature in background; retaining branch (--no-delete-branch)"  // User flag (user keeps)
+```
+
+**Compute decisions once:** For background operations, check conditions upfront, show the message, then pass the decision explicitly rather than re-checking in background scripts:
+```rust
+// ✅ GOOD - check once, pass decision
+let should_delete = check_if_merged();
+show_message_based_on(should_delete);
+spawn_background(build_command(should_delete));
+
+// ❌ BAD - check twice (once for message, again in background script)
+let is_merged = check_if_merged();
+show_message_based_on(is_merged);
+spawn_background(build_command_that_checks_merge_again());  // Duplicate check!
+```
+
 ### The anstyle Ecosystem
 
 All styling uses the **anstyle ecosystem** for composable, auto-detecting terminal output:
