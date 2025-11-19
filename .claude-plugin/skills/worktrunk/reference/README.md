@@ -71,7 +71,9 @@ wt config shell  # Sets up shell integration
 
 ### LLM-Authored Commit Messages
 
-During merge operations, worktrunk can invoke a binary, such as [llm](https://llm.datasette.io/), to generate commit messages based on the diff and a configurable prompt.
+Worktrunk can invoke an external commands during merge operations to generate
+commit messages. Simon Willison's [llm](https://llm.datasette.io/) tool reads
+the diff and a configurable prompt, then returns a formatted commit message.
 
 Add to `~/.config/worktrunk/config.toml`:
 
@@ -196,13 +198,13 @@ $ wt merge
 <details>
 <summary>All available hooks</summary>
 
-| Hook                    | When It Runs                                                                   | Execution                                     | Failure Behavior                                |
-| ----------------------- | ------------------------------------------------------------------------------ | --------------------------------------------- | ----------------------------------------------- |
-| **post-create-command** | After `git worktree add` completes                                             | Sequential, blocking                          | Logs warning, continues with remaining commands |
-| **post-start-command**  | After post-create completes                                                    | Parallel, non-blocking (background processes) | Logs warning, doesn't affect switch result      |
-| **pre-commit-command**  | Before committing changes during `wt merge` (both squash and no-squash modes)  | Sequential, blocking, fail-fast               | Terminates merge immediately                    |
-| **pre-merge-command**   | After rebase completes during `wt merge` (validates rebased state before push) | Sequential, blocking, fail-fast               | Terminates merge immediately                    |
-| **post-merge-command**  | After successful merge and push to target branch, before cleanup               | Sequential, blocking                          | Logs warning, continues with remaining commands |
+| Hook                    | When It Runs                                                                   | Execution                                     | Failure Behavior             |
+| ----------------------- | ------------------------------------------------------------------------------ | --------------------------------------------- | ---------------------------- |
+| **post-create-command** | After `git worktree add` completes                                             | Sequential, blocking                          | Logs warning, continues      |
+| **post-start-command**  | After post-create completes                                                    | Parallel, non-blocking (background processes) | Logs warning, continues      |
+| **pre-commit-command**  | Before committing changes during `wt merge` (both squash and no-squash modes)  | Sequential, blocking, fail-fast               | Terminates merge immediately |
+| **pre-merge-command**   | After rebase completes during `wt merge` (validates rebased state before push) | Sequential, blocking, fail-fast               | Terminates merge immediately |
+| **post-merge-command**  | After successful merge and push to target branch, before cleanup               | Sequential, blocking                          | Logs warning, continues      |
 
 **Template variables:** `{{ repo }}`, `{{ branch }}`, `{{ worktree }}`, `{{ repo_root }}`, `{{ target }}`
 
@@ -512,7 +514,7 @@ Run without `--execute` to preview changes first.
 
 ## FAQ
 
-### Does Worktrunk execute arbitrary commands on my machine?
+### What commands does Worktrunk execute?
 
 Worktrunk executes commands in three contexts:
 
