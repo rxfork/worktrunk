@@ -2867,20 +2867,20 @@ fn test_merge_squash_with_working_tree_creates_backup() {
         ],
     );
 
-    // Verify that a stash backup was created
+    // Verify that a backup was created in the reflog
     // Note: The worktree has been removed by the merge, so we check from the repo root
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
     let output = cmd
-        .args(["stash", "list"])
+        .args(["reflog", "show", "refs/wt-backup/feature"])
         .current_dir(repo.root_path())
         .output()
-        .expect("Failed to list stashes");
+        .expect("Failed to show reflog");
 
-    let stash_list = String::from_utf8_lossy(&output.stdout);
+    let reflog = String::from_utf8_lossy(&output.stdout);
     assert!(
-        stash_list.contains("feature → main (squash)"),
-        "Expected backup stash to be created, but stash list was: {}",
-        stash_list
+        reflog.contains("feature → main (squash)"),
+        "Expected backup in reflog, but reflog was: {}",
+        reflog
     );
 }

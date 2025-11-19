@@ -560,6 +560,9 @@ The merge operation follows a strict order designed for fail-fast execution:
    commits exist, squashes them into one with LLM-generated message. Skip squashing
    with --no-squash.
 
+   A safety backup is created before squashing if there are working tree changes.
+   Recover with: git reflog show refs/wt-backup/<branch>
+
 4. Rebase onto target
    Rebases current branch onto target branch. Detects conflicts and aborts if found.
    This fails fast before running expensive checks.
