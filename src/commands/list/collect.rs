@@ -224,9 +224,16 @@ fn compute_item_status_symbols(item: &mut ListItem, base_branch: Option<&str>) {
                 upstream.active().map(|(_, a, b)| (a, b)).unwrap_or((0, 0));
             let upstream_divergence = compute_upstream_divergence(upstream_ahead, upstream_behind);
 
+            // Combine conflicts and branch state (mutually exclusive)
+            let branch_state = if has_conflicts {
+                BranchState::Conflicts
+            } else {
+                // has_potential_conflicts is always false currently (--full not implemented)
+                // but when implemented, it would go here as: else if has_potential_conflicts { PotentialConflicts }
+                branch_state
+            };
+
             item.status_symbols = Some(StatusSymbols {
-                has_conflicts,
-                has_potential_conflicts: false,
                 branch_state,
                 git_operation,
                 worktree_attrs,
@@ -252,16 +259,21 @@ fn compute_item_status_symbols(item: &mut ListItem, base_branch: Option<&str>) {
                 upstream.active().map(|(_, a, b)| (a, b)).unwrap_or((0, 0));
             let upstream_divergence = compute_upstream_divergence(upstream_ahead, upstream_behind);
 
-            // Branch state - only compute if we have actual counts data
-            // Branches without worktrees can only show NoCommits (no unique commits) or None
-            let branch_state = match item.counts {
-                Some(ref c) if c.ahead == 0 => BranchState::NoCommits,
-                _ => BranchState::None,
+            // Branch state - branches can only show Conflicts or NoCommits
+            // (MatchesMain only applies to worktrees since branches don't have working trees)
+            let branch_state = if has_conflicts {
+                BranchState::Conflicts
+            } else if let Some(ref c) = item.counts {
+                if c.ahead == 0 {
+                    BranchState::NoCommits
+                } else {
+                    BranchState::None
+                }
+            } else {
+                BranchState::None
             };
 
             item.status_symbols = Some(StatusSymbols {
-                has_conflicts,
-                has_potential_conflicts: false,
                 branch_state,
                 git_operation: GitOperation::None,
                 worktree_attrs: "⎇".to_string(), // Branch indicator

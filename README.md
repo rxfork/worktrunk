@@ -579,36 +579,58 @@ Options:
 
 **STATUS SYMBOLS:**
 
-The Status column shows git repository state using compact symbols. Symbol order indicates priority: conflicts (blocking) → worktree state → git operations → branch divergence → working tree changes.
+Order: `=≠ ≡∅ ↻⋈ ⎇⊠⚠ ↑↓ ⇡⇣ ?!+»✘`
 
-**Symbol order:** `= ≡∅ ↻⋈ ◇⊠⚠ ↑↓ ⇡⇣ ?!+»✘`
+- `·` Branch without worktree (no working directory to check)
+- `=` **Merge conflicts** (unmerged paths in working tree)
+- `≠` **Potential conflicts** with main (`--full` only, detected via `git merge-tree`)
+- `≡` Working tree matches main (identical contents, regardless of commit history)
+- `∅` No commits (no commits ahead AND no uncommitted changes)
+- `↻` Rebase in progress
+- `⋈` Merge in progress
+- `⎇` Branch indicator (shown for branches without worktrees)
+- `⊠` Locked worktree
+- `⚠` Prunable worktree
+- `↑` Ahead of main branch
+- `↓` Behind main branch
+- `⇡` Ahead of remote tracking branch
+- `⇣` Behind remote tracking branch
+- `?` Untracked files present
+- `!` Modified files (unstaged changes)
+- `+` Staged files (ready to commit)
+- `»` Renamed files
+- `✘` Deleted files
 
-| Symbol | Meaning                                                                            | Category           | Dimmed? |
-| ------ | ---------------------------------------------------------------------------------- | ------------------ | ------- |
-| `·`    | Branch without worktree                                                            | N/A                | No      |
-| `=`    | Conflicts with main                                                                | Blocking           | No      |
-| `≡`    | Working tree matches main (identical to main branch, regardless of commit history) | Worktree state     | Yes     |
-| `∅`    | No commits (no commits ahead AND no uncommitted changes)                           | Worktree state     | Yes     |
-| `↻`    | Rebase in progress                                                                 | Git operation      | No      |
-| `⋈`    | Merge in progress                                                                  | Git operation      | No      |
-| `◇`    | Bare worktree (no working directory)                                               | Worktree attribute | No      |
-| `⊠`    | Locked worktree                                                                    | Worktree attribute | No      |
-| `⚠`    | Prunable worktree                                                                  | Worktree attribute | No      |
-| `↑`    | Commits ahead of main                                                              | Branch divergence  | No      |
-| `↓`    | Commits behind main                                                                | Branch divergence  | No      |
-| `⇡`    | Commits ahead of remote                                                            | Remote divergence  | No      |
-| `⇣`    | Commits behind remote                                                              | Remote divergence  | No      |
-| `?`    | Untracked files                                                                    | Working tree       | No      |
-| `!`    | Modified files (unstaged)                                                          | Working tree       | No      |
-| `+`    | Staged files                                                                       | Working tree       | No      |
-| `»`    | Renamed files                                                                      | Working tree       | No      |
-| `✘`    | Deleted files                                                                      | Working tree       | No      |
+*Rows are dimmed when no unique work (≡ matches main OR ∅ no commits).*
 
-Symbols combine to show complete state (e.g., `≡↓!` means matches main, behind main, and has unstaged changes).
+**JSON OUTPUT:**
 
-**Dimming logic:** Dimmed rows indicate worktrees with no marginal information beyond main (no unique work). Lines dim when they have either `≡` (matches main) OR `∅` (no commits). Both conditions use OR logic: either is sufficient to dim. This focuses attention on worktrees containing work.
+Use `--format=json` for structured data. The `status_symbols` object provides:
 
-**Branch-only entries:** Branches without worktrees show `·` in the Status column, indicating git status is not applicable (no working directory to check).
+- `has_conflicts`: boolean - true when branch has conflicts with main
+- `branch_state`: "" | "=" (conflicts) | "≠" (potential) | "≡" (matches main) | "∅" (no commits)
+- `git_operation`: "" | "↻" (rebase) | "⋈" (merge)
+- `worktree_attrs`: "⎇" (branch) or combination of "⊠" (locked), "⚠" (prunable)
+- `main_divergence`: "" | "↑" (ahead) | "↓" (behind) | "↕" (diverged)
+- `upstream_divergence`: "" | "⇡" (ahead) | "⇣" (behind) | "⇅" (diverged)
+- `working_tree`: combination of "?" (untracked), "!" (modified), "+" (staged), "»" (renamed), "✘" (deleted)
+- `user_status`: custom status from git config (optional)
+
+**Query examples:**
+
+```bash
+# Find worktrees with conflicts
+jq '.[] | select(.type == "worktree" and .status_symbols.has_conflicts)'
+
+# Find worktrees with uncommitted changes
+jq '.[] | select(.type == "worktree" and .working_tree_diff.added > 0)'
+
+# Find worktrees in rebase or merge
+jq '.[] | select(.type == "worktree" and .status_symbols.git_operation != "")'
+
+# Get branches ahead of main
+jq '.[] | select(.ahead > 0) | {branch: (.branch // .name), ahead}'
+```
 
 </details>
 

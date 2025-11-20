@@ -352,17 +352,32 @@ impl serde::Serialize for UpstreamDivergence {
     }
 }
 
-/// Branch state relative to main/primary branch
+/// Branch state including conflicts
 ///
-/// Represents whether the branch matches main or has no commits.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+/// These states are mutually exclusive:
+/// - Conflicts (= or ≠) indicate changes that differ from main
+/// - MatchesMain (≡) means identical to main (can't have conflicts)
+/// - NoCommits (∅) means nothing ahead of main (can't conflict)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum BranchState {
-    /// Normal branch state (neither matches main nor empty)
+    /// Normal working branch (no conflicts, doesn't match main, has commits)
     #[default]
+    #[serde(rename = "")]
     None,
+    /// Actual merge conflicts with main (unmerged paths in working tree)
+    #[serde(rename = "=")]
+    Conflicts,
+    /// Potential conflicts with main (detected via --full, using git merge-tree)
+    /// TODO: Implement when --full mode is complete
+    #[allow(dead_code)]
+    #[serde(rename = "≠")]
+    PotentialConflicts,
     /// Working tree identical to main branch
+    #[serde(rename = "≡")]
     MatchesMain,
     /// No commits ahead and clean working tree (not matching main)
+    #[serde(rename = "∅")]
     NoCommits,
 }
 
@@ -370,18 +385,11 @@ impl std::fmt::Display for BranchState {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Self::None => Ok(()),
+            Self::Conflicts => write!(f, "="),
+            Self::PotentialConflicts => write!(f, "≠"),
             Self::MatchesMain => write!(f, "≡"),
             Self::NoCommits => write!(f, "∅"),
         }
-    }
-}
-
-impl serde::Serialize for BranchState {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(&self.to_string())
     }
 }
 
@@ -425,36 +433,34 @@ impl serde::Serialize for GitOperation {
 /// 1. Only allocate space for positions that have data
 /// 2. Pad each position to a consistent width for vertical alignment
 ///
-/// Stores maximum character width for each of 8 positions (including user status).
+/// Stores maximum character width for each of 7 positions (including user status).
 /// A width of 0 means the position is unused.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct PositionMask {
-    /// Maximum width for each position: [0, 1, 2, 3, 4, 5, 6, 7]
+    /// Maximum width for each position: [0, 1, 2, 3, 4, 5, 6]
     /// 0 = position unused, >0 = max characters needed
-    widths: [usize; 8],
+    widths: [usize; 7],
 }
 
 impl PositionMask {
     const POS_3_WORKING_TREE: usize = 0;
-    const POS_0A_CONFLICTS: usize = 1;
+    const POS_0A_BRANCH_STATE: usize = 1;
     const POS_0C_GIT_OPERATION: usize = 2;
     const POS_1_MAIN_DIVERGENCE: usize = 3;
     const POS_2_UPSTREAM_DIVERGENCE: usize = 4;
-    const POS_0B_BRANCH_STATE: usize = 5;
-    const POS_0D_WORKTREE_ATTRS: usize = 6;
-    const POS_4_USER_STATUS: usize = 7;
+    const POS_0D_WORKTREE_ATTRS: usize = 5;
+    const POS_4_USER_STATUS: usize = 6;
 
     /// Full mask with all positions enabled (for JSON output and progressive rendering)
     /// Allocates realistic widths based on common symbol sizes to ensure proper grid alignment
     pub const FULL: Self = Self {
         widths: [
             5, // POS_3_WORKING_TREE: ?!+»✘ (max 5 symbols)
-            1, // POS_0A_CONFLICTS: = (1 char)
+            1, // POS_0A_BRANCH_STATE: =≠≡∅ (1 char, mutually exclusive)
             1, // POS_0C_GIT_OPERATION: ↻ or ⋈ (1 char)
             1, // POS_1_MAIN_DIVERGENCE: ↑, ↓, ↕ (1 char)
             1, // POS_2_UPSTREAM_DIVERGENCE: ⇡, ⇣, ⇅ (1 char)
-            1, // POS_0B_BRANCH_STATE: ≡ or ∅ (1 char)
-            2, // POS_0D_WORKTREE_ATTRS: ⎇ for branches (1 char), ⊠⚠ for worktrees (max 2)
+            2, // POS_0D_WORKTREE_ATTRS: ⎇ for branches (1 char), ⊠⚠ for worktrees (max 2, bare filtered out)
             2, // POS_4_USER_STATUS: single emoji or two chars (allocate 2)
         ],
     };
@@ -468,8 +474,7 @@ impl PositionMask {
 /// Structured status symbols for aligned rendering
 ///
 /// Symbols are categorized to enable vertical alignment in table output:
-/// - Position 0a: Conflicts (=)
-/// - Position 0b: Branch state (≡, ∅)
+/// - Position 0a: Conflicts or branch state (=, ≠, ≡, ∅) - mutually exclusive
 /// - Position 0c: Git operation (↻, ⋈)
 /// - Position 0d: Item attributes (⎇ for branches, ⊠⚠ for worktrees)
 /// - Position 1: Main branch divergence (↑, ↓, ↕)
@@ -480,28 +485,20 @@ impl PositionMask {
 /// ## Mutual Exclusivity
 ///
 /// **Mutually exclusive (enforced by type system):**
-/// - ≡ vs ∅: Branch state (BranchState enum)
+/// - = vs ≠ vs ≡ vs ∅: ConflictsOrBranchState enum (combined position)
 /// - ↻ vs ⋈: Git operation (GitOperation enum)
 /// - ↑ vs ↓ vs ↕: Main divergence (MainDivergence enum)
 /// - ⇡ vs ⇣ vs ⇅: Upstream divergence (UpstreamDivergence enum)
 ///
 /// **NOT mutually exclusive (can co-occur):**
-/// - = can occur with any other symbol
 /// - ⊠, ⚠: Worktree can be locked+prunable (bare is filtered out)
 /// - ⎇: Branch indicator (mutually exclusive with ⊠⚠ as branches can't have worktree attrs)
 /// - All working tree symbols (?!+»✘): Can have multiple types of changes
-#[derive(Debug, Clone, Default, serde::Serialize)]
+#[derive(Debug, Clone, Default)]
 pub struct StatusSymbols {
-    /// Actual merge conflicts in working tree (unmerged paths)
-    /// Position 0a - Boolean flag (= or empty)
-    pub(crate) has_conflicts: bool,
-
-    /// Potential conflicts with main branch (detected via --full)
-    /// Position 0a2 - Boolean flag (≠ or empty)
-    pub(crate) has_potential_conflicts: bool,
-
-    /// Branch state relative to main
-    /// Position 0b - MUTUALLY EXCLUSIVE (enforced by enum)
+    /// Branch state including conflicts (mutually exclusive)
+    /// Position 0a - BranchState enum
+    /// Priority: Conflicts (=) > PotentialConflicts (≠) > MatchesMain (≡) > NoCommits (∅)
     pub(crate) branch_state: BranchState,
 
     /// Git operation in progress
@@ -542,8 +539,7 @@ impl StatusSymbols {
     ///
     /// Aligns all symbol types at fixed positions, but only includes positions
     /// that are present in the mask:
-    /// - Position 0a: Conflicts (= or space)
-    /// - Position 0b: Branch state (≡, ∅, or space)
+    /// - Position 0a: Conflicts or branch state (=, ≠, ≡, ∅)
     /// - Position 0c: Git operation (↻, ⋈, or space)
     /// - Position 0d: Worktree attributes (⊠⚠ or space)
     /// - Position 1: Main divergence (↑, ↓, ↕, or space)
@@ -566,16 +562,16 @@ impl StatusSymbols {
         // Build list of (position_index, content, has_data) tuples
         // Ordered by importance/actionability
         // Apply colors based on semantic meaning:
-        // - Red (ERROR): Conflicts (blocking problems)
-        // - Yellow (WARNING): Git operations, locked/prunable (active/stuck states)
+        // - Red (ERROR): Actual conflicts (blocking problems)
+        // - Yellow (WARNING): Potential conflicts, git operations, locked/prunable (active/stuck states)
         // - Cyan: Working tree changes (activity)
         // - Dimmed (HINT): Branch state symbols that indicate removability
-        let conflicts_str = if self.has_conflicts {
-            format!("{ERROR}={ERROR:#}")
-        } else if self.has_potential_conflicts {
-            format!("{WARNING}≠{WARNING:#}")
-        } else {
-            String::new()
+        let branch_state_str = match self.branch_state {
+            BranchState::Conflicts => format!("{ERROR}={ERROR:#}"),
+            BranchState::PotentialConflicts => format!("{WARNING}≠{WARNING:#}"),
+            BranchState::MatchesMain => format!("{HINT}≡{HINT:#}"),
+            BranchState::NoCommits => format!("{HINT}∅{HINT:#}"),
+            BranchState::None => String::new(),
         };
         let git_operation_str = if self.git_operation != GitOperation::None {
             format!("{WARNING}{}{WARNING:#}", self.git_operation)
@@ -584,11 +580,6 @@ impl StatusSymbols {
         };
         let main_divergence_str = self.main_divergence.to_string();
         let upstream_divergence_str = self.upstream_divergence.to_string();
-        let branch_state_str = if self.branch_state != BranchState::None {
-            format!("{HINT}{}{HINT:#}", self.branch_state)
-        } else {
-            String::new()
-        };
         let working_tree_str = if !self.working_tree.is_empty() {
             format!("{CYAN}{}{CYAN:#}", self.working_tree)
         } else {
@@ -612,7 +603,7 @@ impl StatusSymbols {
         // CRITICAL: Display order is working_tree first, then other symbols.
         // NEVER change this order - it ensures progressive and final rendering match exactly.
         // Tests will break if you change this, but that's expected - update the tests, not this order.
-        let positions_data: [(usize, &str, usize, bool); 8] = [
+        let positions_data: [(usize, &str, usize, bool); 7] = [
             (
                 PositionMask::POS_3_WORKING_TREE,
                 working_tree_str.as_str(),
@@ -620,19 +611,13 @@ impl StatusSymbols {
                 !self.working_tree.is_empty(),
             ),
             (
-                PositionMask::POS_0A_CONFLICTS,
-                conflicts_str.as_str(),
-                if self.has_conflicts || self.has_potential_conflicts {
+                PositionMask::POS_0A_BRANCH_STATE,
+                branch_state_str.as_str(),
+                if self.branch_state != BranchState::None {
                     1
                 } else {
                     0
                 },
-                self.has_conflicts || self.has_potential_conflicts,
-            ),
-            (
-                PositionMask::POS_0B_BRANCH_STATE,
-                branch_state_str.as_str(),
-                self.branch_state.to_string().width(),
                 self.branch_state != BranchState::None,
             ),
             (
@@ -640,12 +625,6 @@ impl StatusSymbols {
                 git_operation_str.as_str(),
                 self.git_operation.to_string().width(),
                 self.git_operation != GitOperation::None,
-            ),
-            (
-                PositionMask::POS_0D_WORKTREE_ATTRS,
-                worktree_attrs_str.as_str(),
-                self.worktree_attrs.width(),
-                !self.worktree_attrs.is_empty(),
             ),
             (
                 PositionMask::POS_1_MAIN_DIVERGENCE,
@@ -658,6 +637,12 @@ impl StatusSymbols {
                 upstream_divergence_str.as_str(),
                 self.upstream_divergence.to_string().width(),
                 self.upstream_divergence != UpstreamDivergence::None,
+            ),
+            (
+                PositionMask::POS_0D_WORKTREE_ATTRS,
+                worktree_attrs_str.as_str(),
+                self.worktree_attrs.width(),
+                !self.worktree_attrs.is_empty(),
             ),
             (
                 PositionMask::POS_4_USER_STATUS,
@@ -694,14 +679,39 @@ impl StatusSymbols {
 
     /// Check if symbols are empty
     pub fn is_empty(&self) -> bool {
-        !self.has_conflicts
-            && !self.has_potential_conflicts
-            && self.branch_state == BranchState::None
+        self.branch_state == BranchState::None
             && self.git_operation == GitOperation::None
             && self.worktree_attrs.is_empty()
             && self.main_divergence == MainDivergence::None
             && self.upstream_divergence == UpstreamDivergence::None
             && self.working_tree.is_empty()
             && self.user_status.is_none()
+    }
+}
+
+impl serde::Serialize for StatusSymbols {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut state = serializer.serialize_struct("StatusSymbols", 8)?;
+
+        // Convenience boolean - derived from branch_state
+        let has_conflicts = matches!(
+            self.branch_state,
+            BranchState::Conflicts | BranchState::PotentialConflicts
+        );
+        state.serialize_field("has_conflicts", &has_conflicts)?;
+
+        state.serialize_field("branch_state", &self.branch_state)?;
+        state.serialize_field("git_operation", &self.git_operation)?;
+        state.serialize_field("worktree_attrs", &self.worktree_attrs)?;
+        state.serialize_field("main_divergence", &self.main_divergence)?;
+        state.serialize_field("upstream_divergence", &self.upstream_divergence)?;
+        state.serialize_field("working_tree", &self.working_tree)?;
+        state.serialize_field("user_status", &self.user_status)?;
+
+        state.end()
     }
 }

@@ -361,7 +361,7 @@ Displays worktrees in a table format with status information, commit details, an
 
 ## STATUS SYMBOLS
 
-Order: `=≠ ≡∅ ↻⋈ ⊠⚠ ↑↓ ⇡⇣ ?!+»✘`
+Order: `=≠ ≡∅ ↻⋈ ⎇⊠⚠ ↑↓ ⇡⇣ ?!+»✘`
 
 - `·` Branch without worktree (no working directory to check)
 - `=` **Merge conflicts** (unmerged paths in working tree)
@@ -370,6 +370,7 @@ Order: `=≠ ≡∅ ↻⋈ ⊠⚠ ↑↓ ⇡⇣ ?!+»✘`
 - `∅` No commits (no commits ahead AND no uncommitted changes)
 - `↻` Rebase in progress
 - `⋈` Merge in progress
+- `⎇` Branch indicator (shown for branches without worktrees)
 - `⊠` Locked worktree
 - `⚠` Prunable worktree
 - `↑` Ahead of main branch
@@ -382,7 +383,34 @@ Order: `=≠ ≡∅ ↻⋈ ⊠⚠ ↑↓ ⇡⇣ ?!+»✘`
 - `»` Renamed files
 - `✘` Deleted files
 
-*Rows are dimmed when no unique work (≡ matches main OR ∅ no commits).*")]
+*Rows are dimmed when no unique work (≡ matches main OR ∅ no commits).*
+
+## JSON OUTPUT
+
+Use `--format=json` for structured data. The `status_symbols` object provides:
+
+- `has_conflicts`: boolean - true when branch has conflicts with main
+- `branch_state`: \"\" | \"=\" (conflicts) | \"≠\" (potential) | \"≡\" (matches main) | \"∅\" (no commits)
+- `git_operation`: \"\" | \"↻\" (rebase) | \"⋈\" (merge)
+- `worktree_attrs`: \"⎇\" (branch) or combination of \"⊠\" (locked), \"⚠\" (prunable)
+- `main_divergence`: \"\" | \"↑\" (ahead) | \"↓\" (behind) | \"↕\" (diverged)
+- `upstream_divergence`: \"\" | \"⇡\" (ahead) | \"⇣\" (behind) | \"⇅\" (diverged)
+- `working_tree`: combination of \"?\" (untracked), \"!\" (modified), \"+\" (staged), \"»\" (renamed), \"✘\" (deleted)
+- `user_status`: custom status from git config (optional)
+
+**Query examples:**
+
+  # Find worktrees with conflicts
+  jq '.[] | select(.type == \"worktree\" and .status_symbols.has_conflicts)'
+
+  # Find worktrees with uncommitted changes
+  jq '.[] | select(.type == \"worktree\" and .working_tree_diff.added > 0)'
+
+  # Find worktrees in rebase or merge
+  jq '.[] | select(.type == \"worktree\" and .status_symbols.git_operation != \"\")'
+
+  # Get branches ahead of main
+  jq '.[] | select(.ahead > 0) | {branch: (.branch // .name), ahead}'")]
     List {
         /// Output format
         #[arg(long, value_enum, default_value = "table")]

@@ -515,17 +515,11 @@ Use `wt list --format=json` for structured data access. The output is an array o
 
 - `name`: branch name
 
-### Status Symbols Structure
+### JSON Field Documentation
 
-The `status_symbols` object provides structured access to status indicators (available for both worktrees and branches):
-
-- `has_conflicts`: boolean
-- `branch_state`: "" | "≡" (matches main) | "∅" (no commits and clean)
-- `git_operation`: "" | "↻" (rebase) | "⋈" (merge)
-- `worktree_attrs`: "⎇" for branches, or combination of "◇" (bare), "⊠" (locked), "⚠" (prunable) for worktrees
-- `main_divergence`: "" | "↑" (ahead) | "↓" (behind) | "↕" (diverged)
-- `upstream_divergence`: "" | "⇡" (ahead) | "⇣" (behind) | "⇅" (diverged)
-- `working_tree`: combination of "?" (untracked), "!" (modified), "+" (staged), "»" (renamed), "✘" (deleted)
+**For status symbols and query examples, see:**
+- `wt list --help` - authoritative source of truth
+- README.md - copy of help text for quick reference
 
 ### Display Fields (json-pretty format only)
 
@@ -534,25 +528,3 @@ ANSI-formatted strings for human-readable output:
 - `upstream_display`, `ci_status_display` (optional)
 - `status_display`: rendered status symbols + user status
 - `working_diff_display` (worktrees only, optional)
-
-### Query Examples
-
-```bash
-# Find worktrees with uncommitted changes
-jq '.[] | select(.type == "worktree" and .working_tree_diff.added > 0)'
-
-# Find worktrees with conflicts
-jq '.[] | select(.type == "worktree" and .status_symbols.has_conflicts)'
-
-# Find worktrees in rebase or merge
-jq '.[] | select(.type == "worktree" and .status_symbols.git_operation != "")'
-
-# Get branches ahead of main
-jq '.[] | select(.ahead > 0) | {branch: (.branch // .name), ahead}'
-
-# Find branches without worktrees
-jq '.[] | select(.type == "branch") | .name'
-
-# Get worktrees that match main exactly
-jq '.[] | select(.type == "worktree" and .working_tree_diff_with_main.added == 0 and .working_tree_diff_with_main.deleted == 0)'
-```
