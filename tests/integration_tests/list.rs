@@ -1715,6 +1715,16 @@ fn test_list_maximum_status_symbols() {
         .output()
         .unwrap();
 
+    // Prune reflog to ensure deterministic ahead/behind calculation after force push.
+    // Without this, the reflog may retain the old origin/feature reference (before force push),
+    // causing git rev-list --left-right --count to calculate merge-base differently across platforms.
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["reflog", "expire", "--expire=now", "--all"])
+        .current_dir(&feature)
+        .output()
+        .unwrap();
+
     // Make main advance with conflicting change (so feature is behind with conflicts)
     std::fs::write(repo.root_path().join("shared.txt"), "main version").unwrap();
     std::fs::write(repo.root_path().join("main2.txt"), "more main").unwrap();
