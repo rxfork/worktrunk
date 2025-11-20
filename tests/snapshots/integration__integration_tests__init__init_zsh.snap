@@ -12,10 +12,11 @@ info:
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
     GIT_CONFIG_SYSTEM: /dev/null
+    GIT_EDITOR: ""
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpSJbP72/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpnXjgUA/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -425,7 +426,7 @@ _arguments "${_arguments_options[@]}" : \
 '--create[Create a new branch]' \
 '-f[Skip approval prompts]' \
 '--force[Skip approval prompts]' \
-'--no-verify[Skip project hooks]' \
+'--no-verify[Skip all project hooks]' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
 '-h[Print help]' \
