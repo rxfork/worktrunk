@@ -128,23 +128,23 @@ impl ShellOutput {
     }
 }
 
-/// Generate a shell wrapper script using the actual `wt init` command
+/// Generate a shell wrapper script using the actual `wt config shell init` command
 fn generate_wrapper(repo: &TestRepo, shell: &str) -> String {
     let wt_bin = get_cargo_bin("wt");
 
     let mut cmd = Command::new(&wt_bin);
-    cmd.arg("init").arg(shell);
+    cmd.arg("config").arg("shell").arg("init").arg(shell);
 
     // Configure environment
     repo.clean_cli_env(&mut cmd);
 
     let output = cmd
         .output()
-        .unwrap_or_else(|_| panic!("Failed to run wt init {}", shell));
+        .unwrap_or_else(|_| panic!("Failed to run wt config shell init {}", shell));
 
     if !output.status.success() {
         panic!(
-            "wt init {} failed with exit code: {:?}\nOutput:\n{}",
+            "wt config shell init {} failed with exit code: {:?}\nOutput:\n{}",
             shell,
             output.status.code(),
             String::from_utf8_lossy(&output.stderr)
@@ -152,7 +152,7 @@ fn generate_wrapper(repo: &TestRepo, shell: &str) -> String {
     }
 
     String::from_utf8(output.stdout)
-        .unwrap_or_else(|_| panic!("wt init {} produced invalid UTF-8", shell))
+        .unwrap_or_else(|_| panic!("wt config shell init {} produced invalid UTF-8", shell))
 }
 
 /// Quote a shell argument if it contains special characters

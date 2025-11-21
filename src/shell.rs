@@ -108,13 +108,13 @@ impl Shell {
         match self {
             Self::Bash | Self::Zsh => {
                 format!(
-                    "if command -v {} >/dev/null 2>&1; then eval \"$(command {} init {})\"; fi",
+                    "if command -v {} >/dev/null 2>&1; then eval \"$(command {} config shell init {})\"; fi",
                     cmd_prefix, cmd_prefix, self
                 )
             }
             Self::Fish => {
                 format!(
-                    "if type -q {}; command {} init {} | source; end",
+                    "if type -q {}; command {} config shell init {} | source; end",
                     cmd_prefix, cmd_prefix, self
                 )
             } // Disabled shells - uncomment when ready to support

@@ -31,6 +31,9 @@ exclude = [
     # Sites already excluded in markdown-link-check
     "~opensource\\.org",
     "~llm\\.datasette\\.io",
+
+    # Local build artifacts (not checked into git)
+    "~wt-demo/out/wt-demo\\.gif",
 ]
 
 # Exclude files with relative paths intended for different locations

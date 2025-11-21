@@ -83,7 +83,7 @@ Most common request. Follow this sequence:
 
 5. **After approval, apply**
    - Check if config exists: `wt config list`
-   - If not, guide through `wt config init`
+   - If not, guide through `wt config create`
    - Read, modify, write preserving structure
 
 6. **Suggest testing**
@@ -176,7 +176,7 @@ Common request for workflow automation. Follow discovery process:
 wt config list
 
 # Create initial user config
-wt config init
+wt config create
 
 # LLM setup guide
 wt config --help

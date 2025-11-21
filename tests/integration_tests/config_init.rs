@@ -3,7 +3,7 @@ use insta_cmd::assert_cmd_snapshot;
 use std::fs;
 use tempfile::TempDir;
 
-/// Test `wt config init` when config already exists (should show info message with emoji)
+/// Test `wt config create` when config already exists (should show info message with emoji)
 #[test]
 fn test_config_init_already_exists() {
     let temp_home = TempDir::new().unwrap();
@@ -21,7 +21,7 @@ fn test_config_init_already_exists() {
     let settings = setup_home_snapshot_settings(&temp_home);
     settings.bind(|| {
         let mut cmd = wt_command();
-        cmd.arg("config").arg("init");
+        cmd.arg("config").arg("create");
         set_temp_home_env(&mut cmd, temp_home.path());
 
         assert_cmd_snapshot!(cmd, @r"
@@ -37,19 +37,19 @@ fn test_config_init_already_exists() {
     });
 }
 
-/// Test `wt config init` creates new config file
+/// Test `wt config create` creates new config file
 #[test]
 fn test_config_init_creates_file() {
     let temp_home = TempDir::new().unwrap();
 
-    // Don't create config file - let init create it
+    // Don't create config file - let create create it
     let global_config_dir = temp_home.path().join(".config").join("worktrunk");
     fs::create_dir_all(&global_config_dir).unwrap();
 
     let settings = setup_home_snapshot_settings(&temp_home);
     settings.bind(|| {
         let mut cmd = wt_command();
-        cmd.arg("config").arg("init");
+        cmd.arg("config").arg("create");
         set_temp_home_env(&mut cmd, temp_home.path());
 
         assert_cmd_snapshot!(cmd, @r"

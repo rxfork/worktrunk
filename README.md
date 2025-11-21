@@ -69,7 +69,7 @@ See [`wt list`](#wt-list) for all options.
 
 ```bash
 cargo install worktrunk
-wt config shell  # Sets up shell integration
+wt config shell install  # Sets up shell integration
 ```
 
 See [Shell Integration](#shell-integration) for details.
@@ -126,7 +126,7 @@ $ wt merge
 ✅ Squashed @ a1b2c3d
 ```
 
-To set up integration: run `wt config --help` to see the setup guide, or `wt config init` to create an example config file.
+To set up integration: run `wt config --help` to see the setup guide, or `wt config create` to create an example config file.
 
 <details>
 <summary>Advanced: Custom Prompt Templates</summary>
@@ -720,9 +720,6 @@ Enable AI-generated commit messages
    command = "llm"
    ```
 
-Use `wt config init` to create the config file if it doesn't exist.
-Use `wt config list` to view your current configuration.
-
 Docs: https://llm.datasette.io/ | https://github.com/sigoden/aichat
 
 </details>
@@ -746,7 +743,7 @@ These commands are subject to change:
 
 ```bash
 wt config list    # Show all config files and locations
-wt config init    # Create global config with examples
+wt config create  # Create global config with examples
 wt config --help  # Show LLM setup guide
 ```
 

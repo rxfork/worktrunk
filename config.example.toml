@@ -3,7 +3,7 @@
 #   macOS/Linux:   ~/.config/worktrunk/config.toml (or $XDG_CONFIG_HOME/worktrunk/config.toml)
 #   Windows:       %APPDATA%\worktrunk\config.toml
 #
-# Generate with: wt config init
+# Generate with: wt config create
 #
 # NOTE: This file is the source of truth for default configuration.
 # The commented templates below match src/llm.rs constants:

@@ -16,8 +16,7 @@ wt - Git worktree management
 Usage: wt [OPTIONS] <COMMAND>
 
 Commands:
-  init    Generate shell integration code
-  config  Manage configuration
+  config  Manage configuration and shell integration
   list    List worktrees and optionally branches
   switch  Switch to a worktree
   remove  Remove worktree and branch

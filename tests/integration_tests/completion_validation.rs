@@ -240,18 +240,24 @@ fn validate_cross_shell(fish_content: &str, bash_content: &str, zsh_content: &st
 fn test_completion_validation() {
     // Generate completions
     let fish_output = wt_command()
+        .arg("config")
+        .arg("shell")
         .arg("init")
         .arg("fish")
         .output()
         .expect("Failed to generate fish completion");
 
     let bash_output = wt_command()
+        .arg("config")
+        .arg("shell")
         .arg("init")
         .arg("bash")
         .output()
         .expect("Failed to generate bash completion");
 
     let zsh_output = wt_command()
+        .arg("config")
+        .arg("shell")
         .arg("init")
         .arg("zsh")
         .output()

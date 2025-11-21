@@ -131,55 +131,48 @@ pub struct Cli {
 }
 
 #[derive(Subcommand)]
-pub enum ConfigCommand {
-    /// Initialize global configuration file with examples
-    Init,
-    /// List configuration files & locations
-    List,
-    /// Refresh default branch from remote
-    RefreshCache,
-    /// Configure shell integration
-    #[command(long_about = r#"Configure shell by writing to config files
-
-This command automatically adds the appropriate integration line to your shell's config file.
-It supports Bash, Zsh, Fish, Nushell, PowerShell, Elvish, Xonsh, and Oil.
-
-The integration enables 'wt switch' to change directories and 'wt remove' to return to the
-previous location.
-
-MANUAL SETUP (if you prefer):
+pub enum ConfigShellCommand {
+    /// Generate shell integration code
+    #[command(after_long_help = r#"MANUAL SETUP:
 
 Add one line to your shell config:
 
 Bash (~/.bashrc):
-  eval "$(wt init bash)"
+  eval "$(wt config shell init bash)"
 
 Fish (~/.config/fish/config.fish):
-  wt init fish | source
+  wt config shell init fish | source
 
 Zsh (~/.zshrc):
-  eval "$(wt init zsh)"
+  eval "$(wt config shell init zsh)"
 
-Nushell (~/.config/nushell/env.nu):
-  wt init nushell | save -f ~/.cache/wt-init.nu
+AUTO SETUP:
 
-Then add to ~/.config/nushell/config.nu:
-  source ~/.cache/wt-init.nu
+Use 'wt config shell install' to automatically add to your shell config."#)]
+    Init {
+        /// Shell to generate code for
+        #[arg(value_enum)]
+        shell: Shell,
 
-PowerShell (profile):
-  wt init powershell | Out-String | Invoke-Expression
+        /// Command name
+        #[arg(long, default_value = DEFAULT_COMMAND_NAME)]
+        command_name: String,
+    },
 
-Elvish (~/.config/elvish/rc.elv):
-  eval (wt init elvish | slurp)
+    /// Write shell integration to config files
+    #[command(after_long_help = r#"AUTO SETUP:
 
-Xonsh (~/.xonshrc):
-  execx($(wt init xonsh))
+Detects existing shell config files and adds integration:
+  wt config shell install
 
-Oil Shell (~/.config/oil/oshrc):
-  eval "$(wt init oil)""#)]
-    Shell {
-        /// Shell to configure
-        #[arg(long, value_enum)]
+Install for specific shell only:
+  wt config shell install zsh
+
+Skip confirmation prompt:
+  wt config shell install --force"#)]
+    Install {
+        /// Shell to install (default: auto-detect)
+        #[arg(value_enum)]
         shell: Option<Shell>,
 
         /// Skip confirmation prompt
@@ -190,6 +183,24 @@ Oil Shell (~/.config/oil/oshrc):
         #[arg(long, default_value = DEFAULT_COMMAND_NAME)]
         command_name: String,
     },
+}
+
+#[derive(Subcommand)]
+pub enum ConfigCommand {
+    /// Shell integration setup
+    Shell {
+        #[command(subcommand)]
+        action: ConfigShellCommand,
+    },
+
+    /// Create global configuration file
+    Create,
+
+    /// List configuration files & locations
+    List,
+
+    /// Refresh default branch from remote
+    RefreshCache,
 
     /// Manage branch status markers
     Status {
@@ -309,50 +320,42 @@ pub enum StandaloneCommand {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Generate shell integration code
-    Init {
-        /// Shell to generate code for
-        shell: Shell,
-
-        /// Command name
-        #[arg(long, default_value = DEFAULT_COMMAND_NAME)]
-        command_name: String,
-    },
-
-    /// Manage configuration
+    /// Manage configuration and shell integration
     #[command(
-        about = "Manage configuration",
-        after_long_help = r#"LLM SETUP GUIDE:
-Enable AI-generated commit messages
+        about = "Manage configuration and shell integration",
+        after_long_help = r#"SETUP GUIDE:
 
-1. Install an LLM tool (llm, aichat)
+1. Set up shell integration
 
-   uv tool install -U llm
+   wt config shell install
 
-2. Configure a model
+   Or manually add to your shell config:
+   eval "$(wt config shell init bash)"
+
+2. (Optional) Create config file
+
+   wt config create
+
+   This creates ~/.config/worktrunk/config.toml with examples.
+
+3. (Optional) Enable LLM commit messages
+
+   Install: uv tool install -U llm
+   Configure: llm keys set anthropic
+   Add to config.toml:
+     [commit-generation]
+     command = "llm"
+
+LLM SETUP DETAILS:
 
 For Claude:
    llm install llm-anthropic
    llm keys set anthropic
-   # Paste your API key from: https://console.anthropic.com/settings/keys
    llm models default claude-3.5-sonnet
 
 For OpenAI:
    llm keys set openai
-   # Paste your API key from: https://platform.openai.com/api-keys
 
-3. Test it works
-
-   llm "say hello"
-
-4. Configure worktrunk
-
-Add to ~/.config/worktrunk/config.toml:
-
-   [commit-generation]
-   command = "llm"
-
-Use 'wt config init' to create the config file if it doesn't exist
 Use 'wt config list' to view your current configuration
 Docs: https://llm.datasette.io/ | https://github.com/sigoden/aichat
 "#

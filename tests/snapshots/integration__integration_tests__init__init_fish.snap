@@ -3,6 +3,8 @@ source: tests/integration_tests/init.rs
 info:
   program: wt
   args:
+    - config
+    - shell
     - init
     - fish
   env:
@@ -19,7 +21,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpDJ4JgG/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmph2v1TR/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -191,42 +193,34 @@ complete -c wt -n "__fish_wt_needs_command" -s C -d 'Change working directory' -
 complete -c wt -n "__fish_wt_needs_command" -s v -l verbose -d 'Show commands and debug info'
 complete -c wt -n "__fish_wt_needs_command" -s h -l help -d 'Print help'
 complete -c wt -n "__fish_wt_needs_command" -s V -l version -d 'Print version'
-complete -c wt -n "__fish_wt_needs_command" -f -a "init" -d 'Generate shell integration code'
-complete -c wt -n "__fish_wt_needs_command" -f -a "config" -d 'Manage configuration'
+complete -c wt -n "__fish_wt_needs_command" -f -a "config" -d 'Manage configuration and shell integration'
 complete -c wt -n "__fish_wt_needs_command" -f -a "beta" -d 'Development and testing utilities'
 complete -c wt -n "__fish_wt_needs_command" -f -a "list" -d 'List worktrees and optionally branches'
 complete -c wt -n "__fish_wt_needs_command" -f -a "switch" -d 'Switch to a worktree'
 complete -c wt -n "__fish_wt_needs_command" -f -a "remove" -d 'Remove worktree and branch'
 complete -c wt -n "__fish_wt_needs_command" -f -a "merge" -d 'Merge worktree into target branch'
-complete -c wt -n "__fish_wt_using_subcommand init" -l command-name -d 'Command name' -r
-complete -c wt -n "__fish_wt_using_subcommand init" -s C -d 'Change working directory' -r -F
-complete -c wt -n "__fish_wt_using_subcommand init" -s v -l verbose -d 'Show commands and debug info'
-complete -c wt -n "__fish_wt_using_subcommand init" -s h -l help -d 'Print help'
-complete -c wt -n "__fish_wt_using_subcommand config; and not __fish_seen_subcommand_from init list refresh-cache shell status" -s C -d 'Change working directory' -r -F
-complete -c wt -n "__fish_wt_using_subcommand config; and not __fish_seen_subcommand_from init list refresh-cache shell status" -s v -l verbose -d 'Show commands and debug info'
-complete -c wt -n "__fish_wt_using_subcommand config; and not __fish_seen_subcommand_from init list refresh-cache shell status" -s h -l help -d 'Print help (see more with \'--help\')'
-complete -c wt -n "__fish_wt_using_subcommand config; and not __fish_seen_subcommand_from init list refresh-cache shell status" -f -a "init" -d 'Initialize global configuration file with examples'
-complete -c wt -n "__fish_wt_using_subcommand config; and not __fish_seen_subcommand_from init list refresh-cache shell status" -f -a "list" -d 'List configuration files & locations'
-complete -c wt -n "__fish_wt_using_subcommand config; and not __fish_seen_subcommand_from init list refresh-cache shell status" -f -a "refresh-cache" -d 'Refresh default branch from remote'
-complete -c wt -n "__fish_wt_using_subcommand config; and not __fish_seen_subcommand_from init list refresh-cache shell status" -f -a "shell" -d 'Configure shell integration'
-complete -c wt -n "__fish_wt_using_subcommand config; and not __fish_seen_subcommand_from init list refresh-cache shell status" -f -a "status" -d 'Manage branch status markers'
-complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from init" -s C -d 'Change working directory' -r -F
-complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from init" -s v -l verbose -d 'Show commands and debug info'
-complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from init" -s h -l help -d 'Print help'
+complete -c wt -n "__fish_wt_using_subcommand config; and not __fish_seen_subcommand_from shell create list refresh-cache status" -s C -d 'Change working directory' -r -F
+complete -c wt -n "__fish_wt_using_subcommand config; and not __fish_seen_subcommand_from shell create list refresh-cache status" -s v -l verbose -d 'Show commands and debug info'
+complete -c wt -n "__fish_wt_using_subcommand config; and not __fish_seen_subcommand_from shell create list refresh-cache status" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c wt -n "__fish_wt_using_subcommand config; and not __fish_seen_subcommand_from shell create list refresh-cache status" -f -a "shell" -d 'Shell integration setup'
+complete -c wt -n "__fish_wt_using_subcommand config; and not __fish_seen_subcommand_from shell create list refresh-cache status" -f -a "create" -d 'Create global configuration file'
+complete -c wt -n "__fish_wt_using_subcommand config; and not __fish_seen_subcommand_from shell create list refresh-cache status" -f -a "list" -d 'List configuration files & locations'
+complete -c wt -n "__fish_wt_using_subcommand config; and not __fish_seen_subcommand_from shell create list refresh-cache status" -f -a "refresh-cache" -d 'Refresh default branch from remote'
+complete -c wt -n "__fish_wt_using_subcommand config; and not __fish_seen_subcommand_from shell create list refresh-cache status" -f -a "status" -d 'Manage branch status markers'
+complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from shell" -s C -d 'Change working directory' -r -F
+complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from shell" -s v -l verbose -d 'Show commands and debug info'
+complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from shell" -s h -l help -d 'Print help'
+complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from shell" -f -a "init" -d 'Generate shell integration code'
+complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from shell" -f -a "install" -d 'Write shell integration to config files'
+complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from create" -s C -d 'Change working directory' -r -F
+complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from create" -s v -l verbose -d 'Show commands and debug info'
+complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from create" -s h -l help -d 'Print help'
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from list" -s C -d 'Change working directory' -r -F
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from list" -s v -l verbose -d 'Show commands and debug info'
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from list" -s h -l help -d 'Print help'
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from refresh-cache" -s C -d 'Change working directory' -r -F
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from refresh-cache" -s v -l verbose -d 'Show commands and debug info'
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from refresh-cache" -s h -l help -d 'Print help'
-complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from shell" -l shell -d 'Shell to configure' -r -f -a "bash\t''
-fish\t''
-zsh\t''"
-complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from shell" -l command-name -d 'Command name' -r
-complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from shell" -s C -d 'Change working directory' -r -F
-complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from shell" -s f -l force -d 'Skip confirmation prompt'
-complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from shell" -s v -l verbose -d 'Show commands and debug info'
-complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from shell" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from status" -s C -d 'Change working directory' -r -F
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from status" -s v -l verbose -d 'Show commands and debug info'
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from status" -s h -l help -d 'Print help'

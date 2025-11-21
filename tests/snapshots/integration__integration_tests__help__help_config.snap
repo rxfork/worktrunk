@@ -13,14 +13,14 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-wt-config - Manage configuration
+wt-config - Manage configuration and shell integration
 Usage: wt config [OPTIONS] <COMMAND>
 
 Commands:
-  init           Initialize global configuration file with examples
+  shell          Shell integration setup
+  create         Create global configuration file
   list           List configuration files & locations
   refresh-cache  Refresh default branch from remote
-  shell          Configure shell integration
   status         Manage branch status markers
 
 Options:
@@ -33,37 +33,39 @@ Options:
   -h, --help
       Print help (see a summary with '-h')
 
-LLM SETUP GUIDE:
-Enable AI-generated commit messages
+SETUP GUIDE:
 
-1. Install an LLM tool (llm, aichat)
+1. Set up shell integration
 
-   uv tool install -U llm
+   wt config shell install
 
-2. Configure a model
+   Or manually add to your shell config:
+   eval "$(wt config shell init bash)"
+
+2. (Optional) Create config file
+
+   wt config create
+
+   This creates ~/.config/worktrunk/config.toml with examples.
+
+3. (Optional) Enable LLM commit messages
+
+   Install: uv tool install -U llm
+   Configure: llm keys set anthropic
+   Add to config.toml:
+ [commit-generation]
+ command = "llm"    
+
+LLM SETUP DETAILS:
 
 For Claude:
    llm install llm-anthropic
    llm keys set anthropic
-   # Paste your API key from: https://console.anthropic.com/settings/keys
    llm models default claude-3.5-sonnet
 
 For OpenAI:
    llm keys set openai
-   # Paste your API key from: https://platform.openai.com/api-keys
 
-3. Test it works
-
-   llm "say hello"
-
-4. Configure worktrunk
-
-Add to ~/.config/worktrunk/config.toml:
-
-   [commit-generation]
-   command = "llm"
-
-Use 'wt config init' to create the config file if it doesn't exist
 Use 'wt config list' to view your current configuration
 Docs: https://llm.datasette.io/ | https://github.com/sigoden/aichat
 

@@ -11,8 +11,8 @@ use worktrunk::styling::{
 /// Example configuration file content
 const CONFIG_EXAMPLE: &str = include_str!("../../config.example.toml");
 
-/// Handle the config init command
-pub fn handle_config_init() -> anyhow::Result<()> {
+/// Handle the config create command
+pub fn handle_config_create() -> anyhow::Result<()> {
     let config_path = get_global_config_path()
         .ok_or_else(|| anyhow::anyhow!("Could not determine global config path"))?;
 
@@ -78,7 +78,7 @@ fn display_global_config() -> anyhow::Result<()> {
     // Check if file exists
     if !config_path.exists() {
         println!("{HINT_EMOJI} {HINT}Not found (using defaults){HINT:#}");
-        println!("{HINT_EMOJI} {HINT}Run 'wt config init' to create a config file{HINT:#}");
+        println!("{HINT_EMOJI} {HINT}Run 'wt config create' to create a config file{HINT:#}");
         println!();
         let default_config =
             "# Default configuration:\nworktree-path = \"../{{ main_worktree }}.{{ branch }}\"";

@@ -28,7 +28,7 @@ Type "export PATH=$HOME/bin:$PATH"
 Enter
 Type 'eval "$(starship init zsh)" >/dev/null 2>&1'
 Enter
-Type 'eval "$(wt init zsh)" >/dev/null 2>&1'
+Type 'eval "$(wt config shell init zsh)" >/dev/null 2>&1'
 Enter
 Type "cd $DEMO_REPO"
 Enter

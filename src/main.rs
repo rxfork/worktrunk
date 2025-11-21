@@ -24,7 +24,7 @@ use commands::command_executor::CommandContext;
 use commands::handle_select;
 use commands::worktree::{SwitchResult, handle_push};
 use commands::{
-    ConfigAction, handle_config_init, handle_config_list, handle_config_refresh_cache,
+    ConfigAction, handle_config_create, handle_config_list, handle_config_refresh_cache,
     handle_config_status_set, handle_config_status_unset, handle_configure_shell, handle_init,
     handle_list, handle_merge, handle_rebase, handle_remove, handle_squash,
     handle_standalone_ask_approvals, handle_standalone_clear_approvals, handle_standalone_commit,
@@ -32,7 +32,7 @@ use commands::{
 };
 use output::{execute_user_command, handle_remove_output, handle_switch_output};
 
-use cli::{Cli, Commands, ConfigCommand, StandaloneCommand, StatusAction};
+use cli::{Cli, Commands, ConfigCommand, ConfigShellCommand, StandaloneCommand, StatusAction};
 
 /// Try to handle --help flag with pager before clap processes it
 fn maybe_handle_help_with_pager() -> bool {
@@ -91,7 +91,7 @@ fn main() {
     }
 
     // TODO: Enhance error messages to show possible values for missing enum arguments
-    // Currently `wt init` doesn't show available shells, but `wt init invalid` does.
+    // Currently `wt config shell init` doesn't show available shells, but `wt config shell init invalid` does.
     // Clap doesn't support this natively yet - see https://github.com/clap-rs/clap/issues/3320
     // When available, use built-in setting. Until then, could use try_parse() to intercept
     // MissingRequiredArgument errors and print custom messages with ValueEnum::value_variants().
@@ -169,72 +169,80 @@ fn main() {
     .init();
 
     let result = match cli.command {
-        Commands::Init {
-            shell,
-            command_name,
-        } => {
-            let mut cli_cmd = cli::build_command();
-            handle_init(shell, command_name, &mut cli_cmd).map_err(|e| anyhow::anyhow!("{}", e))
-        }
         Commands::Config { action } => match action {
-            ConfigCommand::Init => handle_config_init(),
+            ConfigCommand::Shell { action } => match action {
+                ConfigShellCommand::Init {
+                    shell,
+                    command_name,
+                } => {
+                    // Generate shell code to stdout
+                    let mut cli_cmd = cli::build_command();
+                    handle_init(shell, command_name, &mut cli_cmd)
+                        .map_err(|e| anyhow::anyhow!("{}", e))
+                }
+                ConfigShellCommand::Install {
+                    shell,
+                    force,
+                    command_name,
+                } => {
+                    // Auto-write to shell config files
+                    handle_configure_shell(shell, force, command_name)
+                        .map_err(|e| anyhow::anyhow!("{}", e))
+                        .map(|results| {
+                            use anstyle::{AnsiColor, Color};
+
+                            // Count actual changes (not AlreadyExists)
+                            let changes_count = results
+                                .iter()
+                                .filter(|r| !matches!(r.action, ConfigAction::AlreadyExists))
+                                .count();
+
+                            if changes_count == 0 {
+                                // All shells already configured
+                                let green =
+                                    Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
+                                println!(
+                                    "{SUCCESS_EMOJI} {green}All shells already configured{green:#}"
+                                );
+                                return;
+                            }
+
+                            // Show what was done (instant operations, no progress needed)
+                            for result in &results {
+                                use worktrunk::styling::format_bash_with_gutter;
+                                let bold = Style::new().bold();
+                                let shell = result.shell;
+                                let path = format_path_for_display(&result.path);
+
+                                println!(
+                                    "{} {} {bold}{shell}{bold:#} {path}",
+                                    result.action.emoji(),
+                                    result.action.description(),
+                                );
+                                // Show config line with gutter
+                                print!("{}", format_bash_with_gutter(&result.config_line, ""));
+                            }
+
+                            // Success summary
+                            println!();
+                            let green = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
+                            let plural = if changes_count == 1 { "" } else { "s" };
+                            println!(
+                                "{SUCCESS_EMOJI} {green}Configured {changes_count} shell{plural}{green:#}"
+                            );
+
+                            // Show hint about restarting shell
+                            println!();
+                            use worktrunk::styling::{HINT, HINT_EMOJI};
+                            println!(
+                                "{HINT_EMOJI} {HINT}Restart your shell or run: source <config-file>{HINT:#}"
+                            );
+                        })
+                }
+            },
+            ConfigCommand::Create => handle_config_create(),
             ConfigCommand::List => handle_config_list(),
             ConfigCommand::RefreshCache => handle_config_refresh_cache(),
-            ConfigCommand::Shell {
-                shell,
-                force,
-                command_name,
-            } => {
-                handle_configure_shell(shell, force, command_name)
-                    .map_err(|e| anyhow::anyhow!("{}", e))
-                    .map(|results| {
-                        use anstyle::{AnsiColor, Color};
-
-                        // Count actual changes (not AlreadyExists)
-                        let changes_count = results
-                            .iter()
-                            .filter(|r| !matches!(r.action, ConfigAction::AlreadyExists))
-                            .count();
-
-                        if changes_count == 0 {
-                            // All shells already configured
-                            let green = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
-                            println!("{SUCCESS_EMOJI} {green}All shells already configured{green:#}");
-                            return;
-                        }
-
-                        // Show what was done (instant operations, no progress needed)
-                        for result in &results {
-                            use worktrunk::styling::format_bash_with_gutter;
-                            let bold = Style::new().bold();
-                            let shell = result.shell;
-                            let path = format_path_for_display(&result.path);
-
-                            println!(
-                                "{} {} {bold}{shell}{bold:#} {path}",
-                                result.action.emoji(),
-                                result.action.description(),
-                            );
-                            // Show config line with gutter
-                            print!("{}", format_bash_with_gutter(&result.config_line, ""));
-                        }
-
-                        // Success summary
-                        println!();
-                        let green = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
-                        let plural = if changes_count == 1 { "" } else { "s" };
-                        println!(
-                            "{SUCCESS_EMOJI} {green}Configured {changes_count} shell{plural}{green:#}"
-                        );
-
-                        // Show hint about restarting shell
-                        println!();
-                        use worktrunk::styling::{HINT, HINT_EMOJI};
-                        println!(
-                            "{HINT_EMOJI} {HINT}Restart your shell or run: source <config-file>{HINT:#}"
-                        );
-                    })
-            }
             ConfigCommand::Status { action } => match action {
                 StatusAction::Set { value, branch } => handle_config_status_set(value, branch),
                 StatusAction::Unset { target } => handle_config_status_unset(target),

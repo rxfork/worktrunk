@@ -287,10 +287,10 @@ fn test_complete_unknown_command() {
         let stdout = String::from_utf8_lossy(&output.stdout);
         let suggestions = value_suggestions(&stdout);
         assert!(
-            suggestions.contains(&"init"),
+            suggestions.contains(&"config"),
             "should fall back to root completions, got:\n{stdout}"
         );
-        assert!(suggestions.contains(&"config"));
+        assert!(suggestions.contains(&"list"));
     });
 }
 
@@ -343,7 +343,13 @@ fn test_complete_list_command() {
 fn test_init_fish_includes_no_file_flag() {
     // Test that fish init wires Clap-based completions into the template
     let mut cmd = wt_command();
-    let output = cmd.arg("init").arg("fish").output().unwrap();
+    let output = cmd
+        .arg("config")
+        .arg("shell")
+        .arg("init")
+        .arg("fish")
+        .output()
+        .unwrap();
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -770,12 +776,15 @@ fn test_complete_dev_run_hook_with_partial_input() {
 }
 
 #[test]
-fn test_complete_init_shows_shells() {
+fn test_complete_init_shell_shows_shells() {
     let temp = TestRepo::new();
     temp.commit("initial");
 
-    // Test completion for init command with no input
-    let output = temp.completion_cmd(&["wt", "init", ""]).output().unwrap();
+    // Test completion for config shell init command with no input
+    let output = temp
+        .completion_cmd(&["wt", "config", "shell", "init", ""])
+        .output()
+        .unwrap();
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -793,12 +802,15 @@ fn test_complete_init_shows_shells() {
 }
 
 #[test]
-fn test_complete_init_partial() {
+fn test_complete_init_shell_partial() {
     let temp = TestRepo::new();
     temp.commit("initial");
 
     // Test completion with partial input "fi"
-    let output = temp.completion_cmd(&["wt", "init", "fi"]).output().unwrap();
+    let output = temp
+        .completion_cmd(&["wt", "config", "shell", "init", "fi"])
+        .output()
+        .unwrap();
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -811,13 +823,13 @@ fn test_complete_init_partial() {
 }
 
 #[test]
-fn test_complete_init_with_source_flag() {
+fn test_complete_init_shell_with_source_flag() {
     let temp = TestRepo::new();
     temp.commit("initial");
 
-    // Test completion with --source flag: wt --source init <tab>
+    // Test completion with --source flag: wt --source config shell init <tab>
     let output = temp
-        .completion_cmd(&["wt", "--source", "init", ""])
+        .completion_cmd(&["wt", "--source", "config", "shell", "init", ""])
         .output()
         .unwrap();
 
@@ -834,13 +846,13 @@ fn test_complete_init_with_source_flag() {
 }
 
 #[test]
-fn test_complete_config_shell_flag() {
+fn test_complete_init_shell_partial_z() {
     let temp = TestRepo::new();
     temp.commit("initial");
 
-    // Test completion for config shell --shell flag
+    // Test completion for config shell init with partial input "z"
     let output = temp
-        .completion_cmd(&["wt", "config", "shell", "--shell", "z"])
+        .completion_cmd(&["wt", "config", "shell", "init", "z"])
         .output()
         .unwrap();
 
@@ -855,13 +867,13 @@ fn test_complete_config_shell_flag() {
 }
 
 #[test]
-fn test_complete_config_shell_flag_with_source() {
+fn test_complete_init_shell_all_with_source() {
     let temp = TestRepo::new();
     temp.commit("initial");
 
-    // Test completion for config shell --shell flag with --source
+    // Test completion for config shell init with --source flag
     let output = temp
-        .completion_cmd(&["wt", "--source", "config", "shell", "--shell", ""])
+        .completion_cmd(&["wt", "--source", "config", "shell", "init", ""])
         .output()
         .unwrap();
 

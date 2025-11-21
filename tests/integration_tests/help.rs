@@ -23,8 +23,8 @@ fn help_root() {
 }
 
 #[test]
-fn help_init() {
-    snapshot_help("help_init", &["init", "--help"]);
+fn help_config_shell() {
+    snapshot_help("help_config_shell", &["config", "shell", "--help"]);
 }
 
 #[test]

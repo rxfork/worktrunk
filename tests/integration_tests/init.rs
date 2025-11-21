@@ -3,7 +3,7 @@ use insta::Settings;
 use insta_cmd::assert_cmd_snapshot;
 use rstest::rstest;
 
-/// Helper to create snapshot for init command
+/// Helper to create snapshot for config shell init command
 fn snapshot_init(test_name: &str, shell: &str, extra_args: &[&str]) {
     let repo = TestRepo::new();
     let mut settings = Settings::clone_current();
@@ -12,7 +12,7 @@ fn snapshot_init(test_name: &str, shell: &str, extra_args: &[&str]) {
     settings.bind(|| {
         let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
-        cmd.arg("init").arg(shell);
+        cmd.arg("config").arg("shell").arg("init").arg(shell);
 
         for arg in extra_args {
             cmd.arg(arg);
@@ -42,7 +42,9 @@ fn test_init_invalid_shell() {
     settings.bind(|| {
         let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
-        cmd.arg("init")
+        cmd.arg("config")
+            .arg("shell")
+            .arg("init")
             .arg("invalid-shell")
             .current_dir(repo.root_path());
 
@@ -67,9 +69,15 @@ fn test_fish_no_duplicate_base_completion() {
     let repo = TestRepo::new();
     let mut cmd = wt_command();
     repo.clean_cli_env(&mut cmd);
-    cmd.arg("init").arg("fish").current_dir(repo.root_path());
+    cmd.arg("config")
+        .arg("shell")
+        .arg("init")
+        .arg("fish")
+        .current_dir(repo.root_path());
 
-    let output = cmd.output().expect("Failed to run wt init fish");
+    let output = cmd
+        .output()
+        .expect("Failed to run wt config shell init fish");
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     // Count how many lines contain "complete -c wt" and "-l base"

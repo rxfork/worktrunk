@@ -81,7 +81,7 @@ Ask: "Should I add this to your config at `~/.config/worktrunk/config.toml`?"
 wt config list
 ```
 
-If not: guide through `wt config init` first.
+If not: guide through `wt config create` first.
 
 ### Step 6: Apply the Change
 
@@ -259,7 +259,7 @@ command = "npm install"
 
 ```bash
 wt config list        # View current config
-wt config init        # Create initial config file
+wt config create      # Create initial config file
 wt config --help      # Show LLM setup guide
 ```
 

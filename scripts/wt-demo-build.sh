@@ -278,7 +278,7 @@ record_text() {
     export NO_COLOR=1
     export CLICOLOR=0
     eval "$(starship init bash)" >/dev/null 2>&1
-    eval "$(wt init bash)" >/dev/null 2>&1
+    eval "$(wt config shell init bash)" >/dev/null 2>&1
     cd "$DEMO_REPO"
     {
       wt list --branches --full

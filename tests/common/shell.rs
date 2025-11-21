@@ -175,13 +175,13 @@ pub fn execute_shell_script(repo: &TestRepo, shell: &str, script: &str) -> Strin
     String::from_utf8(output.stdout).expect("Invalid UTF-8 in output")
 }
 
-/// Generate `wt init <shell>` output for the repo.
+/// Generate `wt config shell init <shell>` output for the repo.
 pub fn generate_init_code(repo: &TestRepo, shell: &str) -> String {
     let mut cmd = wt_command();
     repo.clean_cli_env(&mut cmd);
 
     let output = cmd
-        .args(["init", shell])
+        .args(["config", "shell", "init", shell])
         .current_dir(repo.root_path())
         .output()
         .expect("Failed to generate init code");

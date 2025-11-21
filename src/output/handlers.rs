@@ -104,7 +104,7 @@ fn format_remove_message(
 /// Shell integration hint message (without emoji - hint() adds it automatically)
 fn shell_integration_hint() -> String {
     use worktrunk::styling::HINT;
-    format!("{HINT}To enable automatic cd, run: wt config shell{HINT:#}")
+    format!("{HINT}To enable automatic cd, run: wt config shell install{HINT:#}")
 }
 
 /// Handle output for a switch operation
