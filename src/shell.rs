@@ -44,12 +44,8 @@ impl Shell {
 
         match self {
             Self::Bash => {
-                // macOS uses .bash_profile, Linux typically uses .bashrc
-                if cfg!(target_os = "macos") {
-                    vec![home.join(".bash_profile"), home.join(".profile")]
-                } else {
-                    vec![home.join(".bashrc"), home.join(".bash_profile")]
-                }
+                // Use .bash_profile - canonical location for login shell initialization
+                vec![home.join(".bash_profile")]
             }
             Self::Zsh => {
                 let zdotdir = std::env::var("ZDOTDIR")

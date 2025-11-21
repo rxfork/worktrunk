@@ -182,13 +182,7 @@ fn test_configure_shell_no_files() {
     let repo = TestRepo::new();
     let temp_home = TempDir::new().unwrap();
 
-    let mut settings = setup_home_snapshot_settings(&temp_home);
-    // Normalize bash config file names across platforms
-    // Linux: ".bashrc, .bash_profile" → remove ".bashrc, "
-    // macOS: ".bash_profile, .profile" → remove ", .profile"
-    settings.add_filter(r"\[TEMP_HOME\]/\.bashrc, ", "");
-    settings.add_filter(r", \[TEMP_HOME\]/\.profile", "");
-
+    let settings = setup_home_snapshot_settings(&temp_home);
     settings.bind(|| {
         let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
