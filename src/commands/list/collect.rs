@@ -427,15 +427,58 @@ fn get_branches_without_worktrees(
     Ok(branches_without_worktrees)
 }
 
+/// Get remote branches from the primary remote that don't have local worktrees.
+///
+/// Returns (branch_name, commit_sha) pairs for remote branches.
+/// Filters out branches that already have worktrees (whether the worktree is on the
+/// local tracking branch or not).
+fn get_remote_branches(
+    repo: &Repository,
+    worktrees: &[Worktree],
+) -> anyhow::Result<Vec<(String, String)>> {
+    // Get all remote branches from primary remote
+    let all_remote_branches = repo.list_remote_branches()?;
+
+    // Get primary remote name for prefix stripping
+    let remote = repo.primary_remote()?;
+    let remote_prefix = format!("{}/", remote);
+
+    // Build a set of branch names that have worktrees
+    let worktree_branches: std::collections::HashSet<String> = worktrees
+        .iter()
+        .filter_map(|wt| wt.branch.clone())
+        .collect();
+
+    // Filter to remote branches whose local equivalent doesn't have a worktree
+    let remote_branches: Vec<_> = all_remote_branches
+        .into_iter()
+        .filter(|(remote_branch_name, _)| {
+            // Extract local branch name from "<remote>/feature" -> "feature"
+            // Only include branches that have the expected prefix format
+            if let Some(local_name) = remote_branch_name.strip_prefix(&remote_prefix) {
+                // Include remote branch if local branch doesn't have a worktree
+                !worktree_branches.contains(local_name)
+            } else {
+                // Skip branches that don't have the expected prefix (e.g., just "origin")
+                false
+            }
+        })
+        .collect();
+
+    Ok(remote_branches)
+}
+
 /// Collect worktree data with optional progressive rendering.
 ///
 /// When `show_progress` is true, renders a skeleton immediately and updates as data arrives.
 /// When false, behavior depends on `render_table`:
 /// - If `render_table` is true: renders final table (buffered mode)
 /// - If `render_table` is false: returns data without rendering (JSON mode)
+#[allow(clippy::too_many_arguments)]
 pub fn collect(
     repo: &Repository,
     show_branches: bool,
+    show_remotes: bool,
     show_full: bool,
     fetch_ci: bool,
     check_merge_tree_conflicts: bool,
@@ -469,6 +512,13 @@ pub fn collect(
     // Get branches early for layout calculation and skeleton creation (when --branches is used)
     let branches_without_worktrees = if show_branches {
         get_branches_without_worktrees(repo, &worktrees.worktrees)?
+    } else {
+        Vec::new()
+    };
+
+    // Get remote branches (when --remotes is used)
+    let remote_branches = if show_remotes {
+        get_remote_branches(repo, &worktrees.worktrees)?
     } else {
         Vec::new()
     };
@@ -513,7 +563,26 @@ pub fn collect(
         });
     }
 
-    // Calculate layout from items (both worktrees and branches)
+    // Initialize remote branch items with identity fields and None for computed fields
+    let remote_start_idx = all_items.len();
+    for (branch_name, commit_sha) in &remote_branches {
+        all_items.push(super::model::ListItem {
+            // Common fields
+            head: commit_sha.clone(),
+            branch: Some(branch_name.clone()),
+            commit: None,
+            counts: None,
+            branch_diff: None,
+            upstream: None,
+            pr_status: None,
+            status_symbols: None,
+            display: super::model::DisplayFields::default(),
+            // Type-specific data
+            kind: super::model::ItemKind::Branch,
+        });
+    }
+
+    // Calculate layout from items (worktrees, local branches, and remote branches)
     let layout = super::layout::calculate_layout_from_basics(&all_items, show_full, fetch_ci);
 
     // Single-line invariant: use safe width to prevent line wrapping
@@ -525,16 +594,23 @@ pub fn collect(
         .iter()
         .filter(|item| item.worktree_data().is_some())
         .count();
-    let num_branches = all_items.len() - num_worktrees;
-    let footer_base = if show_branches && num_branches > 0 {
-        format!(
-            "Showing {} worktrees, {} branches",
-            num_worktrees, num_branches
-        )
-    } else {
-        let plural = if num_worktrees == 1 { "" } else { "s" };
-        format!("Showing {} worktree{}", num_worktrees, plural)
-    };
+    let num_local_branches = branches_without_worktrees.len();
+    let num_remote_branches = remote_branches.len();
+
+    let footer_base =
+        if (show_branches && num_local_branches > 0) || (show_remotes && num_remote_branches > 0) {
+            let mut parts = vec![format!("{} worktrees", num_worktrees)];
+            if show_branches && num_local_branches > 0 {
+                parts.push(format!("{} branches", num_local_branches));
+            }
+            if show_remotes && num_remote_branches > 0 {
+                parts.push(format!("{} remote branches", num_remote_branches));
+            }
+            format!("Showing {}", parts.join(", "))
+        } else {
+            let plural = if num_worktrees == 1 { "" } else { "s" };
+            format!("Showing {} worktree{}", num_worktrees, plural)
+        };
 
     // Create progressive table if showing progress
     let mut progressive_table = if show_progress {
@@ -628,6 +704,30 @@ pub fn collect(
         });
     }
 
+    // Spawn remote branch collection in background thread (if requested)
+    if show_remotes {
+        let remote_branches_clone = remote_branches.clone();
+        let main_path = main_worktree.path.clone();
+        let tx_remote = tx.clone();
+        let default_branch_clone = default_branch.clone();
+        std::thread::spawn(move || {
+            remote_branches_clone.par_iter().enumerate().for_each(
+                |(idx, (branch_name, commit_sha))| {
+                    let item_idx = remote_start_idx + idx;
+                    super::collect_progressive_impl::collect_branch_progressive(
+                        branch_name,
+                        commit_sha,
+                        &main_path,
+                        item_idx,
+                        &default_branch_clone,
+                        &options,
+                        tx_remote.clone(),
+                    );
+                },
+            );
+        });
+    }
+
     // Drop the original sender so drain_cell_updates knows when all spawned threads are done
     drop(tx);
 
@@ -692,8 +792,11 @@ pub fn collect(
     // Finalize progressive table or render buffered output
     if let Some(mut table) = progressive_table {
         // Build final summary string
-        let final_msg =
-            super::format_summary_message(&all_items, show_branches, layout.hidden_nonempty_count);
+        let final_msg = super::format_summary_message(
+            &all_items,
+            show_branches || show_remotes,
+            layout.hidden_nonempty_count,
+        );
 
         if table.is_tty() {
             // Interactive: do final render pass and update footer to summary
@@ -718,8 +821,11 @@ pub fn collect(
         }
     } else if render_table {
         // Buffered mode: render final table
-        let final_msg =
-            super::format_summary_message(&all_items, show_branches, layout.hidden_nonempty_count);
+        let final_msg = super::format_summary_message(
+            &all_items,
+            show_branches || show_remotes,
+            layout.hidden_nonempty_count,
+        );
 
         crate::output::raw_terminal(layout.format_header_line())?;
         for item in &all_items {

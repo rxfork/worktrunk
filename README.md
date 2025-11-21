@@ -18,7 +18,8 @@ colliding; each agent gets a separate directory with a version of the code. But
 creating worktrees, tracking paths & statuses, cleaning up, etc, is manual.
 Worktrunk offers control, transparency & automation for this workflow.
 
-![Worktrunk Demo](scripts/wt-demo/out/wt-demo.gif)
+<!-- TODO: Add demo gif when available -->
+<!-- ![Worktrunk Demo](scripts/wt-demo/out/wt-demo.gif) -->
 
 ## Quick Start
 

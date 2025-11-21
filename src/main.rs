@@ -275,6 +275,7 @@ fn main() {
         Commands::List {
             format,
             branches,
+            remotes,
             full,
             progressive,
             no_progressive,
@@ -286,14 +287,21 @@ fn main() {
                 .context("Failed to load config")
                 .and_then(|config| {
                     // Get config values from global list config
-                    let (show_branches_config, show_full_config) = config
+                    let (show_branches_config, show_remotes_config, show_full_config) = config
                         .list
                         .as_ref()
-                        .map(|l| (l.branches.unwrap_or(false), l.full.unwrap_or(false)))
-                        .unwrap_or((false, false));
+                        .map(|l| {
+                            (
+                                l.branches.unwrap_or(false),
+                                l.remotes.unwrap_or(false),
+                                l.full.unwrap_or(false),
+                            )
+                        })
+                        .unwrap_or((false, false, false));
 
                     // CLI flags override config
                     let show_branches = branches || show_branches_config;
+                    let show_remotes = remotes || show_remotes_config;
                     let show_full = full || show_full_config;
 
                     // Convert two bools to Option<bool>: Some(true), Some(false), or None
@@ -303,7 +311,7 @@ fn main() {
                         _ => None,
                     };
                     let render_mode = RenderMode::detect(progressive_opt, cli.internal);
-                    handle_list(format, show_branches, show_full, render_mode)
+                    handle_list(format, show_branches, show_remotes, show_full, render_mode)
                 })
         }
         Commands::Switch {

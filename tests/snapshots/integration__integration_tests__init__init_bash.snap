@@ -21,7 +21,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmp6Iwk46/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmptUKRf7/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -633,7 +633,7 @@ _wt() {
             return 0
             ;;
         wt__list)
-            opts="-C -v -h --format --branches --full --progressive --no-progressive --verbose --help"
+            opts="-C -v -h --format --branches --remotes --full --progressive --no-progressive --verbose --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0

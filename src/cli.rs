@@ -463,6 +463,10 @@ Note: `locked` and `prunable` are top-level fields on worktree objects, not in s
         #[arg(long)]
         branches: bool,
 
+        /// Include remote branches from primary remote
+        #[arg(long)]
+        remotes: bool,
+
         /// Show CI, conflicts, diffs
         #[arg(long)]
         full: bool,

@@ -601,6 +601,43 @@ impl Repository {
         Ok(branches)
     }
 
+    /// List remote branches from the primary remote, excluding HEAD.
+    ///
+    /// Returns (branch_name, commit_sha) pairs for remote branches.
+    /// Branch names are in the form "origin/feature", not "feature".
+    /// Uses the primary remote (typically "origin", but respects upstream configuration).
+    pub fn list_remote_branches(&self) -> anyhow::Result<Vec<(String, String)>> {
+        let remote = self.primary_remote()?;
+        let remote_ref_path = format!("refs/remotes/{}/", remote);
+
+        let output = self.run_command(&[
+            "for-each-ref",
+            "--format=%(refname:short) %(objectname)",
+            &remote_ref_path,
+        ])?;
+
+        let remote_head = format!("{}/HEAD", remote);
+        let branches: Vec<(String, String)> = output
+            .lines()
+            .filter_map(|line| {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() == 2 {
+                    let branch_name = parts[0];
+                    // Skip <remote>/HEAD (symref)
+                    if branch_name != remote_head {
+                        Some((branch_name.to_string(), parts[1].to_string()))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        Ok(branches)
+    }
+
     /// Get line diff statistics for working tree changes (unstaged + staged).
     pub fn working_tree_diff_stats(&self) -> anyhow::Result<LineDiff> {
         // Limit concurrent diff operations to reduce mmap thrash on pack files

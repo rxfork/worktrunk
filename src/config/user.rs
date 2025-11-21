@@ -147,6 +147,10 @@ pub struct ListConfig {
     /// Include branches without worktrees by default
     #[serde(skip_serializing_if = "Option::is_none")]
     pub branches: Option<bool>,
+
+    /// Include remote branches by default
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remotes: Option<bool>,
 }
 
 impl Default for WorktrunkConfig {

@@ -21,7 +21,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmp0Vu0V6/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpKR9Xgz/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -454,6 +454,7 @@ _arguments "${_arguments_options[@]}" : \
 json\:"JSON output"))' \
 '-C+[Change working directory]:path:_files' \
 '--branches[Include branches without worktrees]' \
+'--remotes[Include remote branches from primary remote]' \
 '--full[Show CI, conflicts, diffs]' \
 '--progressive[Force progressive (or --no-progressive)]' \
 '--no-progressive[Force buffered rendering]' \

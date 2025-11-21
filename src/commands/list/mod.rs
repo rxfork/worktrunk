@@ -95,6 +95,7 @@ use worktrunk::git::Repository;
 pub fn handle_list(
     format: crate::OutputFormat,
     show_branches: bool,
+    show_remotes: bool,
     show_full: bool,
     render_mode: RenderMode,
 ) -> anyhow::Result<()> {
@@ -115,6 +116,7 @@ pub fn handle_list(
     let list_data = collect::collect(
         &repo,
         show_branches,
+        show_remotes,
         show_full,
         fetch_ci,
         check_merge_tree_conflicts,
@@ -145,7 +147,8 @@ pub fn handle_list(
 #[derive(Default)]
 pub(super) struct SummaryMetrics {
     worktrees: usize,
-    branches: usize,
+    local_branches: usize,
+    remote_branches: usize,
     dirty_worktrees: usize,
     ahead_items: usize,
 }
@@ -171,7 +174,18 @@ impl SummaryMetrics {
                 self.dirty_worktrees += 1;
             }
         } else {
-            self.branches += 1;
+            // Distinguish local vs remote branches by presence of '/' in name
+            // Remote branches are like "origin/feature", local are like "feature"
+            if item
+                .branch
+                .as_ref()
+                .map(|b| b.contains('/'))
+                .unwrap_or(false)
+            {
+                self.remote_branches += 1;
+            } else {
+                self.local_branches += 1;
+            }
         }
 
         let counts = item.counts();
@@ -189,8 +203,11 @@ impl SummaryMetrics {
 
         if include_branches {
             parts.push(format!("{} worktrees", self.worktrees));
-            if self.branches > 0 {
-                parts.push(format!("{} branches", self.branches));
+            if self.local_branches > 0 {
+                parts.push(format!("{} branches", self.local_branches));
+            }
+            if self.remote_branches > 0 {
+                parts.push(format!("{} remote branches", self.remote_branches));
             }
         } else {
             let plural = if self.worktrees == 1 { "" } else { "s" };

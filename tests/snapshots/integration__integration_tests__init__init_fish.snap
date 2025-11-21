@@ -21,7 +21,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmph2v1TR/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpAjef2E/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -274,6 +274,7 @@ complete -c wt -n "__fish_wt_using_subcommand list" -l format -d 'Output format 
 json\t'JSON output'"
 complete -c wt -n "__fish_wt_using_subcommand list" -s C -d 'Change working directory' -r -F
 complete -c wt -n "__fish_wt_using_subcommand list" -l branches -d 'Include branches without worktrees'
+complete -c wt -n "__fish_wt_using_subcommand list" -l remotes -d 'Include remote branches from primary remote'
 complete -c wt -n "__fish_wt_using_subcommand list" -l full -d 'Show CI, conflicts, diffs'
 complete -c wt -n "__fish_wt_using_subcommand list" -l progressive -d 'Force progressive (or --no-progressive)'
 complete -c wt -n "__fish_wt_using_subcommand list" -l no-progressive -d 'Force buffered rendering'
