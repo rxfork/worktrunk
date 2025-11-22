@@ -58,10 +58,10 @@ See [`wt merge`](#wt-merge) for all options.
 
 ```bash
 $ wt list
-Branch     Status  HEAD±  main↕  Path         Remote⇅  Commit    Age            Message
-main                             ./test-repo  ↑0 ↓0    b834638e  10 months ago  Initial commit
-bugfix-y   ↑              ↑1     ./bugfix-y            412a27c8  10 months ago  Fix bug
-feature-x  +       ↑      +5 ↑3  ./feature-x           7fd821aa  10 months ago  Add file 3
+  Branch     Status         HEAD±    main↕  Path         Remote⇅  Commit    Age   Message
+@ main           ^                          ./test-repo   ↑0  ↓0  b834638e  10mo  Initial commit
++ bugfix-y       ↑                  ↑1      ./bugfix-y            412a27c8  10mo  Fix bug
++ feature-x  +   ↑        +5        ↑3      ./feature-x           7fd821aa  10mo  Add file 3
 
 ⚪ Showing 3 worktrees, 1 with changes, 2 ahead
 ```
@@ -851,12 +851,12 @@ git config worktrunk.status.feature-x "💬"
 <!-- Output from: tests/snapshots/integration__integration_tests__list__with_user_status.snap -->
 
 ```
-Branch             Status  HEAD±  main↕  Path                 Remote⇅  Commit    Age            Message
-main                                     ./test-repo                   b834638e  10 months ago  Initial commit
-clean-no-status    ≡                     ./clean-no-status             b834638e  10 months ago  Initial commit
-clean-with-status  ≡ 💬                  ./clean-with-status           b834638e  10 months ago  Initial commit
-dirty-no-status     !      +1 -1         ./dirty-no-status             b834638e  10 months ago  Initial commit
-dirty-with-status  ≡?🤖                  ./dirty-with-status           b834638e  10 months ago  Initial commit
+  Branch             Status         HEAD±    main↕  Path                 Remote⇅  Commit    Age   Message
+@ main                   ^                          ./test-repo                   b834638e  10mo  Initial commit
++ clean-no-status       ∅                           ./clean-no-status             b834638e  10mo  Initial commit
++ clean-with-status     ∅   💬                      ./clean-with-status           b834638e  10mo  Initial commit
++ dirty-no-status     !           +1   -1           ./dirty-no-status             b834638e  10mo  Initial commit
++ dirty-with-status    ?∅   🤖                      ./dirty-with-status           b834638e  10mo  Initial commit
 ```
 
 The custom emoji appears directly after the git status symbols.
@@ -880,12 +880,12 @@ When using Claude:
 
 ```bash
 $ wt list
-Branch             Status  HEAD±  main↕  Path                 Remote⇅  Commit    Age            Message
-main                                     ./test-repo                   b834638e  10 months ago  Initial commit
-clean-no-status    ≡                     ./clean-no-status             b834638e  10 months ago  Initial commit
-clean-with-status  ≡ 💬                  ./clean-with-status           b834638e  10 months ago  Initial commit
-dirty-no-status     !      +1 -1         ./dirty-no-status             b834638e  10 months ago  Initial commit
-dirty-with-status  ≡?🤖                  ./dirty-with-status           b834638e  10 months ago  Initial commit
+  Branch             Status         HEAD±    main↕  Path                 Remote⇅  Commit    Age   Message
+@ main                   ^                          ./test-repo                   b834638e  10mo  Initial commit
++ clean-no-status       ∅                           ./clean-no-status             b834638e  10mo  Initial commit
++ clean-with-status     ∅   💬                      ./clean-with-status           b834638e  10mo  Initial commit
++ dirty-no-status     !           +1   -1           ./dirty-no-status             b834638e  10mo  Initial commit
++ dirty-with-status    ?∅   🤖                      ./dirty-with-status           b834638e  10mo  Initial commit
 
 ⚪ Showing 5 worktrees, 1 with changes
 ```

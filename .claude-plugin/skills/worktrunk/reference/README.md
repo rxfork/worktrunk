@@ -58,10 +58,10 @@ See [`wt merge`](#wt-merge) for all options.
 
 ```bash
 $ wt list
-Branch     Status  HEAD±  main↕  Path         Remote⇅  Commit    Age            Message
-main                             ./test-repo  ↑0 ↓0    b834638e  10 months ago  Initial commit
-bugfix-y   ↑              ↑1     ./bugfix-y            412a27c8  10 months ago  Fix bug
-feature-x  +       ↑      +5 ↑3  ./feature-x           7fd821aa  10 months ago  Add file 3
+  Branch     Status         HEAD±    main↕  Path         Remote⇅  Commit    Age   Message
+@ main           ^                          ./test-repo   ↑0  ↓0  b834638e  10mo  Initial commit
++ bugfix-y       ↑                  ↑1      ./bugfix-y            412a27c8  10mo  Fix bug
++ feature-x  +   ↑        +5        ↑3      ./feature-x           7fd821aa  10mo  Add file 3
 
 ⚪ Showing 3 worktrees, 1 with changes, 2 ahead
 ```
@@ -84,18 +84,18 @@ choices optimize for parallel AI agent workflow:
 
 - Trunk-based development
 - Lots of short-lived worktrees
-- Commits are squashed into linear histories
-- Terminal-based coding agents, shell navigation
+- Terminal-based, both coding agents & shell navigation
 - Inner dev loops are local
+- Linear commit histories
 
 ...and that means...
 
-- Total focus on zero cost of additional parallel agents
+- Total focus on zero-cost of additional parallel agents
 - A fairly small surface area: three core commands
   - Worktrees are addressed by their branch
 - Maximum automation: LLM commit messages, lifecycle hooks, Claude Code hooks
   - A robust "run auto-merge when 'local-CI' passes" approach
-- Default is to commit everything and squash marge (but configurable)
+- Defaults for commits is "everything and squash merge" (but configurable)
 - Extreme UI responsiveness; slow ops can't delay fast ones
 - Pluggable; adopting Worktrunk for a portion of a workflow doesn't require
   adopting it for everything. standard `git worktree` commands continue working
@@ -106,8 +106,9 @@ choices optimize for parallel AI agent workflow:
 ### LLM Commit Messages
 
 Worktrunk can invoke external commands during merge operations to generate
-commit messages. Simon Willison's [llm](https://llm.datasette.io/) tool reads
-the diff and a configurable prompt, then returns a formatted commit message.
+commit messages, by passing the diff & a configurable prompt, and reading back a
+formatted commit message. Simon Willison's [llm](https://llm.datasette.io/) tool
+is recommended.
 
 Add to `~/.config/worktrunk/config.toml`:
 
@@ -137,7 +138,7 @@ $ wt merge
 ✅ Squashed @ a1b2c3d
 ```
 
-To set up integration: run `wt config --help` to see the setup guide, or `wt config create` to create an example config file.
+For more details: `wt config --help`
 
 <details>
 <summary>Advanced: Custom Prompt Templates</summary>
@@ -284,9 +285,9 @@ and gating the merge on tests passing is very freeing — `main` is protected fr
 one agent forgetting to run all tests, without you having to babysit it.
 
 **View Claude Code status from `wt list`** — The Claude Code integration shows
-which branches have active sessions in `wt list`. When Claude starts working,
-the branch shows `🤖`; hen waiting for input, it shows `💬`. Setup instructions:
-[Custom Worktree Status](#custom-worktree-status).
+which branches have active sessions in `wt list`. When the agent is working, the
+branch shows `🤖`; when it's waiting for the user, it shows `💬`. Setup
+instructions: [Custom Worktree Status](#custom-worktree-status).
 
 **Delegate to task runners** — Reference existing Taskfile/Justfile/Makefile commands
 instead of duplicating logic:
@@ -790,10 +791,12 @@ wt config --help  # Show LLM setup guide
 <summary>Configuration details</summary>
 
 **Global config** (loaded in order of precedence):
+
 1. `WORKTRUNK_CONFIG_PATH` environment variable
 2. `~/.config/worktrunk/config.toml` (Linux/macOS) or `%APPDATA%\worktrunk\config.toml` (Windows)
 
 Contents:
+
 - `worktree-path` - Path template for new worktrees
 - `[list]` - Default display options for `wt list` (full, branches, remotes)
 - `[commit-generation]` - LLM command and prompt templates
@@ -848,12 +851,12 @@ git config worktrunk.status.feature-x "💬"
 <!-- Output from: tests/snapshots/integration__integration_tests__list__with_user_status.snap -->
 
 ```
-Branch             Status  HEAD±  main↕  Path                 Remote⇅  Commit    Age            Message
-main                                     ./test-repo                   b834638e  10 months ago  Initial commit
-clean-no-status    ≡                     ./clean-no-status             b834638e  10 months ago  Initial commit
-clean-with-status  ≡ 💬                  ./clean-with-status           b834638e  10 months ago  Initial commit
-dirty-no-status     !      +1 -1         ./dirty-no-status             b834638e  10 months ago  Initial commit
-dirty-with-status  ≡?🤖                  ./dirty-with-status           b834638e  10 months ago  Initial commit
+  Branch             Status         HEAD±    main↕  Path                 Remote⇅  Commit    Age   Message
+@ main                   ^                          ./test-repo                   b834638e  10mo  Initial commit
++ clean-no-status       ∅                           ./clean-no-status             b834638e  10mo  Initial commit
++ clean-with-status     ∅   💬                      ./clean-with-status           b834638e  10mo  Initial commit
++ dirty-no-status     !           +1   -1           ./dirty-no-status             b834638e  10mo  Initial commit
++ dirty-with-status    ?∅   🤖                      ./dirty-with-status           b834638e  10mo  Initial commit
 ```
 
 The custom emoji appears directly after the git status symbols.
@@ -877,12 +880,12 @@ When using Claude:
 
 ```bash
 $ wt list
-Branch             Status  HEAD±  main↕  Path                 Remote⇅  Commit    Age            Message
-main                                     ./test-repo                   b834638e  10 months ago  Initial commit
-clean-no-status    ≡                     ./clean-no-status             b834638e  10 months ago  Initial commit
-clean-with-status  ≡ 💬                  ./clean-with-status           b834638e  10 months ago  Initial commit
-dirty-no-status     !      +1 -1         ./dirty-no-status             b834638e  10 months ago  Initial commit
-dirty-with-status  ≡?🤖                  ./dirty-with-status           b834638e  10 months ago  Initial commit
+  Branch             Status         HEAD±    main↕  Path                 Remote⇅  Commit    Age   Message
+@ main                   ^                          ./test-repo                   b834638e  10mo  Initial commit
++ clean-no-status       ∅                           ./clean-no-status             b834638e  10mo  Initial commit
++ clean-with-status     ∅   💬                      ./clean-with-status           b834638e  10mo  Initial commit
++ dirty-no-status     !           +1   -1           ./dirty-no-status             b834638e  10mo  Initial commit
++ dirty-with-status    ?∅   🤖                      ./dirty-with-status           b834638e  10mo  Initial commit
 
 ⚪ Showing 5 worktrees, 1 with changes
 ```
