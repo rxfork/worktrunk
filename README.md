@@ -312,13 +312,16 @@ Arguments:
 
 Options:
   -c, --create             Create a new branch
-  -C <path>                Change working directory
   -b, --base <BASE>        Base branch (defaults to default branch)
-  -v, --verbose            Show git commands and debug info
-  -x, --execute <EXECUTE>  Execute command after switching
+  -x, --execute <EXECUTE>  Command to run after switch
   -f, --force              Skip approval prompts
-      --no-verify          Skip project hooks
+      --no-verify          Skip all project hooks
   -h, --help               Print help
+
+Global Options:
+  -C <path>                Change working directory
+      --config <path>      User config file path
+  -v, --verbose            Show commands and debug info
 ```
 
 **BEHAVIOR:**
@@ -401,15 +404,18 @@ Arguments:
   [TARGET]  Target branch (defaults to default branch)
 
 Options:
-  -C <path>         Change working directory
-      --no-squash   Skip commit squashing
-      --no-commit   Skip commit, squash, and rebase
-  -v, --verbose     Show git commands and debug info
-      --no-remove   Keep worktree after merge
-      --no-verify   Skip project hooks
-  -f, --force       Skip approval prompts
-      --tracked-only Stage tracked files only
-  -h, --help        Print help
+      --no-squash      Skip commit squashing
+      --no-commit      Skip commit, squash, and rebase
+      --no-remove      Keep worktree after merge
+      --no-verify      Skip all project hooks
+  -f, --force          Skip approval prompts
+      --tracked-only   Stage tracked files only
+  -h, --help           Print help
+
+Global Options:
+  -C <path>            Change working directory
+      --config <path>  User config file path
+  -v, --verbose        Show commands and debug info
 ```
 
 **LIFECYCLE:**
@@ -478,12 +484,15 @@ Arguments:
   [WORKTREES]...  Worktree or branch (@ for current)
 
 Options:
-  -C <path>               Change working directory
       --no-delete-branch  Keep branch after removal
   -D, --force-delete      Delete unmerged branches
-  -v, --verbose           Show commands and debug info
       --no-background     Run removal in foreground
   -h, --help              Print help
+
+Global Options:
+  -C <path>               Change working directory
+      --config <path>     User config file path
+  -v, --verbose           Show commands and debug info
 ```
 
 **BEHAVIOR:**
@@ -553,42 +562,17 @@ wt remove  # (when already in main worktree)
 Usage: wt list [OPTIONS]
 
 Options:
-  -C <path>
-          Change working directory
+      --format <FORMAT>  Output format (table, json) [default: table]
+      --branches         Include branches without worktrees
+      --remotes          Include remote branches
+      --full             Show CI, conflicts, diffs
+      --progressive      Force progressive (or --no-progressive)
+  -h, --help             Print help
 
-      --format <FORMAT>
-          Output format
-
-          Possible values:
-          - table: Human-readable table format
-          - json:  JSON output
-
-          [default: table]
-
-      --branches
-          Include branches without worktrees
-
-      --remotes
-          Include remote branches
-
-  -v, --verbose
-          Show git commands and debug info
-
-      --full
-          Show CI, conflicts, and full diffs
-
-          Adds columns: CI (pipeline status), main…± (line diffs).
-          Enables conflict detection (shows "=" symbol in Status column).
-          Requires network requests and git merge-tree operations.
-
-      --progressive
-          Show rows progressively (auto-detects TTY)
-
-      --no-progressive
-          Disable progressive rendering
-
-  -h, --help
-          Print help
+Global Options:
+  -C <path>              Change working directory
+      --config <path>    User config file path
+  -v, --verbose          Show commands and debug info
 ```
 
 **COLUMNS:**
@@ -685,21 +669,20 @@ jq '.[] | select(.locked != null)'
 Usage: wt config [OPTIONS] <COMMAND>
 
 Commands:
+  shell          Shell integration setup
   create         Create global configuration file
   list           List configuration files & locations
   refresh-cache  Refresh default branch from remote
-  shell          Configure shell integration
   status         Manage branch status markers
+  approvals      Manage command approvals
 
 Options:
-  -C <path>
-          Change working directory
+  -h, --help             Print help
 
-  -v, --verbose
-          Show commands and debug info
-
-  -h, --help
-          Print help
+Global Options:
+  -C <path>              Change working directory
+      --config <path>    User config file path
+  -v, --verbose          Show commands and debug info
 ```
 
 **LLM SETUP GUIDE:**
@@ -754,14 +737,12 @@ Docs: https://llm.datasette.io/ | https://github.com/sigoden/aichat
 
 These commands are subject to change:
 
+- `wt beta run-hook <hook-type>` - Run a project hook for testing
 - `wt beta commit` - Commit changes with LLM message
 - `wt beta squash [target]` - Squash commits with LLM message
-- `wt beta push [target]` - Push changes to target branch (auto-stashes non-conflicting edits)
-- `wt beta rebase [target]` - Rebase current branch onto target
-- `wt beta ask-approvals` - Approve commands in project config
-- `wt beta clear-approvals` - Clear approved commands from config
-- `wt beta run-hook <hook-type>` - Run a project hook for testing
-- `wt beta select` - Interactive worktree selector (Unix only, WIP)
+- `wt beta push [target]` - Push changes to local target branch
+- `wt beta rebase [target]` - Rebase onto target
+- `wt beta select` - Interactive worktree selector (WIP)
 
 </details>
 
