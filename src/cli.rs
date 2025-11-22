@@ -480,7 +480,7 @@ Global config (loaded in order of precedence):
    %APPDATA%\worktrunk\config.toml (Windows)
 
 Global config contents:
-- worktree-path: Path template for new worktrees
+- worktree-path: Path template (see CUSTOM WORKTREE PATHS below)
 - [list]: Default display options for 'wt list'
 - [commit-generation]: LLM command and prompt templates
 - [projects."project-id"]: Per-project approved commands (auto-populated)
@@ -492,8 +492,24 @@ Project config (.config/wt.toml in repository root):
 - [pre-merge-command]: Validation before merge
 - [post-merge-command]: Cleanup after merge
 
-Path template variables: {{ main_worktree }}, {{ branch }}, {{ repo }}
-Default: "../{{ main_worktree }}.{{ branch }}" (worktrees as siblings)
+CUSTOM WORKTREE PATHS:
+
+By default, worktrees live as siblings to the main repo:
+
+  myapp/               # main worktree
+  myapp.feature-x/     # secondary worktree
+  myapp.bugfix-y/      # secondary worktree
+
+Customize the pattern in ~/.config/worktrunk/config.toml:
+
+  # Inside the repo (keeps everything contained)
+  worktree-path = ".worktrees/{{ branch }}"
+
+  # Shared directory with multiple repos
+  worktree-path = "../worktrees/{{ main_worktree }}/{{ branch }}"
+
+Available variables: {{ main_worktree }}, {{ branch }}, {{ repo }}
+Default: "../{{ main_worktree }}.{{ branch }}"
 
 CUSTOM PROMPT TEMPLATES:
 
