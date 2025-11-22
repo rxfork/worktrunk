@@ -33,9 +33,9 @@ $ wt switch --create fix-auth
 ✅ Created new worktree for fix-auth from main at ../repo.fix-auth/
 ```
 
-...then do work. Then...
+...then do work / have an agent do work. Then, when ready...
 
-**After making changes, merge it back:**
+**Merge it:**
 
 <!-- Output from: tests/snapshots/integration__integration_tests__merge__readme_example_simple.snap -->
 
@@ -52,7 +52,7 @@ $ wt merge
 
 See [`wt merge`](#wt-merge) for all options.
 
-**See all worktrees:**
+**List worktrees:**
 
 <!-- Output from: tests/snapshots/integration__integration_tests__list__readme_example_simple_list.snap -->
 
