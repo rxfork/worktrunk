@@ -142,24 +142,30 @@ For more details, including custom prompt templates: `wt config --help`
 
 ### Project Hooks
 
-Automate common tasks by creating `.config/wt.toml` in the repository root. Install dependencies when creating worktrees, start dev servers automatically, run tests before merging.
+Automate tasks at different points in the worktree lifecycle. Configure hooks in `.config/wt.toml`.
+
+| Hook                    | When                                     | On Failure       |
+| ----------------------- | ---------------------------------------- | ---------------- |
+| **post-create-command** | After worktree created                   | Warn, continue   |
+| **post-start-command**  | After success message (background)       | Warn, continue   |
+| **pre-commit-command**  | Before squash commit created             | Stop merge       |
+| **pre-merge-command**   | After squash, before push                | Stop merge       |
+| **post-merge-command**  | After successful merge                   | Warn, continue   |
 
 ```toml
-# Install deps when creating a worktree
+# Install dependencies, build setup
 [post-create-command]
 "install" = "uv sync"
 
-# Start dev server automatically
+# Dev servers, file watchers (runs in background)
 [post-start-command]
 "dev" = "uv run dev"
 
-# Run tests before merging
+# Tests and lints before merging (blocks on failure)
 [pre-merge-command]
 "test" = "uv run pytest"
 "lint" = "uv run ruff check"
 ```
-
-**Example: Creating a worktree with hooks:**
 
 <!-- Output from: tests/snapshots/integration__integration_tests__merge__readme_example_hooks_post_create.snap -->
 
@@ -175,7 +181,8 @@ $ wt switch --create feature-x
   Installed 24 packages in 1.2s
 ```
 
-**Example: Merging with pre-merge hooks:**
+<details>
+<summary>Merging with pre-merge hooks</summary>
 
 <!-- Output from: tests/snapshots/integration__integration_tests__merge__readme_example_hooks_pre_merge.snap -->
 
@@ -214,22 +221,11 @@ $ wt merge
 🔄 Removing feature-auth worktree & branch in background
 ```
 
-<details>
-<summary>All available hooks</summary>
-
-| Hook                    | When It Runs                                                                   | Execution                                     | Failure Behavior             |
-| ----------------------- | ------------------------------------------------------------------------------ | --------------------------------------------- | ---------------------------- |
-| **post-create-command** | After `git worktree add` completes                                             | Sequential, blocking                          | Logs warning, continues      |
-| **post-start-command**  | After post-create completes                                                    | Parallel, non-blocking (background processes) | Logs warning, continues      |
-| **pre-commit-command**  | Before committing changes during `wt merge` (both squash and no-squash modes)  | Sequential, blocking, fail-fast               | Terminates merge immediately |
-| **pre-merge-command**   | After rebase completes during `wt merge` (validates rebased state before push) | Sequential, blocking, fail-fast               | Terminates merge immediately |
-| **post-merge-command**  | After successful merge and push to target branch, before cleanup               | Sequential, blocking                          | Logs warning, continues      |
+</details>
 
 **Skipping hooks:** `wt switch --no-verify` or `wt merge --no-verify`
 
 See `wt switch --help` and `wt merge --help` for template variables and security details.
-
-</details>
 
 ### Shell Integration
 
