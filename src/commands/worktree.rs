@@ -77,13 +77,12 @@
 //!
 //! ```bash
 //! wt() {
-//!     local script
-//!     script="$("${_WORKTRUNK_CMD:-wt}" --internal "$@" 2>&2)" || {
-//!         local status=$?
-//!         [ -n "$script" ] && eval "$script"
-//!         return "$status"
-//!     }
-//!     eval "$script"
+//!     local script exit_code=0
+//!     script="$(command "$WORKTRUNK_BIN" --internal "$@" 2>&2)" || exit_code=$?
+//!     if [[ -n "$script" ]]; then
+//!         eval "$script"
+//!     fi
+//!     return "$exit_code"
 //! }
 //! ```
 //!
