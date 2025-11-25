@@ -2,10 +2,10 @@
 source: tests/integration_tests/select.rs
 expression: normalized
 ---
->                                                           │                                                       3/4
-    Branch  Status         HEAD±    main↕  Path  Remote⇅  Co│No uncommitted changes
+> [QUERY]                                                     │[PREVIEW_HEADER]
+    Branch  Status         HEAD±    main↕  Path  Remote⇅  Co│ctrl-u/d: scroll | ctrl-p: preview
 > @ main        ^                          .              ..│
-                                                            │
+                                                            │No uncommitted changes
                                                             │
                                                             │
                                                             │

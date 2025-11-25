@@ -2,7 +2,7 @@
 source: tests/integration_tests/select.rs
 expression: normalized
 ---
-> eature                                                    │1: HEAD± | 2: history | 3: main…±                      1/9
+> [QUERY]                                                     │[PREVIEW_HEADER]
     Branch   Status         HEAD±    main↕  Path         Rem│ctrl-u/d: scroll | ctrl-p: preview
 > + feature      ↑                  ↑5      ./feature     ..│
                                                             │* b1549b6 (feature) Add file 5 with important changes

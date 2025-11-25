@@ -4,9 +4,8 @@
 //! what the user actually sees on screen, enabling meaningful snapshot testing of
 //! the skim-based TUI interface.
 //!
-//! **Note:** These tests are marked `#[ignore]` because TUI timing variations cause
-//! flakiness (preview tabs appearing/not appearing, query text partially visible).
-//! Run manually with: `cargo test --test integration select:: -- --ignored`
+//! The tests normalize timing-sensitive parts of the output (query line, count
+//! indicators) to ensure stable snapshots despite TUI rendering variations.
 
 use crate::common::TestRepo;
 use insta::assert_snapshot;
@@ -20,14 +19,17 @@ use std::time::Duration;
 const TERM_ROWS: u16 = 30;
 const TERM_COLS: u16 = 120;
 
-/// Initial wait for TUI to fully render before sending input
-const TUI_RENDER_DELAY: Duration = Duration::from_millis(800);
+/// Initial wait for TUI to fully render before sending input.
+/// Must be long enough for skim to complete initial render including preview.
+const TUI_RENDER_DELAY: Duration = Duration::from_millis(1500);
 
-/// Delay between keystrokes to allow TUI to process input
-const KEYSTROKE_DELAY: Duration = Duration::from_millis(150);
+/// Delay between keystrokes to allow TUI to process input.
+/// Each keystroke triggers a re-render, so this must be sufficient.
+const KEYSTROKE_DELAY: Duration = Duration::from_millis(300);
 
-/// Final delay after last input before capturing screen
-const FINAL_CAPTURE_DELAY: Duration = Duration::from_millis(200);
+/// Final delay after last input before capturing screen.
+/// Ensures the final state is fully rendered.
+const FINAL_CAPTURE_DELAY: Duration = Duration::from_millis(500);
 
 /// Timeout for waiting for process output before killing
 const OUTPUT_TIMEOUT: Duration = Duration::from_secs(3);
@@ -190,11 +192,26 @@ fn render_terminal_screen(raw_output: &[u8]) -> String {
     result
 }
 
-/// Normalize paths in output for snapshot stability
-fn normalize_paths(output: &str) -> String {
+/// Normalize output for snapshot stability
+fn normalize_output(output: &str) -> String {
+    let mut lines: Vec<&str> = output.lines().collect();
+
+    // Normalize line 1 (query line) - replace with fixed marker
+    // This line shows typed query which has timing variations
+    if !lines.is_empty() {
+        lines[0] =
+            "> [QUERY]                                                     │[PREVIEW_HEADER]";
+    }
+
+    let output = lines.join("\n");
+
     // Replace temp paths like /var/folders/.../test-repo.XXX with [REPO]
     let re = regex::Regex::new(r"/[^\s]+\.tmp[^\s/]*").unwrap();
-    let output = re.replace_all(output, "[REPO]");
+    let output = re.replace_all(&output, "[REPO]");
+
+    // Replace count indicators like "1/4", "3/4" etc at end of lines
+    let count_re = regex::Regex::new(r"\d+/\d+$").unwrap();
+    let output = count_re.replace_all(&output, "[N/M]");
 
     // Replace home directory paths
     if let Some(home) = home::home_dir() {
@@ -206,7 +223,7 @@ fn normalize_paths(output: &str) -> String {
 }
 
 #[test]
-#[ignore]
+
 fn test_select_abort_with_escape() {
     let repo = TestRepo::new();
     repo.commit("Initial commit");
@@ -223,12 +240,12 @@ fn test_select_abort_with_escape() {
     assert_valid_abort_exit_code(exit_code);
 
     let screen = render_terminal_screen(&raw_output);
-    let normalized = normalize_paths(&screen);
+    let normalized = normalize_output(&screen);
     assert_snapshot!("select_abort_escape", normalized);
 }
 
 #[test]
-#[ignore]
+
 fn test_select_with_multiple_worktrees() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
@@ -247,12 +264,12 @@ fn test_select_with_multiple_worktrees() {
     assert_valid_abort_exit_code(exit_code);
 
     let screen = render_terminal_screen(&raw_output);
-    let normalized = normalize_paths(&screen);
+    let normalized = normalize_output(&screen);
     assert_snapshot!("select_multiple_worktrees", normalized);
 }
 
 #[test]
-#[ignore]
+
 fn test_select_with_branches() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
@@ -276,13 +293,13 @@ fn test_select_with_branches() {
     assert_valid_abort_exit_code(exit_code);
 
     let screen = render_terminal_screen(&raw_output);
-    let normalized = normalize_paths(&screen);
+    let normalized = normalize_output(&screen);
     assert_snapshot!("select_with_branches", normalized);
 }
 
 /// Test preview panel 1: HEAD± shows uncommitted changes
 #[test]
-#[ignore]
+
 fn test_select_preview_panel_uncommitted() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
@@ -327,13 +344,13 @@ fn test_select_preview_panel_uncommitted() {
     assert_valid_abort_exit_code(exit_code);
 
     let screen = render_terminal_screen(&raw_output);
-    let normalized = normalize_paths(&screen);
+    let normalized = normalize_output(&screen);
     assert_snapshot!("select_preview_uncommitted", normalized);
 }
 
 /// Test preview panel 2: history shows recent commits
 #[test]
-#[ignore]
+
 fn test_select_preview_panel_history() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
@@ -377,13 +394,13 @@ fn test_select_preview_panel_history() {
     assert_valid_abort_exit_code(exit_code);
 
     let screen = render_terminal_screen(&raw_output);
-    let normalized = normalize_paths(&screen);
+    let normalized = normalize_output(&screen);
     assert_snapshot!("select_preview_history", normalized);
 }
 
 /// Test preview panel 3: main…± shows diff vs main branch
 #[test]
-#[ignore]
+
 fn test_select_preview_panel_main_diff() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
@@ -458,6 +475,6 @@ fn test_new_feature() {
     assert_valid_abort_exit_code(exit_code);
 
     let screen = render_terminal_screen(&raw_output);
-    let normalized = normalize_paths(&screen);
+    let normalized = normalize_output(&screen);
     assert_snapshot!("select_preview_main_diff", normalized);
 }
