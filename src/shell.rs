@@ -209,7 +209,7 @@ impl ShellInit {
     pub fn generate(&self) -> Result<String, askama::Error> {
         match self.shell {
             Shell::Bash => {
-                let posix_shim = PosixDirectivesTemplate {}.render()?;
+                let posix_shim = PosixDirectivesTemplate { cmd_prefix: "wt" }.render()?;
                 let template = BashTemplate {
                     shell_name: self.shell.to_string(),
                     cmd_prefix: "wt",
@@ -218,7 +218,7 @@ impl ShellInit {
                 template.render()
             }
             Shell::Zsh => {
-                let posix_shim = PosixDirectivesTemplate {}.render()?;
+                let posix_shim = PosixDirectivesTemplate { cmd_prefix: "wt" }.render()?;
                 let template = ZshTemplate {
                     cmd_prefix: "wt",
                     posix_shim: &posix_shim,
@@ -236,7 +236,9 @@ impl ShellInit {
 /// POSIX directive shim template (shared by bash, zsh, oil)
 #[derive(Template)]
 #[template(path = "posix_directives.sh", escape = "none")]
-struct PosixDirectivesTemplate {}
+struct PosixDirectivesTemplate<'a> {
+    cmd_prefix: &'a str,
+}
 
 /// Bash shell template
 #[derive(Template)]
