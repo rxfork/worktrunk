@@ -51,9 +51,9 @@
 //! ## Output Modes
 //!
 //! - **Interactive**: Colors, emojis, shell hints, direct command execution
-//! - **Directive**: Machine-readable directives on stdout, user messages on stderr
-//!   - stdout (parsed by shell): `__WORKTRUNK_CD__<path>\0`, `__WORKTRUNK_EXEC__<cmd>\0`
-//!   - stderr (streams to terminal): Success messages, progress updates, warnings
+//! - **Directive**: Shell script on stdout (at end), user messages on stderr (streaming)
+//!   - stdout: Shell script emitted at end (e.g., `cd '/path'`)
+//!   - stderr: Success messages, progress updates, warnings (streams in real-time)
 
 pub mod directive;
 pub mod global;

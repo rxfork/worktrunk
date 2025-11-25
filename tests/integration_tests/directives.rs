@@ -12,8 +12,8 @@ fn test_switch_internal_directive() {
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
 
-    // Normalize the directive path output
-    settings.add_filter(r"__WORKTRUNK_CD__[^\n]+", "__WORKTRUNK_CD__[PATH]");
+    // Normalize the shell script cd path output
+    settings.add_filter(r"cd '[^']+'", "cd '[PATH]'");
 
     settings.bind(|| {
         let mut cmd = wt_command();
@@ -73,8 +73,8 @@ fn test_remove_internal_directive() {
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
 
-    // Normalize the directive path output
-    settings.add_filter(r"__WORKTRUNK_CD__[^\n]+", "__WORKTRUNK_CD__[PATH]");
+    // Normalize the shell script cd path output
+    settings.add_filter(r"cd '[^']+'", "cd '[PATH]'");
 
     settings.bind(|| {
         let mut cmd = wt_command();
@@ -87,7 +87,8 @@ fn test_remove_internal_directive() {
         success: true
         exit_code: 0
         ----- stdout -----
-        __WORKTRUNK_CD__[PATH]
+        cd '[PATH]'
+
         ----- stderr -----
         🔄 [36mRemoving [1m[36mmain[0m[36m worktree & branch in background[0m
         ");
@@ -172,8 +173,8 @@ fn test_merge_internal_no_remove() {
     });
 }
 
-/// Test merge command with internal flag (removes worktree, emits __WORKTRUNK_CD__)
-/// This test verifies that the directive protocol is correctly formatted with NUL terminators
+/// Test merge command with internal flag (removes worktree, emits cd shell script)
+/// This test verifies that the shell script output is correctly formatted
 #[test]
 fn test_merge_internal_remove() {
     let mut repo = TestRepo::new();
@@ -210,7 +211,7 @@ fn test_merge_internal_remove() {
     let mut settings = setup_snapshot_settings(&repo);
     // Normalize SHA and path in output
     settings.add_filter(r"@ [a-f0-9]{7}", "@ [SHA]");
-    settings.add_filter(r"__WORKTRUNK_CD__[^\x00]+", "__WORKTRUNK_CD__[PATH]");
+    settings.add_filter(r"cd '[^']+'", "cd '[PATH]'");
 
     settings.bind(|| {
         let mut cmd = wt_command();
@@ -220,8 +221,6 @@ fn test_merge_internal_remove() {
             .arg("main")
             .current_dir(&feature_wt);
 
-        // Note: Using file snapshot instead of inline because multiline inline snapshots
-        // don't work well with NUL bytes (\0) in the output
         assert_cmd_snapshot!(cmd);
     });
 }

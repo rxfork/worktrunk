@@ -199,12 +199,7 @@ pub fn scan_shell_configs(
         vec![shell]
     } else {
         // Try all supported shells in consistent order
-        vec![
-            Shell::Bash,
-            Shell::Zsh,
-            Shell::Fish,
-            // Disabled shells: Nushell, Powershell, Oil, Elvish, Xonsh
-        ]
+        vec![Shell::Bash, Shell::Zsh, Shell::Fish]
     };
 
     let mut results = Vec::new();

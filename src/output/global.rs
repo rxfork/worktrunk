@@ -194,8 +194,8 @@ pub fn flush_for_stderr_prompt() -> io::Result<()> {
 
 /// Terminate command output
 ///
-/// In directive mode, writes a NUL terminator to separate command output from
-/// subsequent directives. In interactive mode, this is a no-op.
+/// In directive mode, emits the buffered shell script (cd and exec commands) to stdout.
+/// In interactive mode, this is a no-op.
 pub fn terminate_output() -> io::Result<()> {
     with_output(|h| h.terminate_output())
 }

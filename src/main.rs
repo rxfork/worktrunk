@@ -754,6 +754,11 @@ fn main() {
             }),
     };
 
+    // Emit shell script (directive mode) or no-op (interactive mode)
+    // Must be called before error handling so cd happens even on failure
+    // (matches shell wrapper behavior which evals script regardless of exit code)
+    let _ = output::terminate_output();
+
     if let Err(e) = result {
         // Error messages are already formatted with emoji and colors
         // Route through output system to respect mode:

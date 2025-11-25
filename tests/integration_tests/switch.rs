@@ -568,3 +568,37 @@ fn test_switch_default_branch_missing_worktree() {
 
     snapshot_switch("switch_default_branch_missing_worktree", &repo, &["main"]);
 }
+
+/// Test that --execute with exit code is emitted in directive mode shell script.
+/// The shell wrapper will eval this script and propagate the exit code.
+#[test]
+fn test_switch_internal_execute_exit_code() {
+    let repo = setup_switch_repo();
+
+    // wt succeeds (exit 0), but shell script contains "exit 42"
+    // Shell wrapper will eval and return 42
+    snapshot_switch_with_global_flags(
+        "switch_internal_execute_exit_code",
+        &repo,
+        &["--create", "exit-code-test", "--execute", "exit 42"],
+        &["--internal"],
+    );
+}
+
+/// Test execute command failure propagation in directive mode.
+/// When wt succeeds but the execute script would fail, wt still exits 0.
+/// The shell wrapper handles the execute command's exit code.
+#[test]
+fn test_switch_internal_execute_with_output_before_exit() {
+    let repo = setup_switch_repo();
+
+    // Execute command outputs then exits with code
+    let cmd = "echo 'doing work'\nexit 7";
+
+    snapshot_switch_with_global_flags(
+        "switch_internal_execute_output_then_exit",
+        &repo,
+        &["--create", "output-exit-test", "--execute", cmd],
+        &["--internal"],
+    );
+}

@@ -534,8 +534,8 @@ fn exec_bash_truly_interactive(
 /// This simulates what actually happens when users run `wt switch`, etc. in their shell:
 /// 1. The `wt` function is defined (from shell integration)
 /// 2. It calls `wt_exec --internal switch ...`
-/// 3. The wrapper parses NUL-delimited output and handles directives
-/// 4. Users see only the final human-friendly output
+/// 3. The wrapper captures stdout (shell script) via command substitution and evals it
+/// 4. Users see stderr output (progress, success, hints) in real-time
 ///
 /// Now uses PTY interactive mode for consistent behavior and potential input echoing.
 ///
@@ -1367,14 +1367,13 @@ approved-commands = ["echo 'background task'"]
     // ============================================================================
     //
     // These tests verify that the Fish shell wrapper correctly:
-    // 1. Parses NUL-delimited directives from `wt --internal`
-    // 2. Never leaks directives to users
-    // 3. Preserves all user-visible output (progress, success, hints)
-    // 4. Handles Fish-specific psub process substitution correctly
+    // 1. Captures stdout (shell script) via command substitution and evals it
+    // 2. Streams stderr (progress, success, hints) to terminal in real-time
+    // 3. Never leaks shell script commands to users
+    // 4. Preserves exit codes from both wt and executed commands
     //
-    // Fish uses `read -z` to parse NUL-delimited chunks and `psub` for
-    // process substitution. These have known limitations (fish-shell #1040)
-    // but work correctly for our use case.
+    // Fish uses `string collect` to join command substitution output into
+    // a single string before eval (fish splits on newlines by default).
 
     #[cfg(unix)]
     #[test]

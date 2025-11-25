@@ -2,58 +2,72 @@
 //!
 //! # How Shell Integration Works
 //!
-//! Worktrunk uses a directive protocol to enable shell integration. When running with
-//! `--internal` flag (invoked by shell wrapper), commands output directives that the
-//! shell wrapper parses and executes.
+//! Worktrunk uses a simple shell script protocol for shell integration. When running
+//! with `--internal` flag (invoked by shell wrapper), all user-facing messages stream
+//! to stderr in real-time, and a shell script is emitted to stdout at the very end.
 //!
 //! ## Protocol
 //!
 //! Running `wt switch --internal my-branch` outputs:
 //!
-//! **stdout** (parsed by shell wrapper):
+//! **stderr** (streams directly to terminal in real-time):
 //! ```text
-//! __WORKTRUNK_CD__/path/to/worktree\0
+//! ✅ Created new worktree for my-branch at ~/worktrees/my-branch
 //! ```
 //!
-//! **stderr** (streams directly to terminal):
+//! **stdout** (shell script emitted at the end):
 //! ```text
-//! ✅ Switched to worktree: my-branch
+//! cd '/path/to/worktree'
 //! ```
 //!
-//! The shell wrapper parses stdout:
-//! - Lines starting with `__WORKTRUNK_CD__` trigger directory changes
-//! - Lines starting with `__WORKTRUNK_EXEC__` trigger command execution
-//! - Directives are NUL-terminated for reliable parsing
+//! The shell wrapper captures stdout via command substitution and evals it:
+//! ```bash
+//! wt() {
+//!     local script
+//!     script="$("${_WORKTRUNK_CMD:-wt}" --internal "$@" 2>&2)" || {
+//!         local status=$?
+//!         [ -n "$script" ] && eval "$script"
+//!         return "$status"
+//!     }
+//!     eval "$script"
+//! }
+//! ```
 //!
-//! User-facing messages go to stderr for real-time streaming without buffering.
+//! ## Why This Design
 //!
-//! This separation keeps the Rust binary focused on git logic while the shell
-//! handles environment changes (cd, exec).
+//! This pattern (stderr for logs, stdout for script) is proven by direnv. Benefits:
+//! - No FIFOs, no background processes, no job control suppression
+//! - Full streaming: stderr goes directly to terminal while wt runs
+//! - Simple shell wrapper: just command substitution + eval
+//! - Works identically across bash, zsh, and fish
 //!
-//! ## Pattern
-//!
-//! This pattern is proven by tools like zoxide, starship, and direnv. The `--internal`
-//! flag is hidden from help output—end users never interact with it directly.
+//! The `--internal` flag is hidden from help output—end users never interact with it.
 
 use std::io::{self, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use super::traits::OutputHandler;
 
 /// Directive output mode for shell integration
 ///
-/// Outputs NUL-terminated directives for shell wrapper to parse and execute.
+/// Buffers cd/exec directives and emits them as a shell script at the end.
 ///
 /// See module-level documentation for protocol details.
 pub struct DirectiveOutput {
     /// Cached stderr handle
     stderr: io::Stderr,
+    /// Target directory for cd (set by change_directory, emitted in terminate_output)
+    target_dir: Option<PathBuf>,
+    /// Command to execute (set by execute, emitted in terminate_output)
+    exec_command: Option<String>,
 }
 
 impl DirectiveOutput {
     pub fn new() -> Self {
         Self {
             stderr: io::stderr(),
+            target_dir: None,
+            exec_command: None,
         }
     }
 }
@@ -77,23 +91,43 @@ impl OutputHandler for DirectiveOutput {
     }
 
     // Note: raw() uses the default which calls write_message_line() -> stderr
-    // This is correct for directive mode where stdout is reserved for directives
+    // This is correct for directive mode where stdout is reserved for the final shell script
 
     fn change_directory(&mut self, path: &Path) -> io::Result<()> {
-        write!(io::stdout(), "__WORKTRUNK_CD__{}\0", path.display())?;
-        io::stdout().flush()
+        // Buffer the path - will be emitted as shell script in terminate_output()
+        self.target_dir = Some(path.to_path_buf());
+        Ok(())
     }
 
     fn execute(&mut self, command: String) -> anyhow::Result<()> {
-        write!(io::stdout(), "__WORKTRUNK_EXEC__{}\0", command)?;
-        io::stdout().flush()?;
+        // Buffer the command - will be emitted as shell script in terminate_output()
+        self.exec_command = Some(command);
         Ok(())
     }
 
     fn terminate_output(&mut self) -> io::Result<()> {
-        // Write NUL terminator to separate command output from subsequent directives
-        write!(io::stdout(), "\0")?;
-        io::stdout().flush()
+        // Emit shell script to stdout with buffered directives
+        // The shell wrapper captures this via $(...) and evals it
+        let mut stdout = io::stdout();
+
+        // cd command (if target directory was set)
+        if let Some(ref path) = self.target_dir {
+            // Use single quotes for safety, escape any embedded single quotes
+            // Single quotes preserve all characters literally (including newlines,
+            // tabs, $, `, etc.) except for single quotes themselves, which we
+            // escape as '\'' (end quote, literal quote, start quote)
+            let path_str = path.to_string_lossy();
+            let escaped = path_str.replace('\'', "'\\''");
+            writeln!(stdout, "cd '{}'", escaped)?;
+        }
+
+        // exec command (if one was set via --execute)
+        if let Some(ref cmd) = self.exec_command {
+            // Command is written directly - it's already shell code
+            writeln!(stdout, "{}", cmd)?;
+        }
+
+        stdout.flush()
     }
 }
 
@@ -105,42 +139,51 @@ impl Default for DirectiveOutput {
 
 #[cfg(test)]
 mod tests {
-    use std::io::Write;
     use std::path::PathBuf;
 
-    /// Test that directive output produces correctly formatted NUL-terminated strings
-    ///
-    /// While we can't easily test that flush() is called in unit tests,
-    /// we can verify the output format is correct. The flushing is critical
-    /// for fish shell integration to work correctly - without immediate flushing,
-    /// the fish shell's `while read -z chunk` loop will block waiting for data
-    /// that's stuck in stdout's buffer.
+    /// Test that shell script output is correctly formatted
     #[test]
-    fn test_directive_format() {
-        // Create a buffer to capture output
-        let mut buffer = Vec::new();
-
-        // Test change_directory format
+    fn test_shell_script_format() {
+        // Test cd command escaping
         let path = PathBuf::from("/test/path");
-        write!(&mut buffer, "__WORKTRUNK_CD__{}\0", path.display()).unwrap();
+        let path_str = path.to_string_lossy();
+        let escaped = path_str.replace('\'', "'\\''");
+        let cd_cmd = format!("cd '{}'", escaped);
+        assert_eq!(cd_cmd, "cd '/test/path'");
+    }
 
-        // Test success message format
-        let message = "Test message";
-        write!(&mut buffer, "{}\0", message).unwrap();
+    #[test]
+    fn test_path_with_single_quotes() {
+        // Paths with single quotes need escaping
+        let path = PathBuf::from("/test/it's/path");
+        let path_str = path.to_string_lossy();
+        let escaped = path_str.replace('\'', "'\\''");
+        let cd_cmd = format!("cd '{}'", escaped);
 
-        // Test execute command format
-        let command = "echo test";
-        write!(&mut buffer, "__WORKTRUNK_EXEC__{}\0", command).unwrap();
+        // Single quote is escaped as: end quote, escaped quote, start quote
+        assert_eq!(cd_cmd, "cd '/test/it'\\''s/path'");
+    }
 
-        // Verify the buffer contains NUL-terminated strings
-        let output = String::from_utf8_lossy(&buffer);
-        assert!(output.contains("__WORKTRUNK_CD__/test/path\0"));
-        assert!(output.contains("Test message\0"));
-        assert!(output.contains("__WORKTRUNK_EXEC__echo test\0"));
+    #[test]
+    fn test_path_with_spaces() {
+        // Paths with spaces are handled by single quoting
+        let path = PathBuf::from("/test/my path/here");
+        let path_str = path.to_string_lossy();
+        let escaped = path_str.replace('\'', "'\\''");
+        let cd_cmd = format!("cd '{}'", escaped);
+        assert_eq!(cd_cmd, "cd '/test/my path/here'");
+    }
 
-        // Verify NUL bytes are in the right places
-        let nul_count = buffer.iter().filter(|&&b| b == 0).count();
-        assert_eq!(nul_count, 3, "Should have exactly 3 NUL terminators");
+    #[test]
+    fn test_path_with_special_shell_chars() {
+        // Shell special chars like $, `, etc. are safe inside single quotes
+        let path = PathBuf::from("/test/$HOME/`whoami`/path");
+        let path_str = path.to_string_lossy();
+        let escaped = path_str.replace('\'', "'\\''");
+        let cd_cmd = format!("cd '{}'", escaped);
+
+        // $ and ` are literal inside single quotes, no escaping needed
+        assert_eq!(cd_cmd, "cd '/test/$HOME/`whoami`/path'");
     }
 
     /// Test that anstyle formatting is preserved in directive output
@@ -161,69 +204,7 @@ mod tests {
         );
 
         // Directive mode preserves styling for users viewing through shell wrapper
-        // (We're not testing actual output here, just documenting the behavior)
-    }
-
-    #[test]
-    fn test_path_with_special_characters() {
-        // BUG HYPOTHESIS: Paths with newlines or NUL bytes could break directive parsing
-        let mut buffer = Vec::new();
-
-        // Path with newline (shouldn't normally happen, but let's test)
-        let path = PathBuf::from("/test/path\nwith\nnewlines");
-        write!(&mut buffer, "__WORKTRUNK_CD__{}\0", path.display()).unwrap();
-
-        let output = String::from_utf8_lossy(&buffer);
-        // The newlines are preserved - this could break parsing!
-        assert!(output.contains('\n'), "Newlines in path are preserved");
-
-        // Count NUL bytes - should only be at the end
-        let nul_positions: Vec<_> = buffer
-            .iter()
-            .enumerate()
-            .filter(|&(_, &b)| b == 0)
-            .map(|(i, _)| i)
-            .collect();
-        assert_eq!(
-            nul_positions.len(),
-            1,
-            "Should have exactly 1 NUL terminator"
-        );
-        assert_eq!(
-            nul_positions[0],
-            buffer.len() - 1,
-            "NUL should be at the end"
-        );
-    }
-
-    #[test]
-    fn test_command_with_nul_bytes() {
-        // BUG HYPOTHESIS: Commands with embedded NUL bytes could break parsing
-        let mut buffer = Vec::new();
-
-        let command = "echo test\0extra";
-        write!(&mut buffer, "__WORKTRUNK_EXEC__{}\0", command).unwrap();
-
-        // Count NUL bytes
-        let nul_count = buffer.iter().filter(|&&b| b == 0).count();
-        // We have 2 NUL bytes: one embedded in command, one terminator
-        assert_eq!(
-            nul_count, 2,
-            "Embedded NUL creates extra terminator - breaks parsing!"
-        );
-    }
-
-    #[test]
-    fn test_message_with_nul_bytes() {
-        // What if success message contains NUL bytes?
-        let mut buffer = Vec::new();
-
-        let message = "Part1\0Part2";
-        write!(&mut buffer, "{}\0", message).unwrap();
-
-        let nul_count = buffer.iter().filter(|&&b| b == 0).count();
-        // Embedded NUL plus terminator = 2 NUL bytes
-        assert_eq!(nul_count, 2, "Embedded NUL creates parsing ambiguity!");
+        // Messages go to stderr which streams directly to terminal
     }
 
     #[test]
@@ -285,25 +266,5 @@ mod tests {
         println!("Composed output: {}", good_output.replace('\x1b', "\\x1b"));
 
         // The good pattern maintains color through the bold section
-    }
-
-    #[test]
-    fn test_path_with_ansi_codes() {
-        // BUG HYPOTHESIS: What if a path somehow contains ANSI codes?
-        // (This could happen with crafted directory names)
-        let mut buffer = Vec::new();
-
-        let path = PathBuf::from("/test/\x1b[31mred\x1b[0m/path");
-        write!(&mut buffer, "__WORKTRUNK_CD__{}\0", path.display()).unwrap();
-
-        let output = String::from_utf8_lossy(&buffer);
-        // ANSI codes are preserved in the directive!
-        assert!(
-            output.contains('\x1b'),
-            "ANSI codes in path leak into directive"
-        );
-
-        // This could cause the shell to display colored output when parsing the directive
-        // or interfere with directive parsing
     }
 }

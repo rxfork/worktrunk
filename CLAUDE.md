@@ -188,7 +188,7 @@ Six canonical message patterns with their emojis:
 - stderr: Child process output (git, npm, user commands) + interactive prompts
 
 **Directive mode** (--internal flag for shell integration):
-- stdout: Only directives (`__WORKTRUNK_CD__`, `__WORKTRUNK_EXEC__`) - NUL-terminated
+- stdout: Shell script emitted at the end (e.g., `cd '/path/to/worktree'`)
 - stderr: All user-facing messages + child process output - streams in real-time
 
 Use the output system (`output::success()`, `output::progress()`, etc.) to handle both modes automatically. Never write directly to stdout/stderr in command code.
@@ -420,7 +420,7 @@ Cover success/error states, with/without data, and flag variations.
 
 Worktrunk supports two output modes, selected once at program startup:
 1. **Interactive Mode** - Human-friendly output with colors, emojis, and hints
-2. **Directive Mode** - Machine-readable NUL-terminated directives for shell integration
+2. **Directive Mode** - Shell script on stdout (at end), user messages on stderr (streaming)
 
 The mode is determined at initialization in `main()` and never changes during execution.
 
@@ -465,10 +465,10 @@ The output module (`src/output/global.rs`) provides:
 - `raw(content)` - Raw output without emoji (JSON data)
 - `raw_terminal(content)` - Raw terminal output to stderr (tables)
 - `change_directory(path)` - Request directory change
-- `execute(command)` - Execute command or emit directive
+- `execute(command)` - Execute command or buffer for shell script
 - `flush()` - Flush output buffers
 - `flush_for_stderr_prompt()` - Flush before interactive prompts
-- `terminate_output()` - NUL terminator in directive mode (no-op in interactive)
+- `terminate_output()` - Emit shell script in directive mode (no-op in interactive)
 
 For the complete API, see `src/output/global.rs`.
 

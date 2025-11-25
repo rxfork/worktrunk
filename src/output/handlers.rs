@@ -412,8 +412,6 @@ pub(crate) fn execute_streaming(
 /// 2. The reset must reach the terminal before child output
 /// 3. Writing to stdout could arrive after stderr due to buffering
 ///
-/// Calls terminate_output() after completion to handle mode-specific cleanup
-/// (NUL terminator in directive mode, no-op in interactive mode).
 pub fn execute_command_in_worktree(
     worktree_path: &std::path::Path,
     command: &str,
@@ -436,9 +434,6 @@ pub fn execute_command_in_worktree(
 
     // Flush to ensure all output appears before we continue
     super::flush()?;
-
-    // Terminate output (adds NUL in directive mode, no-op in interactive)
-    super::terminate_output()?;
 
     Ok(())
 }

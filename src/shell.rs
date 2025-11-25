@@ -19,24 +19,7 @@ fn home_dir() -> Result<PathBuf, std::io::Error> {
 #[strum(serialize_all = "lowercase", ascii_case_insensitive)]
 pub enum Shell {
     Bash,
-    // Disabled shells (elvish, nushell, oil, powershell, xonsh)
-    // Uncomment when ready to support additional shells
-    // /// TODO: Elvish support - currently disabled due to test failures
-    // #[value(skip)]
-    // Elvish,
     Fish,
-    // /// TODO: Nushell support - currently disabled due to test failures
-    // #[value(skip)]
-    // Nushell,
-    // /// TODO: Oil support - currently disabled due to test failures
-    // #[value(skip)]
-    // Oil,
-    // /// TODO: PowerShell support - currently disabled due to test failures
-    // #[value(skip)]
-    // Powershell,
-    // /// TODO: Xonsh support - currently disabled due to test failures
-    // #[value(skip)]
-    // Xonsh,
     Zsh,
 }
 
@@ -66,38 +49,7 @@ impl Shell {
                         .join("conf.d")
                         .join("wt.fish"),
                 ]
-            } // Disabled shells - uncomment when ready to support
-              // Self::Nushell => {
-              //     vec![home.join(".config").join("nushell").join("config.nu")]
-              // }
-              // Self::Powershell => {
-              //     if cfg!(target_os = "windows") {
-              //         let userprofile = PathBuf::from(
-              //             std::env::var("USERPROFILE").unwrap_or_else(|_| ".".to_string()),
-              //         );
-              //         vec![
-              //             userprofile
-              //                 .join("Documents")
-              //                 .join("PowerShell")
-              //                 .join("Microsoft.PowerShell_profile.ps1"),
-              //         ]
-              //     } else {
-              //         vec![
-              //             home.join(".config")
-              //                 .join("powershell")
-              //                 .join("Microsoft.PowerShell_profile.ps1"),
-              //         ]
-              //     }
-              // }
-              // Self::Oil => {
-              //     vec![home.join(".config").join("oil").join("oshrc")]
-              // }
-              // Self::Elvish => {
-              //     vec![home.join(".config").join("elvish").join("rc.elv")]
-              // }
-              // Self::Xonsh => {
-              //     vec![home.join(".xonshrc")]
-              // }
+            }
         })
     }
 
@@ -154,38 +106,7 @@ impl Shell {
                     "if type -q wt; command wt config shell init {} | source; end",
                     self
                 )
-            } // Disabled shells - uncomment when ready to support
-              // Self::Oil => {
-              //     format!(
-              //         "if command -v {} >/dev/null 2>&1; then eval \"$(command {} init {})\"; fi",
-              //         cmd_prefix, cmd_prefix, self
-              //     )
-              // }
-              // Self::Nushell => {
-              //     // Use user's home directory cache instead of shared /tmp for security
-              //     format!(
-              //         "if (which {} | is-not-empty) {{ let tmpfile = ($env.HOME | path join \".cache\" \"nushell-{}-init.nu\"); ^{} init {} | save --force $tmpfile; source $tmpfile }}",
-              //         cmd_prefix, cmd_prefix, cmd_prefix, self
-              //     )
-              // }
-              // Self::Powershell => {
-              //     format!(
-              //         "if (Get-Command {} -ErrorAction SilentlyContinue) {{ Invoke-Expression (& {} init {}) }}",
-              //         cmd_prefix, cmd_prefix, self
-              //     )
-              // }
-              // Self::Elvish => {
-              //     format!(
-              //         "if (has-external {}) {{ eval (e:{} init {}) }}",
-              //         cmd_prefix, cmd_prefix, self
-              //     )
-              // }
-              // Self::Xonsh => {
-              //     format!(
-              //         "import shutil; exec(shutil.which('{}') and $({} init {}).strip() or '')",
-              //         cmd_prefix, cmd_prefix, self
-              //     )
-              // }
+            }
         }
     }
 
@@ -214,15 +135,6 @@ impl Shell {
                 .map(PathBuf::from)
                 .unwrap_or_else(|_| home.clone())
                 .join(".zshrc"),
-            // Disabled shells
-            // // Nushell
-            // home.join(".config/nushell/config.nu"),
-            // // Elvish
-            // home.join(".config/elvish/rc.elv"),
-            // // Xonsh
-            // home.join(".xonshrc"),
-            // // Powershell
-            // home.join(".config/powershell/Microsoft.PowerShell_profile.ps1"),
         ];
 
         // Check standard config files for eval pattern (any prefix)
@@ -317,43 +229,7 @@ impl ShellInit {
             Shell::Fish => {
                 let template = FishTemplate { cmd_prefix: "wt" };
                 template.render()
-            } // Disabled shells - uncomment when ready to support
-              // Shell::Oil => {
-              //     let posix_shim = PosixDirectivesTemplate {
-              //         cmd_prefix: &self.cmd_prefix,
-              //     }
-              //     .render()?;
-              //     let template = BashTemplate {
-              //         shell_name: self.shell.to_string(),
-              //         cmd_prefix: &self.cmd_prefix,
-              //         posix_shim: &posix_shim,
-              //     };
-              //     template.render()
-              // }
-              // Shell::Nushell => {
-              //     let template = NushellTemplate {
-              //         cmd_prefix: &self.cmd_prefix,
-              //     };
-              //     template.render()
-              // }
-              // Shell::Powershell => {
-              //     let template = PowershellTemplate {
-              //         cmd_prefix: &self.cmd_prefix,
-              //     };
-              //     template.render()
-              // }
-              // Shell::Elvish => {
-              //     let template = ElvishTemplate {
-              //         cmd_prefix: &self.cmd_prefix,
-              //     };
-              //     template.render()
-              // }
-              // Shell::Xonsh => {
-              //     let template = XonshTemplate {
-              //         cmd_prefix: &self.cmd_prefix,
-              //     };
-              //     template.render()
-              // }
+            }
         }
     }
 }
@@ -388,35 +264,6 @@ struct ZshTemplate<'a> {
 struct FishTemplate<'a> {
     cmd_prefix: &'a str,
 }
-
-// Disabled shell templates - uncomment when ready to support
-// /// Nushell shell template
-// #[derive(Template)]
-// #[template(path = "nushell.nu", escape = "none")]
-// struct NushellTemplate<'a> {
-//     cmd_prefix: &'a str,
-// }
-//
-// /// PowerShell template
-// #[derive(Template)]
-// #[template(path = "powershell.ps1", escape = "none")]
-// struct PowershellTemplate<'a> {
-//     cmd_prefix: &'a str,
-// }
-//
-// /// Elvish shell template
-// #[derive(Template)]
-// #[template(path = "elvish.elv", escape = "none")]
-// struct ElvishTemplate<'a> {
-//     cmd_prefix: &'a str,
-// }
-//
-// /// Xonsh shell template
-// #[derive(Template)]
-// #[template(path = "xonsh.xsh", escape = "none")]
-// struct XonshTemplate<'a> {
-//     cmd_prefix: &'a str,
-// }
 
 /// Detect if user's zsh has compinit enabled by probing for the compdef function.
 ///

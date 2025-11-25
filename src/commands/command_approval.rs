@@ -2,12 +2,13 @@
 //!
 //! Shared helpers for approving commands declared in project configuration.
 
+use crate::output;
 use anyhow::Context;
 use worktrunk::config::{Command, WorktrunkConfig};
 use worktrunk::git::not_interactive;
 use worktrunk::styling::{
-    AnstyleStyle, HINT, HINT_EMOJI, PROGRESS_EMOJI, WARNING, WARNING_BOLD, WARNING_EMOJI, eprint,
-    eprintln, format_bash_with_gutter, println, stderr,
+    AnstyleStyle, HINT_EMOJI, PROGRESS_EMOJI, WARNING, WARNING_BOLD, WARNING_EMOJI, eprint,
+    eprintln, format_bash_with_gutter, stderr,
 };
 
 /// Batch approval helper used when multiple commands are queued for execution.
@@ -64,8 +65,8 @@ pub fn approve_command_batch(
         }
 
         if updated && let Err(e) = fresh_config.save() {
-            println!("{WARNING_EMOJI} {WARNING}Failed to save command approval: {e}{WARNING:#}");
-            println!("{HINT_EMOJI} {HINT}You will be prompted again next time.{HINT:#}");
+            let _ = output::warning(format!("Failed to save command approval: {e}"));
+            let _ = output::hint("You will be prompted again next time.");
         }
     }
 

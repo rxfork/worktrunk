@@ -39,21 +39,16 @@
 //! /path/to/worktree  # ← Automatically changed!
 //! ```
 //!
-//! When shell integration is enabled (`eval "$(wt config shell init bash)"`), the shell function intercepts
-//! commands and adds `--internal`:
+//! When shell integration is enabled (`eval "$(wt config shell init bash)"`), the shell function
+//! intercepts commands and adds `--internal`:
 //!
 //! 1. Shell wrapper calls: `wt switch --internal my-feature`
-//! 2. Binary outputs a NUL-delimited directive stream on **stdout** and user-facing messages on
-//!    **stderr**:
-//!    ```text
-//!    __WORKTRUNK_CD__/path/to/worktree\0
-//!    ```
-//! 3. Shell wrapper splits stdout on `\0` bytes
-//! 4. When it sees `__WORKTRUNK_CD__<path>`, it executes `cd <path>` in the parent shell
-//! 5. Messages printed to stderr stream directly to the terminal for real-time feedback
+//! 2. Binary streams user-facing messages to **stderr** (real-time feedback)
+//! 3. At exit, binary outputs a shell script to **stdout** (e.g., `cd '/path/to/worktree'`)
+//! 4. Shell wrapper captures stdout via `$()` and evals it in the parent shell
 //!
-//! The binary **never changes directories itself** - it just communicates the desired path back
-//! to the shell wrapper via stdout using the `__WORKTRUNK_CD__` directive protocol.
+//! The binary **never changes directories itself** - it just outputs a shell script that the
+//! wrapper evals to perform the cd.
 //!
 //! # Implementation Details
 //!
@@ -64,22 +59,38 @@
 //! - `output::handle_remove_output()`: Formats and outputs remove operation results
 //!
 //! These handlers automatically select the appropriate mode (user-friendly or directive protocol)
-//! based on the `internal` flag
+//! based on the `internal` flag.
 //!
-//! ## Directive Protocol
+//! ## Shell Script Protocol
 //!
-//! Directives are NUL-terminated to support multi-line commands (e.g., via `-x` flag):
+//! In directive mode (`--internal`), the binary:
+//! - Streams all user messages to **stderr** (real-time, with colors)
+//! - Buffers cd/exec directives internally
+//! - At exit, emits a shell script to **stdout**:
 //!
-//! ```text
-//! __WORKTRUNK_CD__/path/to/worktree\0
-//! Message for user\0
-//! __WORKTRUNK_EXEC__echo 'line1'\necho 'line2'\0
+//! ```bash
+//! cd '/path/to/worktree'
+//! echo 'optional follow-up command'
 //! ```
 //!
-//! Shell wrappers split on `\0` bytes and process each chunk:
-//! - `__WORKTRUNK_CD__<path>`: Change directory to `<path>`
-//! - `__WORKTRUNK_EXEC__<command>`: Execute `<command>` (may contain newlines)
-//! - Other chunks: Print as regular output
+//! The shell wrapper captures this via command substitution and evals it:
+//!
+//! ```bash
+//! wt() {
+//!     local script
+//!     script="$("${_WORKTRUNK_CMD:-wt}" --internal "$@" 2>&2)" || {
+//!         local status=$?
+//!         [ -n "$script" ] && eval "$script"
+//!         return "$status"
+//!     }
+//!     eval "$script"
+//! }
+//! ```
+//!
+//! This pattern (stderr for logs, stdout for script) is proven by direnv. Benefits:
+//! - No FIFOs, no background processes, no job control suppression
+//! - Full streaming: stderr goes directly to terminal while wt runs
+//! - Simple shell wrapper: just command substitution + eval
 //!
 //! ## Exit Code Semantics
 //!
