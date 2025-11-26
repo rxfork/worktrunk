@@ -19,7 +19,10 @@ pub enum ColumnKind {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DiffVariant {
     Signs,
+    /// Simple arrows (↑↓) for commits ahead/behind main
     Arrows,
+    /// Double-struck arrows (⇡⇣) for commits ahead/behind remote
+    UpstreamArrows,
 }
 
 /// Static metadata describing a column's behavior in both layout and rendering.

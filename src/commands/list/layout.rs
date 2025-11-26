@@ -296,7 +296,7 @@ impl ColumnKind {
                 always_show_zeros: false,
             }),
             ColumnKind::Upstream => Some(DiffDisplayConfig {
-                variant: DiffVariant::Arrows,
+                variant: DiffVariant::UpstreamArrows,
                 positive_style: ADDITION,
                 negative_style: DELETION.dimmed(),
                 always_show_zeros: true,

@@ -61,7 +61,7 @@ Global Options:
 - [1mmain↕:[0m Commit count ahead↑/behind↓ relative to main (commits in HEAD vs main)
 - [1mmain…±[0m ([2m--full[0m): Line diffs in commits ahead of main (+added -deleted)
 - [1mPath:[0m Worktree directory location
-- [1mRemote⇅:[0m Commits ahead↑/behind↓ relative to tracking branch (e.g. [2morigin/branch[0m)
+- [1mRemote⇅:[0m Commits ahead⇡/behind⇣ relative to tracking branch (e.g. [2morigin/branch[0m)
 - [1mCI[0m ([2m--full[0m): CI pipeline status (tries PR/MR checks first, falls back to branch workflows)
   - [2m●[0m [1mpassed[0m (green) - All checks passed
   - [2m●[0m [1mrunning[0m (blue) - Checks in progress

@@ -122,6 +122,10 @@ impl DiffVariant {
                 positive: "↑",
                 negative: "↓",
             },
+            DiffVariant::UpstreamArrows => DiffSymbols {
+                positive: "⇡",
+                negative: "⇣",
+            },
         }
     }
 }
@@ -165,7 +169,9 @@ impl DiffColumnConfig {
                 // Line diffs: show full number (user prefers precision over compactness)
                 DiffVariant::Signs => (value.to_string(), false),
                 // Commit counts: use C abbreviation
-                DiffVariant::Arrows => (format!("{}C", value / 100), true),
+                DiffVariant::Arrows | DiffVariant::UpstreamArrows => {
+                    (format!("{}C", value / 100), true)
+                }
             }
         } else {
             (value.to_string(), false)
