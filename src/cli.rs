@@ -364,10 +364,10 @@ Stored in git config under `worktrunk.status.<branch>`."#
 
     /// Clear status emoji
     #[command(
-        after_long_help = r#"Removes status marker from branch(es). Use `*` to clear all statuses."#
+        after_long_help = r#"Removes status marker from branch(es). Use '*' to clear all statuses."#
     )]
     Unset {
-        /// Branch or "*" for all
+        /// Branch or '*' for all
         #[arg(default_value = "", add = crate::completion::branch_value_completer())]
         target: String,
     },

@@ -24,7 +24,7 @@ Usage: wt config status unset [OPTIONS] [TARGET]
 
 Arguments:
   [TARGET]
-          Branch or "*" for all
+          Branch or '*' for all
           
           [default: ]
 
@@ -42,4 +42,4 @@ Global Options:
   -v, --verbose
           Show commands and debug info
 
-Removes status marker from branch(es). Use [2m*[0m to clear all statuses.
+Removes status marker from branch(es). Use '*' to clear all statuses.
