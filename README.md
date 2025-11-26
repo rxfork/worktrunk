@@ -18,43 +18,37 @@ Worktrunk is a CLI for Git worktree management, designed for parallel AI agent w
 
 ## Why worktrees?
 
-Agentic coding makes it cheap to spin up a new "developer" for each feature or
-bugfix. The coordination problems:
+Parallel agents need isolated working directories that share one Git history.
 
-- Keeping multiple tasks in flight without re-explaining the codebase
-- Preventing agents from stepping on each other
-- Merging, testing, and cleaning up all those branches
+We can get that a few ways:
 
-Git worktrees solve this: multiple isolated working directories backed by a
-single `.git` directory. But raw `git worktree` requires picking directory
-names, tracking paths, remembering cleanup steps. Worktrunk wraps that with:
+- multiple clones — slow to set up, waste disk, drift out of sync
+- one working tree with many branches — constant stashing, rebasing, and conflict risk
+- git worktrees — multiple directories backed by a single `.git` directory
 
-- Consistent directory layout (`../repo.feature-x/`)
-- Lifecycle hooks for setup, tests, cleanup
-- Unified status across all worktrees
+Git worktrees are the right primitive: many working directories, one repository.
 
-## Mental model
+## Why Worktrunk?
 
-One repository, many short-lived worktrees. `main` is the trunk. Each
-feature/bugfix/agent gets a branch + worktree directory with a 1:1 mapping.
+Raw `git worktree` means inventing directory names, tracking paths, and remembering cleanup steps.
 
-Three core commands:
+Worktrunk maintains a 1:1 mapping: branches get predictable paths (`../repo.<branch>/`), hooks run at creation and merge, and `wt merge` handles cleanup.
 
-| Command | Purpose |
-| ------- | ------- |
-| `wt switch` | Create or switch worktrees |
-| `wt merge` | Commit, squash, rebase, test, merge, cleanup |
-| `wt list` | Status across all worktrees |
+Three commands:
 
-See [Commands](#commands) for the full list.
+| Command     | What it does                                    |
+| ----------- | ----------------------------------------------- |
+| `wt switch` | Create or jump to a worktree                    |
+| `wt merge`  | Squash, rebase, run hooks, merge, clean up      |
+| `wt list`   | Show status across all worktrees and branches   |
 
 ## Quick Start
 
 ### 1. Install
 
 ```console
-cargo install worktrunk
-wt config shell install  # Bash, Zsh, Fish
+$ cargo install worktrunk
+$ wt config shell install  # Bash, Zsh, Fish
 ```
 
 Shell integration lets `wt switch` and `wt merge` change directories.
@@ -108,19 +102,6 @@ $ wt list
 <!-- END AUTO-GENERATED -->
 
 `--full` adds CI status and conflicts. `--branches` includes all branches.
-
-## Design philosophy
-
-Worktrunk is opinionated:
-
-- **Trunk-based** — Short-lived branches, linear histories.
-- **Local-first** — Terminal-based agents, local dev loops.
-- **Git underneath** — Git remains the source of truth; Worktrunk orchestrates.
-- **Minimal surface** — Three core commands. Extras are escape hatches.
-- **1:1 branch/worktree** — Worktrees addressed by branch name.
-- **Squash by default** — Clean history. Opt out with `--no-squash`.
-- **Progressive UI** — `wt list` shows local data first, slow data as it arrives.
-- **Pluggable** — `git worktree` commands still work.
 
 ## Automation
 
