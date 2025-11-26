@@ -357,16 +357,17 @@ impl WorktreeSkimItem {
     /// Render Tab 1: Working tree preview (uncommitted changes vs HEAD)
     /// Matches `wt list` "HEAD±" column
     fn render_working_tree_preview(&self, width: usize) -> String {
+        use worktrunk::styling::INFO_EMOJI;
+
         let Some(wt_info) = self.item.worktree_data() else {
             // Branch without worktree - selecting will create one
-            use worktrunk::styling::INFO_EMOJI;
             return format!("{INFO_EMOJI} Branch only — press Enter to create worktree\n");
         };
 
         let path = wt_info.path.display().to_string();
         self.render_diff_preview(
             &["-C", &path, "diff", "HEAD"],
-            "No uncommitted changes",
+            &format!("{INFO_EMOJI} No uncommitted changes"),
             width,
         )
     }
@@ -374,16 +375,23 @@ impl WorktreeSkimItem {
     /// Render Tab 3: Branch diff preview (line diffs in commits ahead of main)
     /// Matches `wt list` "main…± (--full)" column
     fn render_branch_diff_preview(&self, width: usize) -> String {
+        use worktrunk::styling::INFO_EMOJI;
+
         if self.item.counts().ahead == 0 {
-            return "No commits ahead of main\n".to_string();
+            return format!("{INFO_EMOJI} No commits ahead of main\n");
         }
 
         let merge_base = format!("main...{}", self.item.head());
-        self.render_diff_preview(&["diff", &merge_base], "No changes vs main", width)
+        self.render_diff_preview(
+            &["diff", &merge_base],
+            &format!("{INFO_EMOJI} No changes vs main"),
+            width,
+        )
     }
 
     /// Render Tab 2: History preview
     fn render_history_preview(&self, _width: usize) -> String {
+        use worktrunk::styling::INFO_EMOJI;
         const HISTORY_LIMIT: &str = "10";
 
         let mut output = String::new();
@@ -401,7 +409,7 @@ impl WorktreeSkimItem {
         // running git commands. This would provide better diagnostics but adds latency to
         // every preview render. Trade-off: simplicity + speed vs. detailed error messages.
         let Ok(merge_base_output) = repo.run_command(&["merge-base", "main", head]) else {
-            output.push_str("No commits\n");
+            output.push_str(&format!("{INFO_EMOJI} No commits\n"));
             return output;
         };
 
