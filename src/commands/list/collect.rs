@@ -52,6 +52,11 @@ pub(super) enum CellUpdate {
         item_idx: usize,
         counts: AheadBehind,
     },
+    /// Whether HEAD's tree SHA matches main's tree SHA (committed content identical)
+    CommittedTreesMatch {
+        item_idx: usize,
+        committed_trees_match: bool,
+    },
     /// Line diff vs main branch
     BranchDiff {
         item_idx: usize,
@@ -99,6 +104,7 @@ impl CellUpdate {
         match self {
             CellUpdate::CommitDetails { item_idx, .. }
             | CellUpdate::AheadBehind { item_idx, .. }
+            | CellUpdate::CommittedTreesMatch { item_idx, .. }
             | CellUpdate::BranchDiff { item_idx, .. }
             | CellUpdate::WorkingTreeDiff { item_idx, .. }
             | CellUpdate::MergeTreeConflicts { item_idx, .. }
@@ -152,6 +158,12 @@ fn drain_cell_updates(
             }
             CellUpdate::AheadBehind { item_idx, counts } => {
                 items[item_idx].counts = Some(counts);
+            }
+            CellUpdate::CommittedTreesMatch {
+                item_idx,
+                committed_trees_match,
+            } => {
+                items[item_idx].committed_trees_match = Some(committed_trees_match);
             }
             CellUpdate::BranchDiff {
                 item_idx,
@@ -396,6 +408,7 @@ pub fn collect(
                 commit: None,
                 counts: None,
                 branch_diff: None,
+                committed_trees_match: None,
                 upstream: None,
                 pr_status: None,
                 status_symbols: None,
@@ -747,6 +760,7 @@ pub fn build_worktree_item(
         commit: None,
         counts: None,
         branch_diff: None,
+        committed_trees_match: None,
         upstream: None,
         pr_status: None,
         status_symbols: None,

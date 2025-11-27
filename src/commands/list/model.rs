@@ -215,6 +215,11 @@ pub struct ListItem {
     pub counts: Option<AheadBehind>,
     #[serde(flatten, skip_serializing_if = "Option::is_none")]
     pub branch_diff: Option<BranchDiffTotals>,
+    /// Whether HEAD's tree SHA matches main's tree SHA.
+    /// True when committed content is identical regardless of commit history.
+    /// Internal field used to compute BranchOpState::MatchesMain.
+    #[serde(skip)]
+    pub committed_trees_match: Option<bool>,
 
     // TODO: Same concern as counts/branch_diff above - should upstream fields always be present?
     #[serde(flatten, skip_serializing_if = "Option::is_none")]
@@ -248,6 +253,7 @@ impl ListItem {
             commit: None,
             counts: None,
             branch_diff: None,
+            committed_trees_match: None,
             upstream: None,
             pr_status: None,
             status_symbols: None,
@@ -442,6 +448,7 @@ impl ListItem {
                     data.is_main,
                     default_branch,
                     counts.ahead,
+                    self.committed_trees_match.unwrap_or(false),
                     data.working_tree_diff.as_ref(),
                     &data.working_tree_diff_with_main,
                 );
@@ -508,15 +515,31 @@ impl ListItem {
 
 /// Determine branch state for a worktree.
 ///
-/// Returns:
-/// - `BranchOpState::None` if main worktree or no base branch
-/// - `BranchOpState::NoCommits` if no commits ahead and working tree is clean
-/// - `BranchOpState::MatchesMain` if ahead == 0 but dirty tree happens to match main (rare)
-/// - `BranchOpState::None` otherwise
+/// # States (mutually exclusive)
+///
+/// **`NoCommits`** (`ahead == 0`): Branch HEAD is an ancestor of main - no unique
+/// commits exist. This is the "nothing to merge" state. Note: `ahead` compares
+/// commit SHAs via `git rev-list`, not content. Cherry-picked commits create new
+/// SHAs, so a branch with cherry-picked-to-main commits still has `ahead > 0`.
+///
+/// **`MatchesMain`** (`ahead > 0`): Branch has unique commits but working tree
+/// content is identical to main. Examples: merge commits that pull in main,
+/// reverts that undo changes, or independent development arriving at same result.
+///
+/// These states are mutually exclusive: `ahead == 0` means HEAD is an ancestor of
+/// main (can fast-forward), while `MatchesMain` requires unique commits that happen
+/// to produce identical content.
+///
+/// # Parameters
+///
+/// - `committed_trees_match`: Whether committed tree SHAs match (HEAD^{tree} == main^{tree})
+/// - `working_tree_diff_with_main`: Diff between working tree and main. May be `None` (not
+///   computed) or `Some(None)` (skipped). When unavailable, assumes no match.
 fn determine_worktree_base_state(
     is_main: bool,
     default_branch: Option<&str>,
     ahead: usize,
+    committed_trees_match: bool,
     working_tree_diff: Option<&LineDiff>,
     working_tree_diff_with_main: &Option<Option<LineDiff>>,
 ) -> BranchOpState {
@@ -526,17 +549,22 @@ fn determine_worktree_base_state(
 
     let is_clean = working_tree_diff.map(|d| d.is_empty()).unwrap_or(true);
 
-    // Check if no commits and clean working tree (most common removable state)
     if ahead == 0 && is_clean {
         return BranchOpState::NoCommits;
     }
 
-    // Check if working tree matches main exactly (requires diff with main to be computed)
-    // This is rare - only when ahead == 0, tree is dirty, but dirty changes happen to match main
-    if let Some(Some(mdiff)) = working_tree_diff_with_main.as_ref()
-        && mdiff.is_empty()
-        && ahead == 0
-    {
+    // If committed trees match AND no uncommitted changes, working tree must match main.
+    let working_tree_matches_main = if committed_trees_match && is_clean {
+        true
+    } else {
+        // Check pre-computed diff. None/Some(None) → assume no match
+        working_tree_diff_with_main
+            .as_ref()
+            .and_then(|opt| opt.as_ref())
+            .is_some_and(|diff| diff.is_empty())
+    };
+
+    if working_tree_matches_main {
         BranchOpState::MatchesMain
     } else {
         BranchOpState::None

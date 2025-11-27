@@ -835,6 +835,7 @@ mod tests {
             branch_diff: Some(BranchDiffTotals {
                 diff: LineDiff::from((200, 30)),
             }),
+            committed_trees_match: Some(false),
             upstream: Some(UpstreamStatus::from_parts(Some("origin".to_string()), 4, 2)),
             pr_status: None,
             status_symbols: Some(StatusSymbols::default()),
@@ -921,6 +922,7 @@ mod tests {
             branch_diff: Some(BranchDiffTotals {
                 diff: LineDiff::default(),
             }),
+            committed_trees_match: Some(false),
             upstream: Some(UpstreamStatus::default()),
             pr_status: None,
             status_symbols: Some(StatusSymbols::default()),

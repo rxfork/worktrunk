@@ -712,7 +712,7 @@ impl Repository {
             return Ok(Some(LineDiff::default()));
         };
 
-        if !self.branch_tree_matches_head(branch)? {
+        if !self.head_tree_matches_branch(branch)? {
             return Ok(None);
         }
 
@@ -1066,7 +1066,9 @@ impl Repository {
         Ok(branch)
     }
 
-    fn branch_tree_matches_head(&self, branch: &str) -> anyhow::Result<bool> {
+    /// Check if HEAD's tree SHA matches a branch's tree SHA.
+    /// Returns true when content is identical even if commit history differs.
+    pub fn head_tree_matches_branch(&self, branch: &str) -> anyhow::Result<bool> {
         let head_tree = self.rev_parse_tree("HEAD^{tree}")?;
         let branch_tree = self.rev_parse_tree(&format!("{branch}^{{tree}}"))?;
         Ok(head_tree == branch_tree)

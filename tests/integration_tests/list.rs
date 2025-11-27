@@ -356,6 +356,59 @@ fn test_list_json_with_metadata() {
     snapshot_list_json("json_with_metadata", &repo);
 }
 
+/// Test that committed_trees_match is true when a branch has commits ahead but identical tree content.
+/// This tests the merge commit scenario where content matches main even with different commit history.
+#[test]
+fn test_list_json_tree_matches_main_after_merge() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    // Create feature branch with a worktree
+    let feature_path = repo.add_worktree("feature-merged");
+
+    // Make a commit on feature branch
+    std::fs::write(feature_path.join("feature.txt"), "feature content").unwrap();
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "."])
+        .current_dir(&feature_path)
+        .output()
+        .unwrap();
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "Feature commit"])
+        .current_dir(&feature_path)
+        .output()
+        .unwrap();
+
+    // Make the same commit on main (so trees will match after merge)
+    std::fs::write(repo.root_path().join("feature.txt"), "feature content").unwrap();
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "."])
+        .current_dir(repo.root_path())
+        .output()
+        .unwrap();
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "Same content on main"])
+        .current_dir(repo.root_path())
+        .output()
+        .unwrap();
+
+    // Merge main into feature (creates merge commit, but tree matches main)
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["merge", "main", "-m", "Merge main into feature"])
+        .current_dir(&feature_path)
+        .output()
+        .unwrap();
+
+    // Now feature-merged is ahead of main (has merge commit) but tree content matches main
+    // JSON output should show branch_op_state: "MatchesMain" with ahead > 0
+    snapshot_list_json("json_tree_matches_main_after_merge", &repo);
+}
+
 #[test]
 fn test_list_with_branches_flag() {
     let mut repo = TestRepo::new();

@@ -100,6 +100,27 @@ fn spawn_ahead_behind<'scope>(
     }
 }
 
+/// Spawn task 2b: Tree identity check (does HEAD tree match main's tree?)
+fn spawn_committed_trees_match<'scope>(
+    s: &'scope std::thread::Scope<'scope, '_>,
+    ctx: &TaskContext,
+    tx: Sender<CellUpdate>,
+) {
+    if let Some(base) = ctx.default_branch.as_deref() {
+        let item_idx = ctx.item_idx;
+        let path = ctx.repo_path.clone();
+        let base = base.to_string();
+        s.spawn(move || {
+            let repo = Repository::at(&path);
+            let committed_trees_match = repo.head_tree_matches_branch(&base).unwrap_or(false);
+            let _ = tx.send(CellUpdate::CommittedTreesMatch {
+                item_idx,
+                committed_trees_match,
+            });
+        });
+    }
+}
+
 /// Spawn task 3: Branch diff
 fn spawn_branch_diff<'scope>(
     s: &'scope std::thread::Scope<'scope, '_>,
@@ -376,6 +397,8 @@ pub fn collect_worktree_progressive(
         cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_ahead_behind(s, &ctx, tx.clone());
         cell_count.fetch_add(1, Ordering::Relaxed);
+        spawn_committed_trees_match(s, &ctx, tx.clone());
+        cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_branch_diff(s, &ctx, tx.clone());
         cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_working_tree_diff(s, &ctx, tx.clone());
@@ -493,6 +516,8 @@ pub fn collect_branch_progressive(
         spawn_commit_details(s, &ctx, tx.clone());
         cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_ahead_behind(s, &ctx, tx.clone());
+        cell_count.fetch_add(1, Ordering::Relaxed);
+        spawn_committed_trees_match(s, &ctx, tx.clone());
         cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_branch_diff(s, &ctx, tx.clone());
         cell_count.fetch_add(1, Ordering::Relaxed);
