@@ -95,6 +95,9 @@ pub fn configure_cli_command(cmd: &mut Command) {
     // Tests that need config should use TestRepo::clean_cli_env() which overrides this
     cmd.env("WORKTRUNK_CONFIG_PATH", "/nonexistent/test/config.toml");
     cmd.env("CLICOLOR_FORCE", "1");
+    // Oct 28, 2025 - exactly 300 days (10 months) after default commit date (2025-01-01)
+    // for deterministic relative time display in Age column
+    cmd.env("SOURCE_DATE_EPOCH", "1761609600");
     if std::env::var("COLUMNS").is_err() {
         cmd.env("COLUMNS", "150");
     }
