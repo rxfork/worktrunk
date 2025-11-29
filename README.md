@@ -180,7 +180,7 @@ git branch -d feature</pre></td>
 
 ## Advanced
 
-Many Worktrunk users will use the commands above. But for more:
+Many Worktrunk users will just use the commands above. For more:
 
 ### Shell integration
 
@@ -191,7 +191,7 @@ directories:
 wt config shell install  # Bash, Zsh, Fish
 ```
 
-Manual setup: `wt config shell --help`.
+or for manual setup: `wt config shell --help`.
 
 ### Local merging with `wt merge`
 
