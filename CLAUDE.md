@@ -4,22 +4,21 @@
 
 ## Project Status
 
-**This project has no users yet and zero backward compatibility concerns.**
+**This project was released very recently and has very few backward compatibility concerns.**
 
-We are in **pre-release development** mode:
-- Breaking changes are acceptable and expected
-- No migration paths needed for config changes, API changes, or behavior changes
+We are in **early release** mode:
+- Breaking changes are generally acceptable
 - Optimize for the best solution, not compatibility with previous versions
-- Move fast and make bold improvements
+- No Rust library compatibility concerns (this is a CLI tool only)
+
+**CLI deprecation policy:** When renaming or removing CLI options, retain the old option with a deprecation warning if there's no code complication cost. If supporting both old and new would add complexity, just make the breaking change.
 
 When making decisions, prioritize:
 1. **Best technical solution** over backward compatibility
 2. **Clean design** over maintaining old patterns
 3. **Modern conventions** over legacy approaches
 
-Acceptable breaking changes: config locations, command/flag names, output formats, dependencies, codebase structure.
-
-When the project reaches v1.0 or gains users, we'll adopt stability commitments. Until then, we're free to iterate rapidly.
+Acceptable breaking changes: config locations, output formats, dependencies, codebase structure. CLI flag changes can be breaking if deprecation warnings would complicate the code.
 
 ## Code Quality
 
