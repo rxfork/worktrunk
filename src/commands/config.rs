@@ -51,11 +51,11 @@ pub fn handle_config_create() -> anyhow::Result<()> {
             format_path_for_display(&config_path)
         ))?;
         output::blank()?;
-        output::print(cformat!(
-            "{HINT_EMOJI} <dim>Use </>wt config show<dim> to view existing configuration</>"
+        output::hint(cformat!(
+            "Use <bright-black>wt config show</><dim> to view existing configuration"
         ))?;
-        output::print(cformat!(
-            "{HINT_EMOJI} <dim>Use </>wt config create --help<dim> for config format reference</>"
+        output::hint(cformat!(
+            "Use <bright-black>wt config create --help</><dim> for config format reference"
         ))?;
         return Ok(());
     }
@@ -128,7 +128,9 @@ fn render_user_config(out: &mut String) -> anyhow::Result<()> {
         writeln!(
             out,
             "{}",
-            cformat!("{HINT_EMOJI} <dim>Run </>wt config create<dim> to create a config file</>")
+            cformat!(
+                "{HINT_EMOJI} <dim>Run <bright-black>wt config create</><dim> to create a config file</>"
+            )
         )?;
         writeln!(out)?;
         let default_config =
@@ -327,7 +329,7 @@ fn render_shell_status(out: &mut String) -> anyhow::Result<()> {
             out,
             "{}",
             cformat!(
-                "{HINT_EMOJI} <dim>Run </>wt config shell install<dim> to enable shell integration</>"
+                "{HINT_EMOJI} <dim>Run <bright-black>wt config shell install</><dim> to enable shell integration</>"
             )
         )?;
     }
@@ -475,8 +477,8 @@ pub fn handle_cache_show() -> anyhow::Result<()> {
     // Show default branch cache
     crate::output::info("Default branch cache:")?;
     match repo.default_branch() {
-        Ok(branch) => crate::output::data(format!("  {branch}"))?,
-        Err(_) => crate::output::data("  (not cached)")?,
+        Ok(branch) => crate::output::gutter(format_with_gutter(&branch, "", None))?,
+        Err(_) => crate::output::gutter(format_with_gutter("(not cached)", "", None))?,
     }
     crate::output::blank()?;
 
@@ -485,7 +487,7 @@ pub fn handle_cache_show() -> anyhow::Result<()> {
 
     let entries = CachedCiStatus::list_all(&repo);
     if entries.is_empty() {
-        crate::output::data("  (no CI cache entries)")?;
+        crate::output::gutter(format_with_gutter("(empty)", "", None))?;
         return Ok(());
     }
 
@@ -494,6 +496,7 @@ pub fn handle_cache_show() -> anyhow::Result<()> {
         .map(|d| d.as_secs())
         .unwrap_or(0);
 
+    let mut ci_lines = Vec::new();
     for (branch, cached) in entries {
         let status = serde_json::to_string(&cached.status.ci_status)
             .map(|s| s.trim_matches('"').to_string())
@@ -501,8 +504,9 @@ pub fn handle_cache_show() -> anyhow::Result<()> {
         let age = now_secs.saturating_sub(cached.checked_at);
         let head: String = cached.head.chars().take(8).collect();
 
-        crate::output::data(format!("  {branch}: {status} (age: {age}s, head: {head})"))?;
+        ci_lines.push(format!("{branch}: {status} (age: {age}s, head: {head})"));
     }
+    crate::output::gutter(format_with_gutter(&ci_lines.join("\n"), "", None))?;
 
     Ok(())
 }

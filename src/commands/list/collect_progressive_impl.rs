@@ -20,12 +20,12 @@
 //! - Show error placeholder in UI
 //! - Continue silently (current behavior)
 
+use crate::output;
 use crossbeam_channel::Sender;
 use std::path::PathBuf;
 use std::sync::Arc;
 use worktrunk::git::{LineDiff, Repository, Worktree};
 use worktrunk::path::format_path_for_display;
-use worktrunk::styling::eprintln;
 
 use super::ci_status::PrStatus;
 use super::collect::{ExpectedResults, TaskKind, TaskResult, detect_git_operation};
@@ -361,11 +361,11 @@ impl Task for UpstreamTask {
                         }),
                         Err(e) => {
                             if ctx.verbose_errors {
-                                eprintln!(
-                                    "Warning: ahead_behind failed for {}: {}",
+                                let _ = output::warning(format!(
+                                    "ahead_behind failed for {}: {}",
                                     format_path_for_display(&ctx.repo_path),
                                     e
-                                );
+                                ));
                             }
                             None
                         }
@@ -374,11 +374,11 @@ impl Task for UpstreamTask {
                 Ok(None) => None,
                 Err(e) => {
                     if ctx.verbose_errors {
-                        eprintln!(
-                            "Warning: upstream_branch failed for {}: {}",
+                        let _ = output::warning(format!(
+                            "upstream_branch failed for {}: {}",
                             format_path_for_display(&ctx.repo_path),
                             e
-                        );
+                        ));
                     }
                     None
                 }

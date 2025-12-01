@@ -42,7 +42,7 @@ pub trait OutputHandler {
         self.write_message_line(&cformat!("{PROGRESS_EMOJI} <cyan>{message}</>"))
     }
 
-    /// Emit a hint message (automatically wrapped in dim)
+    /// Emit a hint message (automatically wrapped in dim styling)
     fn hint(&mut self, message: String) -> io::Result<()> {
         self.write_message_line(&cformat!("{HINT_EMOJI} <dim>{message}</>"))
     }
