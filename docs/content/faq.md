@@ -17,7 +17,7 @@ Commands from project hooks and LLM configuration require approval on first run.
 
 <!-- ⚠️ AUTO-GENERATED from tests/integration_tests/snapshots/integration__integration_tests__shell_wrapper__tests__readme_example_approval_prompt.snap — edit source to update -->
 
-```text
+```txt
 🟡 repo needs approval to execute 3 commands:
 
 ⚪ post-create install:
