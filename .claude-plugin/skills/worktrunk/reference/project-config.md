@@ -18,7 +18,7 @@ When users say "set up some hooks for me", follow this discovery process:
 ### Step 1: Detect Project Type
 
 Check for package manifests:
-```console
+```bash
 ls package.json Cargo.toml pyproject.toml pom.xml go.mod
 ```
 
@@ -27,7 +27,7 @@ ls package.json Cargo.toml pyproject.toml pom.xml go.mod
 <example type="detecting-npm-scripts">
 
 For npm projects, read `package.json`:
-```console
+```bash
 cat package.json | grep -A 20 '"scripts"'
 ```
 
@@ -57,7 +57,7 @@ Match hooks to project needs using this decision tree:
 ### Step 4: Validate Commands Work
 
 Before adding to config, check:
-```console
+```bash
 npm run lint    # Check script exists
 which cargo     # Check tool exists
 ```
@@ -115,7 +115,7 @@ pre-commit = ["npm run lint", "npm run typecheck"]
 
 ### Step 7: Suggest Testing
 
-```console
+```bash
 # Create a test worktree to verify hooks work
 wt switch --create test-hooks
 ```
@@ -126,7 +126,7 @@ When users want to add automation to an existing project:
 
 ### Step 1: Read Existing Config
 
-```console
+```bash
 cat .config/wt.toml
 ```
 
@@ -381,7 +381,7 @@ Check commands are safe and exist:
 
 <example type="validation-checks">
 
-```console
+```bash
 # Verify command exists
 which npm
 which cargo
@@ -446,7 +446,7 @@ post-start = "npm run build"  # Slow, background
 
 ## Key Commands
 
-```console
+```bash
 wt config list                    # View project config
 cat .config/wt.toml               # Read config directly
 wt switch --create test-hooks     # Test hooks work

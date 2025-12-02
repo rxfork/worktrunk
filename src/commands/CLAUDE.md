@@ -6,7 +6,7 @@ When debugging TUI commands like `wt select`, use the `tmux-cli` skill (preferre
 
 ### 1. Create Test Environment
 
-```console
+```bash
 cargo run --bin setup-select-test
 ```
 
@@ -18,7 +18,7 @@ This creates a reproducible test repo at `/tmp/wt-select-test/test-repo`.
 
 Load the `tmux-cli` skill, then use the `tmux-cli` tool. Install if needed: `uv tool install claude-code-tools` (requires tmux).
 
-```console
+```bash
 # Launch shell in test repo
 pane=$(tmux-cli launch "zsh")
 tmux-cli send "cd /tmp/wt-select-test/test-repo" --pane=$pane
@@ -60,7 +60,7 @@ mcp__node-terminal__terminal_read({ sessionId: "test" })
 
 ### 3. Analyze Logs
 
-```console
+```bash
 tail -100 debug.log | grep -E "error|hang|stuck"
 ```
 
@@ -69,7 +69,7 @@ tail -100 debug.log | grep -E "error|hang|stuck"
 - **`-C <path>`**: Set working directory (alternative to `cd`)
 - **`--source`**: Use local source (only needed with installed `wt`, not with `cargo run`)
 
-```console
+```bash
 # Testing with cargo run (already uses local source):
 cargo run --quiet -- -C /path/to/repo select
 

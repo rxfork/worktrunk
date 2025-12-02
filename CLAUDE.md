@@ -44,7 +44,7 @@ Avoid mixing: "main/default branch worktree" is confusing. Use "main worktree" f
 
 ### Running Tests
 
-```console
+```bash
 # Unit tests (fast, ~210 tests)
 cargo test --lib --bins
 
@@ -66,7 +66,7 @@ The pre-merge hook runs the full test suite and is the recommended way to verify
 
 When working in Claude Code web, run the setup script first:
 
-```console
+```bash
 ./dev/setup-claude-code-web.sh
 ```
 
@@ -621,7 +621,7 @@ For detailed benchmark documentation, see `benches/CLAUDE.md`.
 
 ### Quick Start
 
-```console
+```bash
 # Run fast synthetic benchmarks (skip slow ones)
 cargo bench --bench list -- --skip cold --skip real
 

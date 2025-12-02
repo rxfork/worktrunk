@@ -50,14 +50,14 @@ I'd recommend:
 
 **Homebrew (macOS):**
 
-```console
+```bash
 $ brew install max-sixty/worktrunk/wt
 $ wt config shell install  # allows commands to change directories
 ```
 
 **Cargo:**
 
-```console
+```bash
 $ cargo install worktrunk
 $ wt config shell install
 ```
@@ -66,7 +66,7 @@ $ wt config shell install
 
 <!-- ⚠️ AUTO-GENERATED from tests/integration_tests/snapshots/integration__integration_tests__shell_wrapper__tests__readme_example_simple_switch.snap — edit source to update -->
 
-```console
+```bash
 $ wt switch --create fix-auth
 ✅ Created new worktree for fix-auth from main at ../repo.fix-auth
 ```
@@ -79,7 +79,7 @@ This creates `../repo.fix-auth` on branch `fix-auth`.
 
 <!-- ⚠️ AUTO-GENERATED from tests/integration_tests/snapshots/integration__integration_tests__shell_wrapper__tests__readme_example_switch_back.snap — edit source to update -->
 
-```console
+```bash
 $ wt switch feature-api
 ✅ Switched to worktree for feature-api at ../repo.feature-api
 ```
@@ -90,7 +90,7 @@ $ wt switch feature-api
 
 <!-- ⚠️ AUTO-GENERATED from tests/snapshots/integration__integration_tests__list__readme_example_simple_list.snap — edit source to update -->
 
-```console
+```bash
 $ wt list
   Branch       Status         HEAD±    main↕  Path                Remote⇅  Commit    Age   Message
 @ feature-api  +   ↑⇡      +36  -11   ↑4      ./repo.feature-api   ⇡3      b1554967  30m   Add API tests
@@ -110,7 +110,7 @@ Say we merged via CI, our changes are on main, and we're finished with the workt
 
 <!-- ⚠️ AUTO-GENERATED from tests/integration_tests/snapshots/integration__integration_tests__shell_wrapper__tests__readme_example_remove.snap — edit source to update -->
 
-```console
+```bash
 $ wt remove
 🔄 Removing feature-api worktree & branch in background (already in main)
 ```
@@ -237,7 +237,7 @@ Example output:
 
 <!-- ⚠️ AUTO-GENERATED from tests/integration_tests/snapshots/integration__integration_tests__shell_wrapper__tests__readme_example_hooks_post_create.snap — edit source to update -->
 
-```console
+```bash
 $ wt switch --create feature-x
 🔄 Running post-create install:
    uv sync
@@ -283,7 +283,7 @@ cargo install --path .  </pre></td>
 
 <!-- ⚠️ AUTO-GENERATED from tests/snapshots/integration__integration_tests__merge__readme_example_complex.snap — edit source to update -->
 
-```console
+```bash
 $ wt merge
 🔄 Squashing 3 commits into a single commit (3 files, +33)...
 🔄 Generating squash commit message...
@@ -338,7 +338,7 @@ The Worktrunk plugin adds Claude Code session tracking to `wt list`:
 
 <!-- ⚠️ AUTO-GENERATED from tests/snapshots/integration__integration_tests__list__with_user_marker.snap — edit source to update -->
 
-```console
+```bash
 $ wt list
   Branch       Status         HEAD±    main↕  Path                Remote⇅  Commit    Age   Message
 @ main             ^                          ./repo                       b834638e  1d    Initial commit
@@ -356,7 +356,7 @@ $ wt list
 
 **Install the plugin:**
 
-```console
+```bash
 claude plugin marketplace add max-sixty/worktrunk
 claude plugin install worktrunk@worktrunk
 ```
@@ -366,7 +366,7 @@ claude plugin install worktrunk@worktrunk
 
 Set status markers manually for any workflow:
 
-```console
+```bash
 wt config var set marker "🚧"                   # Current branch
 wt config var set marker "✅" --branch feature  # Specific branch
 git config worktrunk.marker.feature "💬"        # Direct git config
@@ -396,7 +396,7 @@ or editor integrations[^1].
 **Claude Code** (`--claude-code`): Reads workspace context from stdin, outputs
 directory, branch status, and model.
 
-```text
+```
 ~/w/myproject.feature-auth  !🤖  ±+42 -8  ↑3  ⇡1  ●  | Opus
 ```
 
@@ -420,7 +420,7 @@ Add to `~/.claude/settings.json`:
 
 <a id="alias"></a>**Alias for new worktree + agent:**
 
-```console
+```bash
 alias wsc='wt switch --create --execute=claude'
 wsc new-feature  # Creates worktree, runs hooks, launches Claude
 ```
@@ -462,7 +462,7 @@ HEAD.
 
 <!-- ⚠️ AUTO-GENERATED from `wt switch --help-md` — edit source to update -->
 
-```text
+```
 wt switch — Switch to a worktree
 Usage: wt switch [OPTIONS] <BRANCH>
 
@@ -562,37 +562,37 @@ See `wt config approvals --help`.
 
 Switch to existing worktree:
 
-```console
+```bash
 wt switch feature-branch
 ```
 
 Create new worktree from main:
 
-```console
+```bash
 wt switch --create new-feature
 ```
 
 Switch to previous worktree:
 
-```console
+```bash
 wt switch -
 ```
 
 Create from specific base:
 
-```console
+```bash
 wt switch --create hotfix --base production
 ```
 
 Create and run command:
 
-```console
+```bash
 wt switch --create docs --execute "code ."
 ```
 
 Skip hooks during creation:
 
-```console
+```bash
 wt switch --create temp --no-verify
 ```
 
@@ -600,7 +600,7 @@ wt switch --create temp --no-verify
 
 Use `@` for current HEAD, `-` for previous, `^` for main:
 
-```console
+```bash
 wt switch @                              # Switch to current branch's worktree
 wt switch -                              # Switch to previous worktree
 wt switch --create new-feature --base=^  # Branch from main (default)
@@ -617,7 +617,7 @@ wt remove @                              # Remove current worktree
 
 <!-- ⚠️ AUTO-GENERATED from `wt merge --help-md` — edit source to update -->
 
-```text
+```
 wt merge — Merge worktree into target branch
 Usage: wt merge [OPTIONS] [TARGET]
 
@@ -707,25 +707,25 @@ See `wt config approvals --help`.
 
 Basic merge to main:
 
-```console
+```bash
 wt merge
 ```
 
 Merge without squashing:
 
-```console
+```bash
 wt merge --no-squash
 ```
 
 Keep worktree after merging:
 
-```console
+```bash
 wt merge --no-remove
 ```
 
 Skip all hooks:
 
-```console
+```bash
 wt merge --no-verify
 ```
 
@@ -738,7 +738,7 @@ wt merge --no-verify
 
 <!-- ⚠️ AUTO-GENERATED from `wt remove --help-md` — edit source to update -->
 
-```text
+```
 wt remove — Remove worktree and branch
 Usage: wt remove [OPTIONS] [WORKTREES]...
 
@@ -834,37 +834,37 @@ Stops any git fsmonitor daemon for the worktree before removal. This prevents or
 
 Remove current worktree and branch:
 
-```console
+```bash
 wt remove
 ```
 
 Remove specific worktree and branch:
 
-```console
+```bash
 wt remove feature-branch
 ```
 
 Remove worktree but keep branch:
 
-```console
+```bash
 wt remove --no-delete-branch feature-branch
 ```
 
 Remove multiple worktrees:
 
-```console
+```bash
 wt remove old-feature another-branch
 ```
 
 Remove in foreground (blocking):
 
-```console
+```bash
 wt remove --no-background feature-branch
 ```
 
 Switch to default in main:
 
-```console
+```bash
 wt remove  # (when already in main worktree)
 ```
 
@@ -877,7 +877,7 @@ wt remove  # (when already in main worktree)
 
 <!-- ⚠️ AUTO-GENERATED from `wt list --help-md` — edit source to update -->
 
-```text
+```
 wt list — List worktrees and optionally branches
 Usage: wt list [OPTIONS]
        wt list <COMMAND>
@@ -992,7 +992,7 @@ Note: `locked` and `prunable` are top-level fields on worktree objects, not in s
 
 **Query examples:**
 
-```console
+```bash
 # Find worktrees with conflicts
 jq '.[] | select(.status.branch_state == "Conflicts")'
 
@@ -1021,7 +1021,7 @@ jq '.[] | select(.is_current == true)'
 
 <!-- ⚠️ AUTO-GENERATED from `wt config --help-md` — edit source to update -->
 
-```text
+```
 wt config — Manage configuration and shell integration
 Usage: wt config [OPTIONS] <COMMAND>
 
@@ -1053,19 +1053,19 @@ Global Options:
 
 1. Set up shell integration
 
-   ```console
+   ```bash
    wt config shell install
    ```
 
    Or manually add to the shell config:
 
-   ```console
+   ```bash
    eval "$(wt config shell init bash)"
    ```
 
 2. (Optional) Create user config file
 
-   ```console
+   ```bash
    wt config create
    ```
 
@@ -1086,7 +1086,7 @@ Global Options:
 
 For Claude:
 
-```console
+```bash
 llm install llm-anthropic
 llm keys set anthropic
 llm models default claude-haiku-4-5-20251001
@@ -1094,7 +1094,7 @@ llm models default claude-haiku-4-5-20251001
 
 For OpenAI:
 
-```console
+```bash
 llm keys set openai
 ```
 
@@ -1122,7 +1122,7 @@ Docs: <https://llm.datasette.io/> | <https://github.com/sigoden/aichat>
 
 <!-- ⚠️ AUTO-GENERATED from `wt step --help-md` — edit source to update -->
 
-```text
+```
 wt step — Workflow building blocks
 Usage: wt step [OPTIONS] <COMMAND>
 
@@ -1167,7 +1167,7 @@ Commands from project hooks and LLM configuration require approval on first run.
 
 <!-- ⚠️ AUTO-GENERATED from tests/integration_tests/snapshots/integration__integration_tests__shell_wrapper__tests__readme_example_approval_prompt.snap — edit source to update -->
 
-```text
+```
 🟡 repo needs approval to execute 3 commands:
 
 ⚪ post-create install:
@@ -1200,7 +1200,7 @@ Worktrees give each agent its own directory.
 
 Git's built-in worktree commands work but require manual lifecycle management:
 
-```console
+```bash
 # Plain git worktree workflow
 git worktree add -b feature-branch ../myapp-feature main
 cd ../myapp-feature
@@ -1213,7 +1213,7 @@ git branch -d feature-branch
 
 Worktrunk automates the full lifecycle:
 
-```console
+```bash
 wt switch --create feature-branch  # Creates worktree, runs setup hooks
 # ...work...
 wt merge                            # Squashes, merges, removes worktree
@@ -1251,7 +1251,7 @@ each worktree directory.
 Errors related to tree-sitter or C compilation (C99 mode, `le16toh` undefined)
 can be avoided by installing without syntax highlighting:
 
-```console
+```bash
 cargo install worktrunk --no-default-features
 ```
 
@@ -1298,7 +1298,7 @@ cargo test --test integration --features shell-integration-tests
 
 Use [cargo-release](https://github.com/crate-ci/cargo-release) to publish new versions:
 
-```console
+```bash
 cargo install cargo-release
 
 # Bump version, update Cargo.lock, commit, tag, and push
@@ -1315,7 +1315,7 @@ Run without `--execute` to preview changes first.
 
 After `cargo release` completes and the GitHub release is created, update the [homebrew-worktrunk](https://github.com/max-sixty/homebrew-worktrunk) tap:
 
-```console
+```bash
 ./dev/update-homebrew.sh
 ```
 

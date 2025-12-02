@@ -7,7 +7,7 @@ weight = 5
 
 <!-- ⚠️ AUTO-GENERATED from `wt switch --help-md` — edit source to update -->
 
-```text
+```
 wt switch — Switch to a worktree
 Usage: wt switch [OPTIONS] <BRANCH>
 
@@ -107,37 +107,37 @@ See `wt config approvals --help`.
 
 Switch to existing worktree:
 
-```console
+```bash
 wt switch feature-branch
 ```
 
 Create new worktree from main:
 
-```console
+```bash
 wt switch --create new-feature
 ```
 
 Switch to previous worktree:
 
-```console
+```bash
 wt switch -
 ```
 
 Create from specific base:
 
-```console
+```bash
 wt switch --create hotfix --base production
 ```
 
 Create and run command:
 
-```console
+```bash
 wt switch --create docs --execute "code ."
 ```
 
 Skip hooks during creation:
 
-```console
+```bash
 wt switch --create temp --no-verify
 ```
 
@@ -145,7 +145,7 @@ wt switch --create temp --no-verify
 
 Use `@` for current HEAD, `-` for previous, `^` for main:
 
-```console
+```bash
 wt switch @                              # Switch to current branch's worktree
 wt switch -                              # Switch to previous worktree
 wt switch --create new-feature --base=^  # Branch from main (default)
@@ -161,7 +161,7 @@ wt remove @                              # Remove current worktree
 
 <!-- ⚠️ AUTO-GENERATED from `wt merge --help-md` — edit source to update -->
 
-```text
+```
 wt merge — Merge worktree into target branch
 Usage: wt merge [OPTIONS] [TARGET]
 
@@ -251,25 +251,25 @@ See `wt config approvals --help`.
 
 Basic merge to main:
 
-```console
+```bash
 wt merge
 ```
 
 Merge without squashing:
 
-```console
+```bash
 wt merge --no-squash
 ```
 
 Keep worktree after merging:
 
-```console
+```bash
 wt merge --no-remove
 ```
 
 Skip all hooks:
 
-```console
+```bash
 wt merge --no-verify
 ```
 
@@ -281,7 +281,7 @@ wt merge --no-verify
 
 <!-- ⚠️ AUTO-GENERATED from `wt remove --help-md` — edit source to update -->
 
-```text
+```
 wt remove — Remove worktree and branch
 Usage: wt remove [OPTIONS] [WORKTREES]...
 
@@ -377,37 +377,37 @@ Stops any git fsmonitor daemon for the worktree before removal. This prevents or
 
 Remove current worktree and branch:
 
-```console
+```bash
 wt remove
 ```
 
 Remove specific worktree and branch:
 
-```console
+```bash
 wt remove feature-branch
 ```
 
 Remove worktree but keep branch:
 
-```console
+```bash
 wt remove --no-delete-branch feature-branch
 ```
 
 Remove multiple worktrees:
 
-```console
+```bash
 wt remove old-feature another-branch
 ```
 
 Remove in foreground (blocking):
 
-```console
+```bash
 wt remove --no-background feature-branch
 ```
 
 Switch to default in main:
 
-```console
+```bash
 wt remove  # (when already in main worktree)
 ```
 
@@ -419,7 +419,7 @@ wt remove  # (when already in main worktree)
 
 <!-- ⚠️ AUTO-GENERATED from `wt list --help-md` — edit source to update -->
 
-```text
+```
 wt list — List worktrees and optionally branches
 Usage: wt list [OPTIONS]
        wt list <COMMAND>
@@ -534,7 +534,7 @@ Note: `locked` and `prunable` are top-level fields on worktree objects, not in s
 
 **Query examples:**
 
-```console
+```bash
 # Find worktrees with conflicts
 jq '.[] | select(.status.branch_state == "Conflicts")'
 
@@ -562,7 +562,7 @@ jq '.[] | select(.is_current == true)'
 
 <!-- ⚠️ AUTO-GENERATED from `wt config --help-md` — edit source to update -->
 
-```text
+```
 wt config — Manage configuration and shell integration
 Usage: wt config [OPTIONS] <COMMAND>
 
@@ -594,19 +594,19 @@ Global Options:
 
 1. Set up shell integration
 
-   ```console
+   ```bash
    wt config shell install
    ```
 
    Or manually add to the shell config:
 
-   ```console
+   ```bash
    eval "$(wt config shell init bash)"
    ```
 
 2. (Optional) Create user config file
 
-   ```console
+   ```bash
    wt config create
    ```
 
@@ -627,7 +627,7 @@ Global Options:
 
 For Claude:
 
-```console
+```bash
 llm install llm-anthropic
 llm keys set anthropic
 llm models default claude-haiku-4-5-20251001
@@ -635,7 +635,7 @@ llm models default claude-haiku-4-5-20251001
 
 For OpenAI:
 
-```console
+```bash
 llm keys set openai
 ```
 
@@ -662,7 +662,7 @@ Docs: <https://llm.datasette.io/> | <https://github.com/sigoden/aichat>
 
 <!-- ⚠️ AUTO-GENERATED from `wt step --help-md` — edit source to update -->
 
-```text
+```
 wt step — Workflow building blocks
 Usage: wt step [OPTIONS] <COMMAND>
 

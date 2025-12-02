@@ -17,7 +17,7 @@ html {
 
 body {
     font-family: var(--wt-font-sans);
-    font-size: 17px;
+    font-size: 15px;
     line-height: 1.6;
     color: var(--wt-color-text);
     background-color: var(--wt-color-bg);
@@ -250,7 +250,6 @@ table {
     th {
         background-color: var(--wt-color-bg-soft);
         font-weight: 600;
-        font-size: 0.9rem;
         color: var(--wt-color-text);
     }
 
@@ -319,7 +318,7 @@ table {
     margin: 0 0.5rem;
 
     a {
-        font-size: 0.8rem;
+        font-size: 0.9rem;
         color: var(--wt-color-text-soft);
         padding: 0.1rem 0.4rem;
         border-radius: 0.3rem;
@@ -337,7 +336,7 @@ table {
         padding-left: 2.5rem;
 
         a {
-            font-size: 0.75rem;
+            font-size: 0.85rem;
         }
     }
 }

@@ -2,7 +2,7 @@
 
 ## Running the Demo
 
-```console
+```bash
 ./dev/wt-demo-build
 ```
 

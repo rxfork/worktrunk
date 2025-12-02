@@ -4,7 +4,7 @@ See `list.rs` header for the authoritative list of benchmark groups and run exam
 
 ## Quick Start
 
-```console
+```bash
 # Fast iteration (skip slow benchmarks)
 cargo bench --bench list -- --skip cold --skip real
 
@@ -22,12 +22,12 @@ Real repo benchmarks clone rust-lang/rust on first run (~2-5 minutes). The clone
 ## Faster Iteration
 
 **Skip slow benchmarks:**
-```console
+```bash
 cargo bench --bench list -- --skip cold --skip real
 ```
 
 **Pattern matching:**
-```console
+```bash
 cargo bench --bench list scaling    # All scaling benchmarks
 cargo bench --bench list -- --skip cold  # Warm cache only
 ```
