@@ -47,53 +47,50 @@ Usage: [1m[36mwt remove[0m [36m[OPTIONS][0m [36m[WORKTREES]...[0m
   [1m[36m-v[0m, [1m[36m--verbose[0m
           Show commands and debug info
 
-Cleans up finished work by removing worktrees and their branches. Without arguments, removes the current worktree and returns to the main worktree.
+Removes worktrees and their branches. Without arguments, removes the current worktree and returns to the main worktree.
 
 [32mExamples[0m
 
-Remove current worktree and branch:
+Remove current worktree:
 
   [2mwt remove[0m
 
-Remove a specific worktree:
+Remove specific worktrees:
 
   [2mwt remove feature-branch[0m
+  [2mwt remove old-feature another-branch[0m
 
-Keep the branch after removing the worktree:
+Keep the branch:
 
   [2mwt remove --no-delete-branch feature-branch[0m
-
-Remove multiple worktrees:
-
-  [2mwt remove old-feature another-branch[0m
 
 Force-delete an unmerged branch:
 
   [2mwt remove -D experimental[0m
 
-[32mBranch Deletion[0m
+[32mWhen Branches Are Deleted[0m
 
-By default, branches are deleted only when their content is already integrated into the target branch (typically main). This works correctly with squash-merge and rebase workflows where commit ancestry isn't preserved but the file changes are.
+Branches delete automatically when their content is already in the target branch (typically main). This works with squash-merge and rebase workflows where commit history differs but file changes match.
 
-The [2m-D[0m flag overrides this safety check and force-deletes unmerged branches. The [2m--no-delete-branch[0m flag prevents branch deletion entirely.
+Use [2m-D[0m to force-delete unmerged branches. Use [2m--no-delete-branch[0m to keep the branch.
 
 [32mBackground Removal[0m
 
-Removal runs in the background by default — the command returns immediately so work can continue. Logs are written to [2m.git/wt-logs/{branch}-remove.log[0m.
+Removal runs in the background by default (returns immediately). Logs are written to [2m.git/wt-logs/{branch}-remove.log[0m. Use [2m--no-background[0m to run in the foreground.
 
-The [2m--no-background[0m flag runs removal in the foreground (blocking).
+[32mPath-First Lookup[0m
 
-[32mHow Arguments Are Resolved[0m
+Arguments resolve by checking the expected path first, then falling back to branch name:
 
-Arguments resolve using [1mpath-first lookup[0m:
+1. Compute expected path from argument (using configured path template)
+2. If a worktree exists there, remove it (regardless of branch name)
+3. Otherwise, treat argument as a branch name
 
-1. Compute the expected path for the argument (using the configured path template)
-2. If a worktree exists at that path, use it (regardless of what branch it's on)
-3. Otherwise, treat the argument as a branch name
+If [2mrepo.foo/[0m exists on branch [2mbar[0m, both [2mwt remove foo[0m and [2mwt remove bar[0m remove the same worktree.
 
-[1mExample[0m: If [2mrepo.foo/[0m exists but is on branch [2mbar[0m:
+[1mShortcuts[0m: [2m@[0m (current), [2m-[0m (previous), [2m^[0m (main worktree)
 
-- [2mwt remove foo[0m removes [2mrepo.foo/[0m and the [2mbar[0m branch
-- [2mwt remove bar[0m also works (falls back to branch lookup)
+[32mSee Also[0m
 
-[1mShortcuts[0m: [2m@[0m (current worktree), [2m-[0m (previous worktree), [2m^[0m (main worktree)
+- [wt merge](/merge/) — Remove worktree after merging
+- [wt list](/list/) — View all worktrees

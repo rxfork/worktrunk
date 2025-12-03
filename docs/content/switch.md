@@ -6,89 +6,71 @@ weight = 10
 group = "Commands"
 +++
 
-Navigate between worktrees or create new ones. Switching to an existing worktree is just a directory change. With `--create`, a new branch and worktree are created, and hooks run.
+Two distinct operations:
+
+- **Switch to existing worktree** — Changes directory, nothing else
+- **Create new worktree** (`--create`) — Creates branch and worktree, runs [hooks](/hooks/)
 
 ## Examples
 
-Switch to an existing worktree:
-
 ```bash
-wt switch feature-auth
-```
-
-Create a new worktree for a fresh branch:
-
-```bash
-wt switch --create new-feature
-```
-
-Create from a specific base branch:
-
-```bash
+wt switch feature-auth           # Switch to existing worktree
+wt switch -                      # Previous worktree (like cd -)
+wt switch --create new-feature   # Create branch and worktree
 wt switch --create hotfix --base production
 ```
 
-Switch to the previous worktree (like `cd -`):
-
-```bash
-wt switch -
-```
-
-## Creating Worktrees
-
-The `--create` flag (or `-c`) creates a new branch from the default branch (or `--base`), sets up a worktree at `../{repo}.{branch}`, runs [post-create hooks](/hooks/#post-create) synchronously, then spawns [post-start hooks](/hooks/#post-start) in the background before switching to the new directory.
-
-```bash
-# Create from main (default)
-wt switch --create api-refactor
-
-# Create from a specific branch
-wt switch --create emergency-fix --base release-2.0
-
-# Create and open in editor
-wt switch --create docs --execute "code ."
-
-# Skip all hooks
-wt switch --create temp --no-verify
-```
+For interactive selection, use [`wt select`](/select/).
 
 ## Shortcuts
 
-Special symbols for common targets:
-
-| Shortcut | Meaning |
-|----------|---------|
-| `-` | Previous worktree (like `cd -`) |
+| Symbol | Meaning |
+|--------|---------|
+| `-` | Previous worktree |
 | `@` | Current branch's worktree |
-| `^` | Default branch (main/master) |
+| `^` | Default branch worktree |
 
 ```bash
-wt switch -                              # Go back to previous worktree
-wt switch ^                              # Switch to main worktree
-wt switch --create bugfix --base=@       # Branch from current HEAD
+wt switch -                      # Back to previous
+wt switch ^                      # Main worktree
+wt switch --create fix --base=@  # Branch from current HEAD
 ```
 
-## Hooks
+## Path-First Lookup
 
-When creating a worktree (`--create`), hooks run in this order:
+Arguments resolve by checking the filesystem before git branches:
 
-1. **post-create** — Blocking, sequential. Typically: `npm install`, `cargo build`
-2. **post-start** — Background, parallel. Typically: dev servers, file watchers
+1. Compute expected path from argument (using configured path template)
+2. If worktree exists at that path, switch to it
+3. Otherwise, treat argument as branch name
 
-See [Hooks](/hooks/) for configuration details.
+**Edge case**: If `repo.foo/` exists but tracks branch `bar`:
+- `wt switch foo` → switches to `repo.foo/` (the `bar` worktree)
+- `wt switch bar` → also works (branch lookup finds same worktree)
 
-## How Arguments Are Resolved
+## Creating Worktrees
 
-Arguments resolve using **path-first lookup**:
+With `--create`, worktrunk:
 
-1. Compute the expected path for the argument (using the configured path template)
-2. If a worktree exists at that path, switch to it (regardless of what branch it's on)
-3. Otherwise, treat the argument as a branch name
+1. Creates branch from `--base` (defaults to default branch)
+2. Creates worktree at configured path
+3. Runs [post-create hooks](/hooks/#post-create) (blocking)
+4. Switches to new directory
+5. Spawns [post-start hooks](/hooks/#post-start) (background)
 
-**Example**: If `repo.foo/` exists but is on branch `bar`:
+```bash
+wt switch --create api-refactor
+wt switch --create fix --base release-2.0
+wt switch --create docs --execute "code ."
+wt switch --create temp --no-verify      # Skip hooks
+```
 
-- `wt switch foo` switches to `repo.foo/` (the `bar` branch worktree)
-- `wt switch bar` also works (falls back to branch lookup)
+## See Also
+
+- [wt select](/select/) — Interactive worktree selection
+- [wt list](/list/) — View all worktrees
+- [wt remove](/remove/) — Delete worktrees when done
+- [wt merge](/merge/) — Integrate changes back to main
 
 ---
 

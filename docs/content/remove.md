@@ -6,32 +6,27 @@ weight = 13
 group = "Commands"
 +++
 
-Cleans up finished work by removing worktrees and their branches. Without arguments, removes the current worktree and returns to the main worktree.
+Removes worktrees and their branches. Without arguments, removes the current worktree and returns to the main worktree.
 
 ## Examples
 
-Remove current worktree and branch:
+Remove current worktree:
 
 ```bash
 wt remove
 ```
 
-Remove a specific worktree:
+Remove specific worktrees:
 
 ```bash
 wt remove feature-branch
+wt remove old-feature another-branch
 ```
 
-Keep the branch after removing the worktree:
+Keep the branch:
 
 ```bash
 wt remove --no-delete-branch feature-branch
-```
-
-Remove multiple worktrees:
-
-```bash
-wt remove old-feature another-branch
 ```
 
 Force-delete an unmerged branch:
@@ -40,32 +35,32 @@ Force-delete an unmerged branch:
 wt remove -D experimental
 ```
 
-## Branch Deletion
+## When Branches Are Deleted
 
-By default, branches are deleted only when their content is already integrated into the target branch (typically main). This works correctly with squash-merge and rebase workflows where commit ancestry isn't preserved but the file changes are.
+Branches delete automatically when their content is already in the target branch (typically main). This works with squash-merge and rebase workflows where commit history differs but file changes match.
 
-The `-D` flag overrides this safety check and force-deletes unmerged branches. The `--no-delete-branch` flag prevents branch deletion entirely.
+Use `-D` to force-delete unmerged branches. Use `--no-delete-branch` to keep the branch.
 
 ## Background Removal
 
-Removal runs in the background by default — the command returns immediately so work can continue. Logs are written to `.git/wt-logs/{branch}-remove.log`.
+Removal runs in the background by default (returns immediately). Logs are written to `.git/wt-logs/{branch}-remove.log`. Use `--no-background` to run in the foreground.
 
-The `--no-background` flag runs removal in the foreground (blocking).
+## Path-First Lookup
 
-## How Arguments Are Resolved
+Arguments resolve by checking the expected path first, then falling back to branch name:
 
-Arguments resolve using **path-first lookup**:
+1. Compute expected path from argument (using configured path template)
+2. If a worktree exists there, remove it (regardless of branch name)
+3. Otherwise, treat argument as a branch name
 
-1. Compute the expected path for the argument (using the configured path template)
-2. If a worktree exists at that path, use it (regardless of what branch it's on)
-3. Otherwise, treat the argument as a branch name
+If `repo.foo/` exists on branch `bar`, both `wt remove foo` and `wt remove bar` remove the same worktree.
 
-**Example**: If `repo.foo/` exists but is on branch `bar`:
+**Shortcuts**: `@` (current), `-` (previous), `^` (main worktree)
 
-- `wt remove foo` removes `repo.foo/` and the `bar` branch
-- `wt remove bar` also works (falls back to branch lookup)
+## See Also
 
-**Shortcuts**: `@` (current worktree), `-` (previous worktree), `^` (main worktree)
+- [wt merge](/merge/) — Remove worktree after merging
+- [wt list](/list/) — View all worktrees
 
 ---
 

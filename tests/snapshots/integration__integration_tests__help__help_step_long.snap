@@ -17,7 +17,7 @@ exit_code: 0
 ----- stdout -----
 
 ----- stderr -----
-wt step - Workflow building blocks
+wt step - Run individual workflow operations
 Usage: [1m[36mwt step[0m [36m[OPTIONS][0m [36m<COMMAND>[0m
 
 [1m[32mCommands:[0m
@@ -45,51 +45,43 @@ Usage: [1m[36mwt step[0m [36m[OPTIONS][0m [36m<COMMAND>[0m
   [1m[36m-v[0m, [1m[36m--verbose[0m
           Show commands and debug info
 
-Individual workflow steps for scripting and automation. Each subcommand performs one step of the [2mwt merge[0m pipeline — commit, squash, rebase, push, or run hooks — allowing custom workflows or manual intervention between steps.
+Run individual workflow operations: commits, squashes, rebases, pushes, and [hooks](/hooks/).
 
 [32mExamples[0m
 
-Commit with an LLM-generated message:
+Commit with LLM-generated message:
 
   [2mwt step commit[0m
 
-Squash all branch commits into one:
+Run pre-merge hooks in CI:
 
-  [2mwt step squash[0m
+  [2mwt step pre-merge --force[0m
 
-Run pre-merge hooks (tests, lints):
-
-  [2mwt step pre-merge[0m
-
-Rebase onto main:
-
-  [2mwt step rebase[0m
-
-[32mUse Cases[0m
-
-[1mCustom merge workflow[0m — Run steps individually when [2mwt merge[0m doesn't fit, such as adding manual review between squash and rebase:
+Manual merge workflow with review between steps:
 
   [2mwt step commit[0m
   [2mwt step squash[0m
-  [2m# manual review here[0m
+  [2m# Review the squashed commit[0m
   [2mwt step rebase[0m
-  [2mwt step pre-merge[0m
   [2mwt step push[0m
 
-[1mCI integration[0m — Run hooks explicitly in CI environments:
+[32mOperations[0m
 
-  [2mwt step pre-merge --force  # skip approval prompts[0m
+[1mGit operations:[0m
 
-[32mSubcommands[0m
+- [2mcommit[0m — Stage and commit with [LLM-generated message](/llm-commits/)
+- [2msquash[0m — Squash all branch commits into one with [LLM-generated message](/llm-commits/)
+- [2mrebase[0m — Rebase onto target branch
+- [2mpush[0m — Push to target branch (default: main)
 
-| Command | Description |
-|---------|-------------|
-| [2mcommit[0m | Commits uncommitted changes with an [LLM-generated message](/llm-commits/) |
-| [2msquash[0m | Squashes all branch commits into one with an [LLM-generated message](/llm-commits/) |
-| [2mrebase[0m | Rebases the branch onto the target (default: main) |
-| [2mpush[0m | Pushes changes to the local target branch |
-| [2mpost-create[0m | Runs post-create hooks |
-| [2mpost-start[0m | Runs post-start hooks |
-| [2mpre-commit[0m | Runs pre-commit hooks |
-| [2mpre-merge[0m | Runs pre-merge hooks |
-| [2mpost-merge[0m | Runs post-merge hooks |
+[1mHooks[0m — run project commands defined in [[2m.config/wt.toml[0m](/hooks/):
+
+- [2mpost-create[0m — After worktree creation
+- [2mpost-start[0m — After switching to a worktree
+- [2mpre-commit[0m — Before committing
+- [2mpre-merge[0m — Before pushing to target
+- [2mpost-merge[0m — After merge cleanup
+
+[32mSee Also[0m
+
+- [wt merge](/merge/) — Runs commit → squash → rebase → hooks → push → cleanup automatically

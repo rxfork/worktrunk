@@ -122,6 +122,19 @@ Each command page should follow this order:
 - Redundant content that duplicates other pages
 - Technical details at the top (push Operation/Resolution sections down)
 - Wrapper sections that just contain one subsection (remove "Operation" if it only contains "How Arguments Are Resolved")
+- Presuming user intent — describe what the command does, not why users run it
+
+### Example: Don't Presume Intent
+
+```markdown
+# Bad — presumes why users run the command
+See which worktrees need attention.
+
+# Good — describes what it does
+Show all worktrees with their status.
+```
+
+Users run `wt list` for many reasons: checking status, finding a branch, remembering what they were working on, scripting. The intro should describe the command's behavior, not assume the user's goal.
 
 ### Example: Good Intro
 

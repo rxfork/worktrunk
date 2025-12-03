@@ -6,66 +6,52 @@ weight = 16
 group = "Commands"
 +++
 
-Individual workflow steps for scripting and automation. Each subcommand performs one step of the `wt merge` pipeline — commit, squash, rebase, push, or run hooks — allowing custom workflows or manual intervention between steps.
+Run individual workflow operations: commits, squashes, rebases, pushes, and [hooks](/hooks/).
 
 ## Examples
 
-Commit with an LLM-generated message:
+Commit with LLM-generated message:
 
 ```bash
 wt step commit
 ```
 
-Squash all branch commits into one:
+Run pre-merge hooks in CI:
 
 ```bash
-wt step squash
+wt step pre-merge --force
 ```
 
-Run pre-merge hooks (tests, lints):
-
-```bash
-wt step pre-merge
-```
-
-Rebase onto main:
-
-```bash
-wt step rebase
-```
-
-## Use Cases
-
-**Custom merge workflow** — Run steps individually when `wt merge` doesn't fit, such as adding manual review between squash and rebase:
+Manual merge workflow with review between steps:
 
 ```bash
 wt step commit
 wt step squash
-# manual review here
+# Review the squashed commit
 wt step rebase
-wt step pre-merge
 wt step push
 ```
 
-**CI integration** — Run hooks explicitly in CI environments:
+## Operations
 
-```bash
-wt step pre-merge --force  # skip approval prompts
-```
+**Git operations:**
 
-## Subcommands
+- `commit` — Stage and commit with [LLM-generated message](/llm-commits/)
+- `squash` — Squash all branch commits into one with [LLM-generated message](/llm-commits/)
+- `rebase` — Rebase onto target branch
+- `push` — Push to target branch (default: main)
 
-| Command | Description |
-|---------|-------------|
-| `commit` | Commits uncommitted changes with an [LLM-generated message](/llm-commits/) |
-| `squash` | Squashes all branch commits into one with an [LLM-generated message](/llm-commits/) |
-| `rebase` | Rebases the branch onto the target (default: main) |
-| `push` | Pushes changes to the local target branch |
-| `post-create` | Runs post-create hooks |
-| `post-start` | Runs post-start hooks |
-| `pre-commit` | Runs pre-commit hooks |
-| `pre-merge` | Runs pre-merge hooks |
-| `post-merge` | Runs post-merge hooks |
+**Hooks** — run project commands defined in [`.config/wt.toml`](/hooks/):
+
+- `post-create` — After worktree creation
+- `post-start` — After switching to a worktree
+- `pre-commit` — Before committing
+- `pre-merge` — Before pushing to target
+- `post-merge` — After merge cleanup
+
+## See Also
+
+- [wt merge](/merge/) — Runs commit → squash → rebase → hooks → push → cleanup automatically
 
 ---
 
@@ -74,7 +60,7 @@ wt step pre-merge --force  # skip approval prompts
 <!-- ⚠️ AUTO-GENERATED from `wt step --help-page` — edit cli.rs to update -->
 
 ```bash
-wt step - Workflow building blocks
+wt step - Run individual workflow operations
 Usage: wt step [OPTIONS] <COMMAND>
 
 Commands:

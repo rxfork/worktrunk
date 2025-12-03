@@ -57,7 +57,7 @@ Usage: [1m[36mwt list[0m [36m[OPTIONS][0m
   [1m[36m-v[0m, [1m[36m--verbose[0m
           Show commands and debug info
 
-Show all worktrees with their status at a glance. The table includes uncommitted changes, divergence from main and remote, and optional CI status.
+Show all worktrees with their status. The table includes uncommitted changes, divergence from main and remote, and optional CI status.
 
 [32mExamples[0m
 
@@ -79,51 +79,55 @@ Output as JSON for scripting:
 
 [32mStatus Symbols[0m
 
-The Status column shows a compact summary. Symbols appear in this order:
+Symbols appear in the Status column in this order:
 
-| Symbol | Meaning |
-|--------|---------|
-| [2m+[0m | Staged files (ready to commit) |
-| [2m![0m | Modified files (unstaged changes) |
-| [2m?[0m | Untracked files |
-| [2m✖[0m | Merge conflicts (fix before continuing) |
-| [2m⊘[0m | Would conflict if merged to main |
-| [2m≡[0m | Matches main (identical contents) |
-| [2m_[0m | No commits (empty branch) |
-| [2m↻[0m | Rebase in progress |
-| [2m⋈[0m | Merge in progress |
-| [2m↑[0m | Ahead of main |
-| [2m↓[0m | Behind main |
-| [2m↕[0m | Diverged from main |
-| [2m⇡[0m | Ahead of remote |
-| [2m⇣[0m | Behind remote |
-| [2m⇅[0m | Diverged from remote |
-| [2m⎇[0m | Branch without worktree |
-| [2m⌫[0m | Prunable (directory missing) |
-| [2m⊠[0m | Locked worktree |
+[1mWorking tree state:[0m
+- [2m+[0m — Staged files
+- [2m![0m — Modified files (unstaged)
+- [2m?[0m — Untracked files
+- [2m✖[0m — Merge conflicts
+- [2m↻[0m — Rebase in progress
+- [2m⋈[0m — Merge in progress
 
-Rows are dimmed when there's no marginal contribution ([2m≡[0m matches main or [2m_[0m no commits).
+[1mBranch state:[0m
+- [2m⊘[0m — Would conflict if merged to main ([2m--full[0m only)
+- [2m≡[0m — Matches main (identical contents)
+- [2m_[0m — No commits (empty branch)
+
+[1mDivergence from main:[0m
+- [2m↑[0m — Ahead of main
+- [2m↓[0m — Behind main
+- [2m↕[0m — Diverged from main
+
+[1mRemote tracking:[0m
+- [2m⇡[0m — Ahead of remote
+- [2m⇣[0m — Behind remote
+- [2m⇅[0m — Diverged from remote
+
+[1mOther:[0m
+- [2m⎇[0m — Branch without worktree
+- [2m⌫[0m — Prunable (directory missing)
+- [2m⊠[0m — Locked worktree
+
+Rows are dimmed when the branch has no marginal contribution ([2m≡[0m matches main or [2m_[0m no commits).
 
 [32mColumns[0m
 
-| Column | Description |
-|--------|-------------|
-| [1mBranch[0m | Branch name |
-| [1mStatus[0m | Compact symbols (see above) |
-| [1mHEAD±[0m | Uncommitted changes: [2m+added[0m [2m-deleted[0m lines |
-| [1mmain↕[0m | Commits ahead↑/behind↓ relative to main |
-| [1mmain…±[0m | Line diffs in commits ahead of main ([2m--full[0m only) |
-| [1mPath[0m | Worktree directory |
-| [1mRemote⇅[0m | Commits ahead⇡/behind⇣ vs tracking branch |
-| [1mCI[0m | Pipeline status ([2m--full[0m only) |
-| [1mCommit[0m | Short hash (8 chars) |
-| [1mAge[0m | Time since last commit |
-| [1mMessage[0m | Last commit message (truncated) |
+| Column | Shows |
+|--------|-------|
+| Branch | Branch name |
+| Status | Compact symbols (see above) |
+| HEAD± | Uncommitted changes: +added -deleted lines |
+| main↕ | Commits ahead/behind main |
+| main…± | Line diffs in commits ahead of main ([2m--full[0m) |
+| Path | Worktree directory |
+| Remote⇅ | Commits ahead/behind tracking branch |
+| CI | Pipeline status ([2m--full[0m) |
+| Commit | Short hash (8 chars) |
+| Age | Time since last commit |
+| Message | Last commit message (truncated) |
 
-[1mCI Status[0m
-
-The CI column ([2m--full[0m) shows pipeline status from GitHub/GitLab:
-
+The CI column shows GitHub/GitLab pipeline status:
 - [2m●[0m green — All checks passed
 - [2m●[0m blue — Checks running
 - [2m●[0m red — Checks failed
@@ -134,30 +138,32 @@ The CI column ([2m--full[0m) shows pipeline status from GitHub/GitLab:
 
 [32mJSON Output[0m
 
-The [2m--format=json[0m flag outputs structured data for scripting:
+Query structured data with [2m--format=json[0m:
 
-  [2m# Find worktrees with conflicts[0m
+  [2m# Worktrees with conflicts[0m
   [2mwt list --format=json | jq '.[] | select(.status.branch_state == "Conflicts")'[0m
   [2m[0m
-  [2m# Find worktrees with uncommitted changes[0m
+  [2m# Uncommitted changes[0m
   [2mwt list --format=json | jq '.[] | select(.status.working_tree.modified)'[0m
   [2m[0m
-  [2m# Get current worktree[0m
+  [2m# Current worktree[0m
   [2mwt list --format=json | jq '.[] | select(.is_current == true)'[0m
   [2m[0m
-  [2m# Find branches ahead of main[0m
+  [2m# Branches ahead of main[0m
   [2mwt list --format=json | jq '.[] | select(.status.main_divergence == "Ahead")'[0m
 
 [1mStatus fields:[0m
-
-- [2mworking_tree[0m: [2m{untracked, modified, staged, renamed, deleted}[0m booleans
+- [2mworking_tree[0m: [2m{untracked, modified, staged, renamed, deleted}[0m
 - [2mbranch_state[0m: [2m""[0m | [2m"Conflicts"[0m | [2m"MergeTreeConflicts"[0m | [2m"MatchesMain"[0m | [2m"NoCommits"[0m
 - [2mgit_operation[0m: [2m""[0m | [2m"Rebase"[0m | [2m"Merge"[0m
 - [2mmain_divergence[0m: [2m""[0m | [2m"Ahead"[0m | [2m"Behind"[0m | [2m"Diverged"[0m
 - [2mupstream_divergence[0m: [2m""[0m | [2m"Ahead"[0m | [2m"Behind"[0m | [2m"Diverged"[0m
 
 [1mPosition fields:[0m
+- [2mis_main[0m — Main worktree
+- [2mis_current[0m — Current directory
+- [2mis_previous[0m — Previous worktree from [wt switch](/switch/)
 
-- [2mis_main[0m: boolean — is the main worktree
-- [2mis_current[0m: boolean — is the current directory
-- [2mis_previous[0m: boolean — is the previous worktree from [2mwt switch[0m
+[32mSee Also[0m
+
+- [wt select](/select/) — Interactive worktree picker with live preview

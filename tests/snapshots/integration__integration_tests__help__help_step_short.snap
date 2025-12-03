@@ -17,7 +17,7 @@ exit_code: 0
 ----- stdout -----
 
 ----- stderr -----
-wt step - Workflow building blocks
+wt step - Run individual workflow operations
 Usage: [1m[36mwt step[0m [36m[OPTIONS][0m [36m<COMMAND>[0m
 
 [1m[32mCommands:[0m

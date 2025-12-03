@@ -530,7 +530,7 @@ wt config var clear marker --all
     },
 }
 
-/// Workflow building blocks
+/// Run individual workflow operations
 #[derive(Subcommand)]
 pub enum StepCommand {
     /// Commit changes with LLM commit message
@@ -720,69 +720,55 @@ See [LLM Commits](/llm-commits/) for installation, provider setup, and customiza
         action: ConfigCommand,
     },
 
-    /// Workflow building blocks
+    /// Run individual workflow operations
     #[command(
         name = "step",
-        after_long_help = r#"Individual workflow steps for scripting and automation. Each subcommand performs one step of the `wt merge` pipeline — commit, squash, rebase, push, or run hooks — allowing custom workflows or manual intervention between steps.
+        after_long_help = r#"Run individual workflow operations: commits, squashes, rebases, pushes, and [hooks](/hooks/).
 
 ## Examples
 
-Commit with an LLM-generated message:
+Commit with LLM-generated message:
 
 ```console
 wt step commit
 ```
 
-Squash all branch commits into one:
+Run pre-merge hooks in CI:
 
 ```console
-wt step squash
+wt step pre-merge --force
 ```
 
-Run pre-merge hooks (tests, lints):
-
-```console
-wt step pre-merge
-```
-
-Rebase onto main:
-
-```console
-wt step rebase
-```
-
-## Use Cases
-
-**Custom merge workflow** — Run steps individually when `wt merge` doesn't fit, such as adding manual review between squash and rebase:
+Manual merge workflow with review between steps:
 
 ```console
 wt step commit
 wt step squash
-# manual review here
+# Review the squashed commit
 wt step rebase
-wt step pre-merge
 wt step push
 ```
 
-**CI integration** — Run hooks explicitly in CI environments:
+## Operations
 
-```console
-wt step pre-merge --force  # skip approval prompts
-```
+**Git operations:**
 
-## Subcommands
+- `commit` — Stage and commit with [LLM-generated message](/llm-commits/)
+- `squash` — Squash all branch commits into one with [LLM-generated message](/llm-commits/)
+- `rebase` — Rebase onto target branch
+- `push` — Push to target branch (default: main)
 
-| Command | Description |
-|---------|-------------|
-| `commit` | Commits uncommitted changes with an [LLM-generated message](/llm-commits/) |
-| `squash` | Squashes all branch commits into one with an [LLM-generated message](/llm-commits/) |
-| `rebase` | Rebases the branch onto the target (default: main) |
-| `push` | Pushes changes to the local target branch |
-| `post-create` | Runs post-create hooks |
-| `post-start` | Runs post-start hooks |
-| `pre-commit` | Runs pre-commit hooks |
-| `pre-merge` | Runs pre-merge hooks |
-| `post-merge` | Runs post-merge hooks |
+**Hooks** — run project commands defined in [`.config/wt.toml`](/hooks/):
+
+- `post-create` — After worktree creation
+- `post-start` — After switching to a worktree
+- `pre-commit` — Before committing
+- `pre-merge` — Before pushing to target
+- `post-merge` — After merge cleanup
+
+## See Also
+
+- [wt merge](/merge/) — Runs commit → squash → rebase → hooks → push → cleanup automatically
 "#
     )]
     Step {
@@ -795,25 +781,23 @@ wt step pre-merge --force  # skip approval prompts
     /// Toggle preview tabs with 1/2/3 keys. Toggle preview visibility with alt-p.
     #[cfg(unix)]
     #[command(
-        after_long_help = r#"Interactive worktree picker with live preview. The selector shows worktree state at a glance — diff stats, commit history, and working tree status — without switching directories first.
+        after_long_help = r#"Interactive worktree picker with live preview. Navigate worktrees with keyboard shortcuts and press Enter to switch.
 
 ## Examples
 
-Open the interactive selector:
+Open the selector:
 
 ```console
 wt select
 ```
 
-## The Interface
+## Preview Tabs
 
-The selector displays a two-panel layout: a worktree list on the left and a preview panel on the right. The preview updates automatically when navigating between worktrees.
+Toggle between views with number keys:
 
-**Preview tabs** — toggled with number keys:
-
-1. **Diff** — Changes relative to main branch
-2. **Log** — Recent commits on the branch
-3. **Status** — Working tree status (staged, modified, untracked)
+1. **HEAD±** — Uncommitted changes
+2. **history** — Recent commits on the branch
+3. **main…±** — Changes relative to main branch
 
 ## Keybindings
 
@@ -825,13 +809,19 @@ The selector displays a two-panel layout: a worktree list on the left and a prev
 | `/` | Filter worktrees |
 | `1`/`2`/`3` | Switch preview tab |
 | `Alt+p` | Toggle preview panel |
+| `Ctrl-u`/`Ctrl-d` | Scroll preview up/down |
+
+## See Also
+
+- [wt list](/list/) — Static table view with all worktree metadata
+- [wt switch](/switch/) — Direct switching when you know the target branch
 "#
     )]
     Select,
 
     /// List worktrees and optionally branches
     #[command(
-        after_long_help = r#"Show all worktrees with their status at a glance. The table includes uncommitted changes, divergence from main and remote, and optional CI status.
+        after_long_help = r#"Show all worktrees with their status. The table includes uncommitted changes, divergence from main and remote, and optional CI status.
 
 ## Examples
 
@@ -861,51 +851,55 @@ wt list --format=json
 
 ## Status Symbols
 
-The Status column shows a compact summary. Symbols appear in this order:
+Symbols appear in the Status column in this order:
 
-| Symbol | Meaning |
-|--------|---------|
-| `+` | Staged files (ready to commit) |
-| `!` | Modified files (unstaged changes) |
-| `?` | Untracked files |
-| `✖` | Merge conflicts (fix before continuing) |
-| `⊘` | Would conflict if merged to main |
-| `≡` | Matches main (identical contents) |
-| `_` | No commits (empty branch) |
-| `↻` | Rebase in progress |
-| `⋈` | Merge in progress |
-| `↑` | Ahead of main |
-| `↓` | Behind main |
-| `↕` | Diverged from main |
-| `⇡` | Ahead of remote |
-| `⇣` | Behind remote |
-| `⇅` | Diverged from remote |
-| `⎇` | Branch without worktree |
-| `⌫` | Prunable (directory missing) |
-| `⊠` | Locked worktree |
+**Working tree state:**
+- `+` — Staged files
+- `!` — Modified files (unstaged)
+- `?` — Untracked files
+- `✖` — Merge conflicts
+- `↻` — Rebase in progress
+- `⋈` — Merge in progress
 
-Rows are dimmed when there's no marginal contribution (`≡` matches main or `_` no commits).
+**Branch state:**
+- `⊘` — Would conflict if merged to main (`--full` only)
+- `≡` — Matches main (identical contents)
+- `_` — No commits (empty branch)
+
+**Divergence from main:**
+- `↑` — Ahead of main
+- `↓` — Behind main
+- `↕` — Diverged from main
+
+**Remote tracking:**
+- `⇡` — Ahead of remote
+- `⇣` — Behind remote
+- `⇅` — Diverged from remote
+
+**Other:**
+- `⎇` — Branch without worktree
+- `⌫` — Prunable (directory missing)
+- `⊠` — Locked worktree
+
+Rows are dimmed when the branch has no marginal contribution (`≡` matches main or `_` no commits).
 
 ## Columns
 
-| Column | Description |
-|--------|-------------|
-| **Branch** | Branch name |
-| **Status** | Compact symbols (see above) |
-| **HEAD±** | Uncommitted changes: `+added` `-deleted` lines |
-| **main↕** | Commits ahead↑/behind↓ relative to main |
-| **main…±** | Line diffs in commits ahead of main (`--full` only) |
-| **Path** | Worktree directory |
-| **Remote⇅** | Commits ahead⇡/behind⇣ vs tracking branch |
-| **CI** | Pipeline status (`--full` only) |
-| **Commit** | Short hash (8 chars) |
-| **Age** | Time since last commit |
-| **Message** | Last commit message (truncated) |
+| Column | Shows |
+|--------|-------|
+| Branch | Branch name |
+| Status | Compact symbols (see above) |
+| HEAD± | Uncommitted changes: +added -deleted lines |
+| main↕ | Commits ahead/behind main |
+| main…± | Line diffs in commits ahead of main (`--full`) |
+| Path | Worktree directory |
+| Remote⇅ | Commits ahead/behind tracking branch |
+| CI | Pipeline status (`--full`) |
+| Commit | Short hash (8 chars) |
+| Age | Time since last commit |
+| Message | Last commit message (truncated) |
 
-### CI Status
-
-The CI column (`--full`) shows pipeline status from GitHub/GitLab:
-
+The CI column shows GitHub/GitLab pipeline status:
 - `●` green — All checks passed
 - `●` blue — Checks running
 - `●` red — Checks failed
@@ -916,35 +910,37 @@ The CI column (`--full`) shows pipeline status from GitHub/GitLab:
 
 ## JSON Output
 
-The `--format=json` flag outputs structured data for scripting:
+Query structured data with `--format=json`:
 
 ```console
-# Find worktrees with conflicts
+# Worktrees with conflicts
 wt list --format=json | jq '.[] | select(.status.branch_state == "Conflicts")'
 
-# Find worktrees with uncommitted changes
+# Uncommitted changes
 wt list --format=json | jq '.[] | select(.status.working_tree.modified)'
 
-# Get current worktree
+# Current worktree
 wt list --format=json | jq '.[] | select(.is_current == true)'
 
-# Find branches ahead of main
+# Branches ahead of main
 wt list --format=json | jq '.[] | select(.status.main_divergence == "Ahead")'
 ```
 
 **Status fields:**
-
-- `working_tree`: `{untracked, modified, staged, renamed, deleted}` booleans
+- `working_tree`: `{untracked, modified, staged, renamed, deleted}`
 - `branch_state`: `""` | `"Conflicts"` | `"MergeTreeConflicts"` | `"MatchesMain"` | `"NoCommits"`
 - `git_operation`: `""` | `"Rebase"` | `"Merge"`
 - `main_divergence`: `""` | `"Ahead"` | `"Behind"` | `"Diverged"`
 - `upstream_divergence`: `""` | `"Ahead"` | `"Behind"` | `"Diverged"`
 
 **Position fields:**
+- `is_main` — Main worktree
+- `is_current` — Current directory
+- `is_previous` — Previous worktree from [wt switch](/switch/)
 
-- `is_main`: boolean — is the main worktree
-- `is_current`: boolean — is the current directory
-- `is_previous`: boolean — is the previous worktree from `wt switch`
+## See Also
+
+- [wt select](/select/) — Interactive worktree picker with live preview
 "#
     )]
     #[command(args_conflicts_with_subcommands = true)]
@@ -981,92 +977,72 @@ wt list --format=json | jq '.[] | select(.status.main_divergence == "Ahead")'
     },
 
     /// Switch to a worktree
-    #[command(
-        after_long_help = r#"Navigate between worktrees or create new ones. Switching to an existing worktree is just a directory change. With `--create`, a new branch and worktree are created, and hooks run.
+    #[command(after_long_help = r#"Two distinct operations:
+
+- **Switch to existing worktree** — Changes directory, nothing else
+- **Create new worktree** (`--create`) — Creates branch and worktree, runs [hooks](/hooks/)
 
 ## Examples
 
-Switch to an existing worktree:
-
 ```console
-wt switch feature-auth
-```
-
-Create a new worktree for a fresh branch:
-
-```console
-wt switch --create new-feature
-```
-
-Create from a specific base branch:
-
-```console
+wt switch feature-auth           # Switch to existing worktree
+wt switch -                      # Previous worktree (like cd -)
+wt switch --create new-feature   # Create branch and worktree
 wt switch --create hotfix --base production
 ```
 
-Switch to the previous worktree (like `cd -`):
-
-```console
-wt switch -
-```
-
-## Creating Worktrees
-
-The `--create` flag (or `-c`) creates a new branch from the default branch (or `--base`), sets up a worktree at `../{repo}.{branch}`, runs [post-create hooks](/hooks/#post-create) synchronously, then spawns [post-start hooks](/hooks/#post-start) in the background before switching to the new directory.
-
-```console
-# Create from main (default)
-wt switch --create api-refactor
-
-# Create from a specific branch
-wt switch --create emergency-fix --base release-2.0
-
-# Create and open in editor
-wt switch --create docs --execute "code ."
-
-# Skip all hooks
-wt switch --create temp --no-verify
-```
+For interactive selection, use [`wt select`](/select/).
 
 ## Shortcuts
 
-Special symbols for common targets:
-
-| Shortcut | Meaning |
-|----------|---------|
-| `-` | Previous worktree (like `cd -`) |
+| Symbol | Meaning |
+|--------|---------|
+| `-` | Previous worktree |
 | `@` | Current branch's worktree |
-| `^` | Default branch (main/master) |
+| `^` | Default branch worktree |
 
 ```console
-wt switch -                              # Go back to previous worktree
-wt switch ^                              # Switch to main worktree
-wt switch --create bugfix --base=@       # Branch from current HEAD
+wt switch -                      # Back to previous
+wt switch ^                      # Main worktree
+wt switch --create fix --base=@  # Branch from current HEAD
 ```
 
-## Hooks
+## Path-First Lookup
 
-When creating a worktree (`--create`), hooks run in this order:
+Arguments resolve by checking the filesystem before git branches:
 
-1. **post-create** — Blocking, sequential. Typically: `npm install`, `cargo build`
-2. **post-start** — Background, parallel. Typically: dev servers, file watchers
+1. Compute expected path from argument (using configured path template)
+2. If worktree exists at that path, switch to it
+3. Otherwise, treat argument as branch name
 
-See [Hooks](/hooks/) for configuration details.
+**Edge case**: If `repo.foo/` exists but tracks branch `bar`:
+- `wt switch foo` → switches to `repo.foo/` (the `bar` worktree)
+- `wt switch bar` → also works (branch lookup finds same worktree)
 
-## How Arguments Are Resolved
+## Creating Worktrees
 
-Arguments resolve using **path-first lookup**:
+With `--create`, worktrunk:
 
-1. Compute the expected path for the argument (using the configured path template)
-2. If a worktree exists at that path, switch to it (regardless of what branch it's on)
-3. Otherwise, treat the argument as a branch name
+1. Creates branch from `--base` (defaults to default branch)
+2. Creates worktree at configured path
+3. Runs [post-create hooks](/hooks/#post-create) (blocking)
+4. Switches to new directory
+5. Spawns [post-start hooks](/hooks/#post-start) (background)
 
-**Example**: If `repo.foo/` exists but is on branch `bar`:
+```console
+wt switch --create api-refactor
+wt switch --create fix --base release-2.0
+wt switch --create docs --execute "code ."
+wt switch --create temp --no-verify      # Skip hooks
+```
 
-- `wt switch foo` switches to `repo.foo/` (the `bar` branch worktree)
-- `wt switch bar` also works (falls back to branch lookup)
-"#
-    )]
+## See Also
+
+- [wt select](/select/) — Interactive worktree selection
+- [wt list](/list/) — View all worktrees
+- [wt remove](/remove/) — Delete worktrees when done
+- [wt merge](/merge/) — Integrate changes back to main
+"#)]
     Switch {
         /// Branch or worktree name
         ///
@@ -1099,32 +1075,27 @@ Arguments resolve using **path-first lookup**:
 
     /// Remove worktree and branch
     #[command(
-        after_long_help = r#"Cleans up finished work by removing worktrees and their branches. Without arguments, removes the current worktree and returns to the main worktree.
+        after_long_help = r#"Removes worktrees and their branches. Without arguments, removes the current worktree and returns to the main worktree.
 
 ## Examples
 
-Remove current worktree and branch:
+Remove current worktree:
 
 ```console
 wt remove
 ```
 
-Remove a specific worktree:
+Remove specific worktrees:
 
 ```console
 wt remove feature-branch
+wt remove old-feature another-branch
 ```
 
-Keep the branch after removing the worktree:
+Keep the branch:
 
 ```console
 wt remove --no-delete-branch feature-branch
-```
-
-Remove multiple worktrees:
-
-```console
-wt remove old-feature another-branch
 ```
 
 Force-delete an unmerged branch:
@@ -1133,32 +1104,32 @@ Force-delete an unmerged branch:
 wt remove -D experimental
 ```
 
-## Branch Deletion
+## When Branches Are Deleted
 
-By default, branches are deleted only when their content is already integrated into the target branch (typically main). This works correctly with squash-merge and rebase workflows where commit ancestry isn't preserved but the file changes are.
+Branches delete automatically when their content is already in the target branch (typically main). This works with squash-merge and rebase workflows where commit history differs but file changes match.
 
-The `-D` flag overrides this safety check and force-deletes unmerged branches. The `--no-delete-branch` flag prevents branch deletion entirely.
+Use `-D` to force-delete unmerged branches. Use `--no-delete-branch` to keep the branch.
 
 ## Background Removal
 
-Removal runs in the background by default — the command returns immediately so work can continue. Logs are written to `.git/wt-logs/{branch}-remove.log`.
+Removal runs in the background by default (returns immediately). Logs are written to `.git/wt-logs/{branch}-remove.log`. Use `--no-background` to run in the foreground.
 
-The `--no-background` flag runs removal in the foreground (blocking).
+## Path-First Lookup
 
-## How Arguments Are Resolved
+Arguments resolve by checking the expected path first, then falling back to branch name:
 
-Arguments resolve using **path-first lookup**:
+1. Compute expected path from argument (using configured path template)
+2. If a worktree exists there, remove it (regardless of branch name)
+3. Otherwise, treat argument as a branch name
 
-1. Compute the expected path for the argument (using the configured path template)
-2. If a worktree exists at that path, use it (regardless of what branch it's on)
-3. Otherwise, treat the argument as a branch name
+If `repo.foo/` exists on branch `bar`, both `wt remove foo` and `wt remove bar` remove the same worktree.
 
-**Example**: If `repo.foo/` exists but is on branch `bar`:
+**Shortcuts**: `@` (current), `-` (previous), `^` (main worktree)
 
-- `wt remove foo` removes `repo.foo/` and the `bar` branch
-- `wt remove bar` also works (falls back to branch lookup)
+## See Also
 
-**Shortcuts**: `@` (current worktree), `-` (previous worktree), `^` (main worktree)
+- [wt merge](/merge/) — Remove worktree after merging
+- [wt list](/list/) — View all worktrees
 "#
     )]
     Remove {
@@ -1181,11 +1152,13 @@ Arguments resolve using **path-first lookup**:
 
     /// Merge worktree into target branch
     #[command(
-        after_long_help = r#"Integrates the current branch into the target branch (default: main) and removes the worktree. All steps — commit, squash, rebase, push, cleanup — run automatically.
+        after_long_help = r#"Merge the current branch into the target branch and clean up. Handles the full workflow: commit uncommitted changes, squash commits, rebase, run hooks, push to target, and remove the worktree.
+
+When already on the target branch or in the main worktree, the worktree is preserved automatically.
 
 ## Examples
 
-Merge current worktree into main:
+Basic merge to main:
 
 ```console
 wt merge
@@ -1203,38 +1176,37 @@ Preserve commit history (no squash):
 wt merge --no-squash
 ```
 
-Skip hooks and approval prompts:
+Skip git operations, only run hooks and push:
 
 ```console
-wt merge --no-verify --force
+wt merge --no-commit
 ```
 
-## The Pipeline
+## Pipeline
 
-`wt merge` runs these steps in order:
+`wt merge` runs these steps:
 
-1. **Commit** — Stages and commits uncommitted changes with an LLM-generated message. The `--stage` flag controls what gets staged: `all` (default), `tracked`, or `none`.
+1. **Commit** — Stages and commits uncommitted changes. Commit messages are LLM-generated. Use `--stage` to control what gets staged: `all` (default), `tracked`, or `none`.
 
-2. **Squash** — Combines multiple commits into one (like GitHub's "Squash and merge") with an LLM-generated message. The `--no-squash` flag preserves individual commits. A backup ref is saved to `refs/wt-backup/<branch>`.
+2. **Squash** — Combines all commits into one (like GitHub's "Squash and merge"). Skip with `--no-squash` to preserve individual commits. A backup ref is saved to `refs/wt-backup/<branch>`.
 
-3. **Rebase** — Rebases onto the target branch. Conflicts abort the merge immediately.
+3. **Rebase** — Rebases onto the target branch. Conflicts abort immediately.
 
-4. **Pre-merge hooks** — Project-defined commands run after rebase. Failures abort the merge.
+4. **Pre-merge hooks** — Project commands run after rebase, before push. Failures abort. See [Hooks](/hooks/).
 
-5. **Push** — Fast-forward push to the local target branch. Non-fast-forward pushes are rejected.
+5. **Push** — Fast-forward push to the target branch. Non-fast-forward pushes are rejected.
 
-6. **Cleanup** — Removes the worktree and branch. The `--no-remove` flag keeps the worktree.
+6. **Cleanup** — Removes the worktree and branch. Use `--no-remove` to keep the worktree.
 
-7. **Post-merge hooks** — Project-defined commands run after cleanup. Failures are logged but don't abort.
+7. **Post-merge hooks** — Project commands run after cleanup. Failures are logged but don't abort.
 
-## Hooks
+Use `--no-commit` to skip steps 1-3 and only run hooks and push. Requires a clean working tree and `--no-remove`.
 
-When merging, hooks run in this order:
+## See Also
 
-1. **pre-merge** — After rebase, before push. Failures abort the merge.
-2. **post-merge** — After cleanup. Failures are logged but don't abort.
-
-The `--no-verify` flag skips all hooks. See [Hooks](/hooks/) for configuration details.
+- [wt step](/step/) — Run individual merge steps (commit, squash, rebase, push)
+- [wt remove](/remove/) — Remove worktrees without merging
+- [wt switch](/switch/) — Navigate to other worktrees
 "#
     )]
     Merge {

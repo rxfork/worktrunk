@@ -57,74 +57,62 @@ Usage: [1m[36mwt switch[0m [36m[OPTIONS][0m [36m<BRANCH>[0m
   [1m[36m-v[0m, [1m[36m--verbose[0m
           Show commands and debug info
 
-Navigate between worktrees or create new ones. Switching to an existing worktree is just a directory change. With [2m--create[0m, a new branch and worktree are created, and hooks run.
+Two distinct operations:
+
+- [1mSwitch to existing worktree[0m — Changes directory, nothing else
+- [1mCreate new worktree[0m ([2m--create[0m) — Creates branch and worktree, runs [hooks](/hooks/)
 
 [32mExamples[0m
 
-Switch to an existing worktree:
-
-  [2mwt switch feature-auth[0m
-
-Create a new worktree for a fresh branch:
-
-  [2mwt switch --create new-feature[0m
-
-Create from a specific base branch:
-
+  [2mwt switch feature-auth           # Switch to existing worktree[0m
+  [2mwt switch -                      # Previous worktree (like cd -)[0m
+  [2mwt switch --create new-feature   # Create branch and worktree[0m
   [2mwt switch --create hotfix --base production[0m
 
-Switch to the previous worktree (like [2mcd -[0m):
-
-  [2mwt switch -[0m
-
-[32mCreating Worktrees[0m
-
-The [2m--create[0m flag (or [2m-c[0m) creates a new branch from the default branch (or [2m--base[0m), sets up a worktree at [2m../{repo}.{branch}[0m, runs [post-create hooks](/hooks/#post-create) synchronously, then spawns [post-start hooks](/hooks/#post-start) in the background before switching to the new directory.
-
-  [2m# Create from main (default)[0m
-  [2mwt switch --create api-refactor[0m
-  [2m[0m
-  [2m# Create from a specific branch[0m
-  [2mwt switch --create emergency-fix --base release-2.0[0m
-  [2m[0m
-  [2m# Create and open in editor[0m
-  [2mwt switch --create docs --execute "code ."[0m
-  [2m[0m
-  [2m# Skip all hooks[0m
-  [2mwt switch --create temp --no-verify[0m
+For interactive selection, use [[2mwt select[0m](/select/).
 
 [32mShortcuts[0m
 
-Special symbols for common targets:
-
-| Shortcut | Meaning |
-|----------|---------|
-| [2m-[0m | Previous worktree (like [2mcd -[0m) |
+| Symbol | Meaning |
+|--------|---------|
+| [2m-[0m | Previous worktree |
 | [2m@[0m | Current branch's worktree |
-| [2m^[0m | Default branch (main/master) |
+| [2m^[0m | Default branch worktree |
 
-  [2mwt switch -                              # Go back to previous worktree[0m
-  [2mwt switch ^                              # Switch to main worktree[0m
-  [2mwt switch --create bugfix --base=@       # Branch from current HEAD[0m
+  [2mwt switch -                      # Back to previous[0m
+  [2mwt switch ^                      # Main worktree[0m
+  [2mwt switch --create fix --base=@  # Branch from current HEAD[0m
 
-[32mHooks[0m
+[32mPath-First Lookup[0m
 
-When creating a worktree ([2m--create[0m), hooks run in this order:
+Arguments resolve by checking the filesystem before git branches:
 
-1. [1mpost-create[0m — Blocking, sequential. Typically: [2mnpm install[0m, [2mcargo build[0m
-2. [1mpost-start[0m — Background, parallel. Typically: dev servers, file watchers
+1. Compute expected path from argument (using configured path template)
+2. If worktree exists at that path, switch to it
+3. Otherwise, treat argument as branch name
 
-See [Hooks](/hooks/) for configuration details.
+[1mEdge case[0m: If [2mrepo.foo/[0m exists but tracks branch [2mbar[0m:
+- [2mwt switch foo[0m → switches to [2mrepo.foo/[0m (the [2mbar[0m worktree)
+- [2mwt switch bar[0m → also works (branch lookup finds same worktree)
 
-[32mHow Arguments Are Resolved[0m
+[32mCreating Worktrees[0m
 
-Arguments resolve using [1mpath-first lookup[0m:
+With [2m--create[0m, worktrunk:
 
-1. Compute the expected path for the argument (using the configured path template)
-2. If a worktree exists at that path, switch to it (regardless of what branch it's on)
-3. Otherwise, treat the argument as a branch name
+1. Creates branch from [2m--base[0m (defaults to default branch)
+2. Creates worktree at configured path
+3. Runs [post-create hooks](/hooks/#post-create) (blocking)
+4. Switches to new directory
+5. Spawns [post-start hooks](/hooks/#post-start) (background)
 
-[1mExample[0m: If [2mrepo.foo/[0m exists but is on branch [2mbar[0m:
+  [2mwt switch --create api-refactor[0m
+  [2mwt switch --create fix --base release-2.0[0m
+  [2mwt switch --create docs --execute "code ."[0m
+  [2mwt switch --create temp --no-verify      # Skip hooks[0m
 
-- [2mwt switch foo[0m switches to [2mrepo.foo/[0m (the [2mbar[0m branch worktree)
-- [2mwt switch bar[0m also works (falls back to branch lookup)
+[32mSee Also[0m
+
+- [wt select](/select/) — Interactive worktree selection
+- [wt list](/list/) — View all worktrees
+- [wt remove](/remove/) — Delete worktrees when done
+- [wt merge](/merge/) — Integrate changes back to main
