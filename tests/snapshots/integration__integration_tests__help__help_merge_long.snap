@@ -63,57 +63,49 @@ Usage: [1m[36mwt merge[0m [36m[OPTIONS][0m [36m[TARGET][0m
   [1m[36m-v[0m, [1m[36m--verbose[0m
           Show commands and debug info
 
-[32mOperation[0m
-
-Commit → Squash → Rebase → Pre-merge hooks → Push → Cleanup → Post-merge hooks
-
-[1mCommit[0m
-
-Uncommitted changes are staged and committed with LLM commit message.
-Use [2m--stage=tracked[0m to stage only tracked files, or [2m--stage=none[0m to commit only what's already staged.
-
-[1mSquash[0m
-
-Multiple commits are squashed into one (like GitHub's "Squash and merge") with LLM commit message.
-Skip with [2m--no-squash[0m. Safety backup: [2mgit reflog show refs/wt-backup/<branch>[0m
-
-[1mRebase[0m
-
-Branch is rebased onto target. Conflicts abort the merge immediately.
-
-[1mHooks[0m
-
-Pre-merge commands run after rebase (failures abort). Post-merge commands
-run after cleanup (failures logged). Skip all with [2m--no-verify[0m.
-
-[1mPush[0m
-
-Fast-forward push to local target branch. Non-fast-forward pushes are rejected.
-
-[1mCleanup[0m
-
-Worktree and branch are removed. Skip with [2m--no-remove[0m.
-
-[1mTemplate variables:[0m [2m{{ repo }}[0m, [2m{{ branch }}[0m, [2m{{ worktree }}[0m, [2m{{ repo_root }}[0m, [2m{{ target }}[0m
-
-[1mSecurity:[0m Commands from project hooks require approval on first run.
-Approvals are saved to user config. Use [2m--force[0m to bypass prompts.
-See [2mwt config approvals --help[0m.
+Integrates the current branch into the target branch (default: main) and removes the worktree. All steps — commit, squash, rebase, push, cleanup — run automatically.
 
 [32mExamples[0m
 
-Basic merge to main:
+Merge current worktree into main:
 
   [2mwt merge[0m
 
-Merge without squashing:
-
-  [2mwt merge --no-squash[0m
-
-Keep worktree after merging:
+Keep the worktree after merging:
 
   [2mwt merge --no-remove[0m
 
-Skip all hooks:
+Preserve commit history (no squash):
 
-  [2mwt merge --no-verify[0m
+  [2mwt merge --no-squash[0m
+
+Skip hooks and approval prompts:
+
+  [2mwt merge --no-verify --force[0m
+
+[32mThe Pipeline[0m
+
+[2mwt merge[0m runs these steps in order:
+
+1. [1mCommit[0m — Stages and commits uncommitted changes with an LLM-generated message. The [2m--stage[0m flag controls what gets staged: [2mall[0m (default), [2mtracked[0m, or [2mnone[0m.
+
+2. [1mSquash[0m — Combines multiple commits into one (like GitHub's "Squash and merge") with an LLM-generated message. The [2m--no-squash[0m flag preserves individual commits. A backup ref is saved to [2mrefs/wt-backup/<branch>[0m.
+
+3. [1mRebase[0m — Rebases onto the target branch. Conflicts abort the merge immediately.
+
+4. [1mPre-merge hooks[0m — Project-defined commands run after rebase. Failures abort the merge.
+
+5. [1mPush[0m — Fast-forward push to the local target branch. Non-fast-forward pushes are rejected.
+
+6. [1mCleanup[0m — Removes the worktree and branch. The [2m--no-remove[0m flag keeps the worktree.
+
+7. [1mPost-merge hooks[0m — Project-defined commands run after cleanup. Failures are logged but don't abort.
+
+[32mHooks[0m
+
+When merging, hooks run in this order:
+
+1. [1mpre-merge[0m — After rebase, before push. Failures abort the merge.
+2. [1mpost-merge[0m — After cleanup. Failures are logged but don't abort.
+
+The [2m--no-verify[0m flag skips all hooks. See [Hooks](/hooks/) for configuration details.

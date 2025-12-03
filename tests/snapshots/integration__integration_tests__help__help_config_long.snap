@@ -42,54 +42,52 @@ Usage: [1m[36mwt config[0m [36m[OPTIONS][0m [36m<COMMAND>[0m
   [1m[36m-v[0m, [1m[36m--verbose[0m
           Show commands and debug info
 
-[32mSetup Guide[0m
+Manages configuration, shell integration, and runtime settings. The command provides subcommands for setup, inspection, and cache management.
 
-1. Set up shell integration
+[32mExamples[0m
 
-  [2m   wt config shell install[0m
+Install shell integration (required for directory switching):
 
-   Or manually add to the shell config:
+  [2mwt config shell install[0m
 
-  [2m   eval "$(wt config shell init bash)"[0m
+Create user config file with documented examples:
 
-2. (Optional) Create user config file
+  [2mwt config create[0m
 
-  [2m   wt config create[0m
+Show current configuration and file locations:
 
-   This creates [2m~/.config/worktrunk/config.toml[0m with examples.
+  [2mwt config show[0m
 
-3. (Optional) Enable LLM commit messages
+[32mShell Integration[0m
 
-   Install: [2muv tool install -U llm[0m
-   Configure: [2mllm keys set anthropic[0m
-   Add to user config:
+Shell integration allows Worktrunk to change the shell's working directory after [2mwt switch[0m. Without it, commands run in a subprocess and directory changes don't persist.
 
-  [2m   [commit-generation][0m
-  [2m   command = "llm"[0m
+The [2mwt config shell install[0m command adds integration to the shell's config file. Manual installation:
 
-[32mLLM Setup Details[0m
-
-For Claude:
-
-  [2mllm install llm-anthropic[0m
-  [2mllm keys set anthropic[0m
-  [2mllm models default claude-haiku-4-5-20251001[0m
-
-For OpenAI:
-
-  [2mllm keys set openai[0m
-
-Use [2mwt config show[0m to view the current configuration.
-Docs: <https://llm.datasette.io/> | <https://github.com/sigoden/aichat>
+  [2m# For bash: add to ~/.bashrc[0m
+  [2meval "$(wt config shell init bash)"[0m
+  [2m[0m
+  [2m# For zsh: add to ~/.zshrc[0m
+  [2meval "$(wt config shell init zsh)"[0m
+  [2m[0m
+  [2m# For fish: add to ~/.config/fish/config.fish[0m
+  [2mwt config shell init fish | source[0m
 
 [32mConfiguration Files[0m
 
-[1mUser config[0m:
+[1mUser config[0m — [2m~/.config/worktrunk/config.toml[0m (or [2m$WORKTRUNK_CONFIG_PATH[0m):
 
-- Location: [2m~/.config/worktrunk/config.toml[0m (or [2mWORKTRUNK_CONFIG_PATH[0m)
-- Run [2mwt config create --help[0m to view documented examples
+Personal settings like LLM commit generation, path templates, and default behaviors. The [2mwt config create[0m command generates a file with documented examples.
 
-[1mProject config[0m:
+[1mProject config[0m — [2m.config/wt.toml[0m in repository root:
 
-- Location: [2m.config/wt.toml[0m in repository root
-- Contains: post-create, post-start, pre-commit, pre-merge, post-merge hooks
+Project-specific hooks: post-create, post-start, pre-commit, pre-merge, post-merge. See [Hooks](/hooks/) for details.
+
+[32mLLM Commit Messages[0m
+
+Worktrunk can generate commit messages using an LLM. Enable in user config:
+
+  [2m[commit-generation][0m
+  [2mcommand = "llm"[0m
+
+See [LLM Commits](/llm-commits/) for installation, provider setup, and customization.

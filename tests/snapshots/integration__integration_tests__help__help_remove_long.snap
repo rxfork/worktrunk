@@ -47,23 +47,45 @@ Usage: [1m[36mwt remove[0m [36m[OPTIONS][0m [36m[WORKTREES]...[0m
   [1m[36m-v[0m, [1m[36m--verbose[0m
           Show commands and debug info
 
-[32mOperation[0m
+Cleans up finished work by removing worktrees and their branches. Without arguments, removes the current worktree and returns to the main worktree.
 
-Removes worktree directory, git metadata, and branch. Requires clean working tree.
+[32mExamples[0m
 
-[1mNo arguments (remove current)[0m
+Remove current worktree and branch:
 
-- Removes current worktree and switches to main worktree
-- In main worktree: switches to default branch
+  [2mwt remove[0m
 
-[1mBy name (remove specific)[0m
+Remove a specific worktree:
 
-- Removes specified worktree(s) and branches
-- Current worktree removed last (switches to main first)
+  [2mwt remove feature-branch[0m
 
-[1mWorktree resolution[0m
+Keep the branch after removing the worktree:
 
-Arguments are resolved to worktrees using [1mpath-first lookup[0m:
+  [2mwt remove --no-delete-branch feature-branch[0m
+
+Remove multiple worktrees:
+
+  [2mwt remove old-feature another-branch[0m
+
+Force-delete an unmerged branch:
+
+  [2mwt remove -D experimental[0m
+
+[32mBranch Deletion[0m
+
+By default, branches are deleted only when their content is already integrated into the target branch (typically main). This works correctly with squash-merge and rebase workflows where commit ancestry isn't preserved but the file changes are.
+
+The [2m-D[0m flag overrides this safety check and force-deletes unmerged branches. The [2m--no-delete-branch[0m flag prevents branch deletion entirely.
+
+[32mBackground Removal[0m
+
+Removal runs in the background by default — the command returns immediately so work can continue. Logs are written to [2m.git/wt-logs/{branch}-remove.log[0m.
+
+The [2m--no-background[0m flag runs removal in the foreground (blocking).
+
+[32mHow Arguments Are Resolved[0m
+
+Arguments resolve using [1mpath-first lookup[0m:
 
 1. Compute the expected path for the argument (using the configured path template)
 2. If a worktree exists at that path, use it (regardless of what branch it's on)
@@ -74,60 +96,4 @@ Arguments are resolved to worktrees using [1mpath-first lookup[0m:
 - [2mwt remove foo[0m removes [2mrepo.foo/[0m and the [2mbar[0m branch
 - [2mwt remove bar[0m also works (falls back to branch lookup)
 
-[1mConflict detection[0m: If path [2mrepo.foo/[0m has a worktree on branch [2mbar[0m, but
-branch [2mfoo[0m has a different worktree at [2mrepo.bar/[0m, an error is raised.
-
-[1mSpecial arguments[0m:
-
-- [2m@[0m - current worktree (by path, works in detached HEAD)
-- [2m-[0m - previous worktree (from switch history)
-- [2m^[0m - main worktree
-
-[1mBranch deletion[0m
-
-By default, branches are deleted only when their content is already in the target branch:
-
-- no changes beyond the common ancestor — [2mgit diff --name-only target...branch[0m is empty:
-  no files changed between the merge base of [2mtarget[0m/[2mbranch[0m and the tip of [2mbranch[0m.
-- same content as target — [2mgit rev-parse branch^{tree}[0m equals [2mgit rev-parse target^{tree}[0m:
-  both branches point at the same tracked-files snapshot (tree), even if the commits differ.
-
-This handles workflows where PRs are squash-merged or rebased, which don't preserve
-commit ancestry but do integrate the content. Use [2m-D[0m to delete unintegrated
-branches, or [2m--no-delete-branch[0m to always keep branches.
-
-[1mBackground removal (default)[0m
-
-- Returns immediately for continued work
-- Logs: [2m.git/wt-logs/{branch}-remove.log[0m
-- Use [2m--no-background[0m for foreground (blocking)
-
-[1mCleanup[0m
-
-Stops any git fsmonitor daemon for the worktree before removal. This prevents orphaned processes when using builtin fsmonitor ([2mcore.fsmonitor=true[0m). No effect on Watchman users.
-
-[32mExamples[0m
-
-Remove current worktree and branch:
-
-  [2mwt remove[0m
-
-Remove specific worktree and branch:
-
-  [2mwt remove feature-branch[0m
-
-Remove worktree but keep branch:
-
-  [2mwt remove --no-delete-branch feature-branch[0m
-
-Remove multiple worktrees:
-
-  [2mwt remove old-feature another-branch[0m
-
-Remove in foreground (blocking):
-
-  [2mwt remove --no-background feature-branch[0m
-
-Switch to default in main:
-
-  [2mwt remove  # (when already in main worktree)[0m
+[1mShortcuts[0m: [2m@[0m (current worktree), [2m-[0m (previous worktree), [2m^[0m (main worktree)

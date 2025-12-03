@@ -6,68 +6,60 @@ weight = 12
 group = "Commands"
 +++
 
-## Operation
-
-Commit → Squash → Rebase → Pre-merge hooks → Push → Cleanup → Post-merge hooks
-
-### Commit
-
-Uncommitted changes are staged and committed with LLM commit message.
-Use `--stage=tracked` to stage only tracked files, or `--stage=none` to commit only what's already staged.
-
-### Squash
-
-Multiple commits are squashed into one (like GitHub's "Squash and merge") with LLM commit message.
-Skip with `--no-squash`. Safety backup: `git reflog show refs/wt-backup/<branch>`
-
-### Rebase
-
-Branch is rebased onto target. Conflicts abort the merge immediately.
-
-### Hooks
-
-Pre-merge commands run after rebase (failures abort). Post-merge commands
-run after cleanup (failures logged). Skip all with `--no-verify`.
-
-### Push
-
-Fast-forward push to local target branch. Non-fast-forward pushes are rejected.
-
-### Cleanup
-
-Worktree and branch are removed. Skip with `--no-remove`.
-
-**Template variables:** `{{ repo }}`, `{{ branch }}`, `{{ worktree }}`, `{{ repo_root }}`, `{{ target }}`
-
-**Security:** Commands from project hooks require approval on first run.
-Approvals are saved to user config. Use `--force` to bypass prompts.
-See `wt config approvals --help`.
+Integrates the current branch into the target branch (default: main) and removes the worktree. All steps — commit, squash, rebase, push, cleanup — run automatically.
 
 ## Examples
 
-Basic merge to main:
+Merge current worktree into main:
 
 ```bash
 wt merge
 ```
 
-Merge without squashing:
-
-```bash
-wt merge --no-squash
-```
-
-Keep worktree after merging:
+Keep the worktree after merging:
 
 ```bash
 wt merge --no-remove
 ```
 
-Skip all hooks:
+Preserve commit history (no squash):
 
 ```bash
-wt merge --no-verify
+wt merge --no-squash
 ```
+
+Skip hooks and approval prompts:
+
+```bash
+wt merge --no-verify --force
+```
+
+## The Pipeline
+
+`wt merge` runs these steps in order:
+
+1. **Commit** — Stages and commits uncommitted changes with an LLM-generated message. The `--stage` flag controls what gets staged: `all` (default), `tracked`, or `none`.
+
+2. **Squash** — Combines multiple commits into one (like GitHub's "Squash and merge") with an LLM-generated message. The `--no-squash` flag preserves individual commits. A backup ref is saved to `refs/wt-backup/<branch>`.
+
+3. **Rebase** — Rebases onto the target branch. Conflicts abort the merge immediately.
+
+4. **Pre-merge hooks** — Project-defined commands run after rebase. Failures abort the merge.
+
+5. **Push** — Fast-forward push to the local target branch. Non-fast-forward pushes are rejected.
+
+6. **Cleanup** — Removes the worktree and branch. The `--no-remove` flag keeps the worktree.
+
+7. **Post-merge hooks** — Project-defined commands run after cleanup. Failures are logged but don't abort.
+
+## Hooks
+
+When merging, hooks run in this order:
+
+1. **pre-merge** — After rebase, before push. Failures abort the merge.
+2. **post-merge** — After cleanup. Failures are logged but don't abort.
+
+The `--no-verify` flag skips all hooks. See [Hooks](/hooks/) for configuration details.
 
 ---
 

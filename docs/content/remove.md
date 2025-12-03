@@ -6,64 +6,7 @@ weight = 13
 group = "Commands"
 +++
 
-## Operation
-
-Removes worktree directory, git metadata, and branch. Requires clean working tree.
-
-### No arguments (remove current)
-
-- Removes current worktree and switches to main worktree
-- In main worktree: switches to default branch
-
-### By name (remove specific)
-
-- Removes specified worktree(s) and branches
-- Current worktree removed last (switches to main first)
-
-### Worktree resolution
-
-Arguments are resolved to worktrees using **path-first lookup**:
-
-1. Compute the expected path for the argument (using the configured path template)
-2. If a worktree exists at that path, use it (regardless of what branch it's on)
-3. Otherwise, treat the argument as a branch name
-
-**Example**: If `repo.foo/` exists but is on branch `bar`:
-
-- `wt remove foo` removes `repo.foo/` and the `bar` branch
-- `wt remove bar` also works (falls back to branch lookup)
-
-**Conflict detection**: If path `repo.foo/` has a worktree on branch `bar`, but
-branch `foo` has a different worktree at `repo.bar/`, an error is raised.
-
-**Special arguments**:
-
-- `@` - current worktree (by path, works in detached HEAD)
-- `-` - previous worktree (from switch history)
-- `^` - main worktree
-
-### Branch deletion
-
-By default, branches are deleted only when their content is already in the target branch:
-
-- no changes beyond the common ancestor — `git diff --name-only target...branch` is empty:
-  no files changed between the merge base of `target`/`branch` and the tip of `branch`.
-- same content as target — `git rev-parse branch^{tree}` equals `git rev-parse target^{tree}`:
-  both branches point at the same tracked-files snapshot (tree), even if the commits differ.
-
-This handles workflows where PRs are squash-merged or rebased, which don't preserve
-commit ancestry but do integrate the content. Use `-D` to delete unintegrated
-branches, or `--no-delete-branch` to always keep branches.
-
-### Background removal (default)
-
-- Returns immediately for continued work
-- Logs: `.git/wt-logs/{branch}-remove.log`
-- Use `--no-background` for foreground (blocking)
-
-### Cleanup
-
-Stops any git fsmonitor daemon for the worktree before removal. This prevents orphaned processes when using builtin fsmonitor (`core.fsmonitor=true`). No effect on Watchman users.
+Cleans up finished work by removing worktrees and their branches. Without arguments, removes the current worktree and returns to the main worktree.
 
 ## Examples
 
@@ -73,13 +16,13 @@ Remove current worktree and branch:
 wt remove
 ```
 
-Remove specific worktree and branch:
+Remove a specific worktree:
 
 ```bash
 wt remove feature-branch
 ```
 
-Remove worktree but keep branch:
+Keep the branch after removing the worktree:
 
 ```bash
 wt remove --no-delete-branch feature-branch
@@ -91,17 +34,38 @@ Remove multiple worktrees:
 wt remove old-feature another-branch
 ```
 
-Remove in foreground (blocking):
+Force-delete an unmerged branch:
 
 ```bash
-wt remove --no-background feature-branch
+wt remove -D experimental
 ```
 
-Switch to default in main:
+## Branch Deletion
 
-```bash
-wt remove  # (when already in main worktree)
-```
+By default, branches are deleted only when their content is already integrated into the target branch (typically main). This works correctly with squash-merge and rebase workflows where commit ancestry isn't preserved but the file changes are.
+
+The `-D` flag overrides this safety check and force-deletes unmerged branches. The `--no-delete-branch` flag prevents branch deletion entirely.
+
+## Background Removal
+
+Removal runs in the background by default — the command returns immediately so work can continue. Logs are written to `.git/wt-logs/{branch}-remove.log`.
+
+The `--no-background` flag runs removal in the foreground (blocking).
+
+## How Arguments Are Resolved
+
+Arguments resolve using **path-first lookup**:
+
+1. Compute the expected path for the argument (using the configured path template)
+2. If a worktree exists at that path, use it (regardless of what branch it's on)
+3. Otherwise, treat the argument as a branch name
+
+**Example**: If `repo.foo/` exists but is on branch `bar`:
+
+- `wt remove foo` removes `repo.foo/` and the `bar` branch
+- `wt remove bar` also works (falls back to branch lookup)
+
+**Shortcuts**: `@` (current worktree), `-` (previous worktree), `^` (main worktree)
 
 ---
 

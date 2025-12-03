@@ -859,6 +859,77 @@ fn test_docs_quickstart_examples_are_in_sync() {
     }
 }
 
+/// Command pages generated via `wt <cmd> --help-page`
+const COMMAND_PAGES: &[&str] = &[
+    "switch", "list", "merge", "remove", "select", "config", "step",
+];
+
+#[test]
+fn test_command_pages_are_in_sync() {
+    let project_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut errors = Vec::new();
+    let mut updated = 0;
+
+    for cmd in COMMAND_PAGES {
+        let doc_path = project_root.join(format!("docs/content/{}.md", cmd));
+        if !doc_path.exists() {
+            errors.push(format!("Missing command page: {}", doc_path.display()));
+            continue;
+        }
+
+        // Run wt <cmd> --help-page
+        let output = Command::new(env!("CARGO_BIN_EXE_wt"))
+            .args([cmd, "--help-page"])
+            .current_dir(project_root)
+            .output()
+            .expect("Failed to run wt --help-page");
+
+        if !output.status.success() {
+            errors.push(format!(
+                "'wt {} --help-page' failed (exit {}): {}",
+                cmd,
+                output.status.code().unwrap_or(-1),
+                String::from_utf8_lossy(&output.stderr)
+            ));
+            continue;
+        }
+
+        // Strip trailing whitespace from each line (pre-commit does this)
+        let expected: String = String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .map(|line| line.trim_end())
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n"; // Ensure trailing newline
+        if expected.trim().is_empty() {
+            errors.push(format!(
+                "Empty output from 'wt {} --help-page': {}",
+                cmd,
+                String::from_utf8_lossy(&output.stderr)
+            ));
+            continue;
+        }
+
+        let current = fs::read_to_string(&doc_path)
+            .unwrap_or_else(|e| panic!("Failed to read {}: {}", doc_path.display(), e));
+
+        if current != expected {
+            fs::write(&doc_path, &expected)
+                .unwrap_or_else(|e| panic!("Failed to write {}: {}", doc_path.display(), e));
+            println!("Updated docs/content/{}.md", cmd);
+            updated += 1;
+        }
+    }
+
+    if updated > 0 {
+        println!("Updated {} command page(s)", updated);
+    }
+
+    if !errors.is_empty() {
+        panic!("Command pages out of sync:\n\n{}\n", errors.join("\n"));
+    }
+}
+
 /// Strip HTML tags from a string (simple implementation for command extraction)
 fn strip_html_tags(s: &str) -> String {
     let mut result = String::new();

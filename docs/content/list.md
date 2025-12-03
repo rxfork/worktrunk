@@ -6,97 +6,120 @@ weight = 11
 group = "Commands"
 +++
 
-## Columns
+Show all worktrees with their status at a glance. The table includes uncommitted changes, divergence from main and remote, and optional CI status.
 
-- **Branch:** Branch name
-- **Status:** Quick status symbols (see Status Symbols below)
-- **HEAD±:** Uncommitted changes vs HEAD (+added -deleted lines, staged + unstaged)
-- **main↕:** Commit count ahead↑/behind↓ relative to main (commits in HEAD vs main)
-- **main…±** (`--full`): Line diffs in commits ahead of main (+added -deleted)
-- **Path:** Worktree directory location
-- **Remote⇅:** Commits ahead⇡/behind⇣ relative to tracking branch (e.g. `origin/branch`)
-- **CI** (`--full`): CI pipeline status (tries PR/MR checks first, falls back to branch workflows)
-  - `●` **passed** (green) - All checks passed
-  - `●` **running** (blue) - Checks in progress
-  - `●` **failed** (red) - Checks failed
-  - `●` **conflicts** (yellow) - Merge conflicts with base
-  - `●` **no-ci** (gray) - PR/MR or workflow found but no checks configured
-  - **(blank)** - No PR/MR or workflow found, or `gh`/`glab` CLI unavailable
-  - **(dimmed)** - Stale: unpushed local changes differ from PR/MR head
-- **Commit:** Short commit hash (8 chars)
-- **Age:** Time since last commit (relative)
-- **Message:** Last commit message (truncated)
+## Examples
+
+List all worktrees:
+
+```bash
+wt list
+```
+
+Include CI status and conflict detection:
+
+```bash
+wt list --full
+```
+
+Include branches that don't have worktrees:
+
+```bash
+wt list --branches
+```
+
+Output as JSON for scripting:
+
+```bash
+wt list --format=json
+```
 
 ## Status Symbols
 
-Order: `+!? ✖⚠≡_ ↻⋈ ↑↓↕ ⇡⇣⇅ ⎇⌫⊠`
+The Status column shows a compact summary. Symbols appear in this order:
 
-- `+` Staged files (ready to commit)
-- `!` Modified files (unstaged changes)
-- `?` Untracked files present
-- `✖` **Merge conflicts** - unresolved conflicts in working tree (fix before continuing)
-- `⊘` **Would conflict** - merging into main would fail
-- `≡` Working tree matches main (identical contents, regardless of commit history)
-- `_` No commits (no commits ahead AND no uncommitted changes)
-- `↻` Rebase in progress
-- `⋈` Merge in progress
-- `↑` Ahead of main branch
-- `↓` Behind main branch
-- `↕` Diverged (both ahead and behind main)
-- `⇡` Ahead of remote tracking branch
-- `⇣` Behind remote tracking branch
-- `⇅` Diverged (both ahead and behind remote)
-- `⎇` Branch indicator (shown for branches without worktrees)
-- `⌫` Prunable worktree (directory missing, can be pruned)
-- `⊠` Locked worktree (protected from auto-removal)
+| Symbol | Meaning |
+|--------|---------|
+| `+` | Staged files (ready to commit) |
+| `!` | Modified files (unstaged changes) |
+| `?` | Untracked files |
+| `✖` | Merge conflicts (fix before continuing) |
+| `⊘` | Would conflict if merged to main |
+| `≡` | Matches main (identical contents) |
+| `_` | No commits (empty branch) |
+| `↻` | Rebase in progress |
+| `⋈` | Merge in progress |
+| `↑` | Ahead of main |
+| `↓` | Behind main |
+| `↕` | Diverged from main |
+| `⇡` | Ahead of remote |
+| `⇣` | Behind remote |
+| `⇅` | Diverged from remote |
+| `⎇` | Branch without worktree |
+| `⌫` | Prunable (directory missing) |
+| `⊠` | Locked worktree |
 
-Rows are dimmed when there's no marginal contribution (`≡` matches main OR `_` no commits).
+Rows are dimmed when there's no marginal contribution (`≡` matches main or `_` no commits).
+
+## Columns
+
+| Column | Description |
+|--------|-------------|
+| **Branch** | Branch name |
+| **Status** | Compact symbols (see above) |
+| **HEAD±** | Uncommitted changes: `+added` `-deleted` lines |
+| **main↕** | Commits ahead↑/behind↓ relative to main |
+| **main…±** | Line diffs in commits ahead of main (`--full` only) |
+| **Path** | Worktree directory |
+| **Remote⇅** | Commits ahead⇡/behind⇣ vs tracking branch |
+| **CI** | Pipeline status (`--full` only) |
+| **Commit** | Short hash (8 chars) |
+| **Age** | Time since last commit |
+| **Message** | Last commit message (truncated) |
+
+### CI Status
+
+The CI column (`--full`) shows pipeline status from GitHub/GitLab:
+
+- `●` green — All checks passed
+- `●` blue — Checks running
+- `●` red — Checks failed
+- `●` yellow — Merge conflicts with base
+- `●` gray — No checks configured
+- blank — No PR/MR found
+- dimmed — Stale (unpushed local changes)
 
 ## JSON Output
 
-Use `--format=json` for structured data. Each object contains two status maps
-with the same fields in the same order as Status Symbols above:
+The `--format=json` flag outputs structured data for scripting:
 
-**`status`** - variant names for querying:
+```bash
+# Find worktrees with conflicts
+wt list --format=json | jq '.[] | select(.status.branch_state == "Conflicts")'
+
+# Find worktrees with uncommitted changes
+wt list --format=json | jq '.[] | select(.status.working_tree.modified)'
+
+# Get current worktree
+wt list --format=json | jq '.[] | select(.is_current == true)'
+
+# Find branches ahead of main
+wt list --format=json | jq '.[] | select(.status.main_divergence == "Ahead")'
+```
+
+**Status fields:**
 
 - `working_tree`: `{untracked, modified, staged, renamed, deleted}` booleans
 - `branch_state`: `""` | `"Conflicts"` | `"MergeTreeConflicts"` | `"MatchesMain"` | `"NoCommits"`
 - `git_operation`: `""` | `"Rebase"` | `"Merge"`
 - `main_divergence`: `""` | `"Ahead"` | `"Behind"` | `"Diverged"`
 - `upstream_divergence`: `""` | `"Ahead"` | `"Behind"` | `"Diverged"`
-- `user_marker`: string (optional)
 
-**`status_symbols`** - Unicode symbols for display (same fields, plus `worktree_attrs`: ⎇/⌫/⊠)
+**Position fields:**
 
-Note: `locked` and `prunable` are top-level fields on worktree objects, not in status.
-
-**Worktree position fields** (for identifying special worktrees):
-
-- `is_main`: boolean - is the main worktree
-- `is_current`: boolean - is the current working directory (present when true)
-- `is_previous`: boolean - is the previous worktree from `wt switch` (present when true)
-
-**Query examples:**
-
-```bash
-# Find worktrees with conflicts
-jq '.[] | select(.status.branch_state == "Conflicts")'
-
-# Find worktrees with untracked files
-jq '.[] | select(.status.working_tree.untracked)'
-
-# Find worktrees in rebase or merge
-jq '.[] | select(.status.git_operation != "")'
-
-# Get branches ahead of main
-jq '.[] | select(.status.main_divergence == "Ahead")'
-
-# Find locked worktrees
-jq '.[] | select(.locked != null)'
-
-# Get current worktree info (useful for statusline tools)
-jq '.[] | select(.is_current == true)'
-```
+- `is_main`: boolean — is the main worktree
+- `is_current`: boolean — is the current directory
+- `is_previous`: boolean — is the previous worktree from `wt switch`
 
 ---
 

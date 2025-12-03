@@ -6,7 +6,36 @@ weight = 14
 group = "Commands"
 +++
 
+Interactive worktree picker with live preview. The selector shows worktree state at a glance — diff stats, commit history, and working tree status — without switching directories first.
 
+## Examples
+
+Open the interactive selector:
+
+```bash
+wt select
+```
+
+## The Interface
+
+The selector displays a two-panel layout: a worktree list on the left and a preview panel on the right. The preview updates automatically when navigating between worktrees.
+
+**Preview tabs** — toggled with number keys:
+
+1. **Diff** — Changes relative to main branch
+2. **Log** — Recent commits on the branch
+3. **Status** — Working tree status (staged, modified, untracked)
+
+## Keybindings
+
+| Key | Action |
+|-----|--------|
+| `↑`/`↓` or `j`/`k` | Navigate worktree list |
+| `Enter` | Switch to selected worktree |
+| `Esc` or `q` | Cancel |
+| `/` | Filter worktrees |
+| `1`/`2`/`3` | Switch preview tab |
+| `Alt+p` | Toggle preview panel |
 
 ---
 

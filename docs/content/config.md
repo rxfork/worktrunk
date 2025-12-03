@@ -6,69 +6,65 @@ weight = 15
 group = "Commands"
 +++
 
-## Setup Guide
+Manages configuration, shell integration, and runtime settings. The command provides subcommands for setup, inspection, and cache management.
 
-1. Set up shell integration
+## Examples
 
-   ```bash
-   wt config shell install
-   ```
-
-   Or manually add to the shell config:
-
-   ```bash
-   eval "$(wt config shell init bash)"
-   ```
-
-2. (Optional) Create user config file
-
-   ```bash
-   wt config create
-   ```
-
-   This creates `~/.config/worktrunk/config.toml` with examples.
-
-3. (Optional) Enable LLM commit messages
-
-   Install: `uv tool install -U llm`
-   Configure: `llm keys set anthropic`
-   Add to user config:
-
-   ```toml
-   [commit-generation]
-   command = "llm"
-   ```
-
-## LLM Setup Details
-
-For Claude:
+Install shell integration (required for directory switching):
 
 ```bash
-llm install llm-anthropic
-llm keys set anthropic
-llm models default claude-haiku-4-5-20251001
+wt config shell install
 ```
 
-For OpenAI:
+Create user config file with documented examples:
 
 ```bash
-llm keys set openai
+wt config create
 ```
 
-Use `wt config show` to view the current configuration.
-Docs: <https://llm.datasette.io/> | <https://github.com/sigoden/aichat>
+Show current configuration and file locations:
+
+```bash
+wt config show
+```
+
+## Shell Integration
+
+Shell integration allows Worktrunk to change the shell's working directory after `wt switch`. Without it, commands run in a subprocess and directory changes don't persist.
+
+The `wt config shell install` command adds integration to the shell's config file. Manual installation:
+
+```bash
+# For bash: add to ~/.bashrc
+eval "$(wt config shell init bash)"
+
+# For zsh: add to ~/.zshrc
+eval "$(wt config shell init zsh)"
+
+# For fish: add to ~/.config/fish/config.fish
+wt config shell init fish | source
+```
 
 ## Configuration Files
 
-**User config**:
+**User config** — `~/.config/worktrunk/config.toml` (or `$WORKTRUNK_CONFIG_PATH`):
 
-- Location: `~/.config/worktrunk/config.toml` (or `WORKTRUNK_CONFIG_PATH`)
-- Run `wt config create --help` to view documented examples
+Personal settings like LLM commit generation, path templates, and default behaviors. The `wt config create` command generates a file with documented examples.
 
-**Project config**:
+**Project config** — `.config/wt.toml` in repository root:
 
-- Location: `.config/wt.toml` in repository root
-- Contains: post-create, post-start, pre-commit, pre-merge, post-merge hooks
+Project-specific hooks: post-create, post-start, pre-commit, pre-merge, post-merge. See [Hooks](/hooks/) for details.
+
+## LLM Commit Messages
+
+Worktrunk can generate commit messages using an LLM. Enable in user config:
+
+```toml
+[commit-generation]
+command = "llm"
+```
+
+See [LLM Commits](/llm-commits/) for installation, provider setup, and customization.
 
 ---
 

@@ -117,15 +117,11 @@ The output combines:
 - **Conceptual content** - Edit the `after_long_help` attribute on the command
 - **Usage/options/examples** - Edit the clap attributes (`about`, `long_about`, doc comments on args)
 
-After editing, regenerate the affected page(s):
+After editing, run the sync test (which auto-updates out-of-sync pages):
 
 ```bash
-wt switch --help-page > docs/content/switch.md
-wt merge --help-page > docs/content/merge.md
-# etc.
+cargo test --test integration test_command_pages_are_in_sync
 ```
-
-**Note:** Unlike inline `--help-md` snippets (which are auto-synced by `readme_sync.rs`), command pages require manual regeneration. There's no test that verifies they're in sync.
 
 The generated files contain this warning comment:
 ```html
