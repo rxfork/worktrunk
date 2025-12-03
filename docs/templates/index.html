@@ -2,7 +2,6 @@
 {% import "macros.html" as macros %}
 
 {% block hero %}
-<script async defer src="https://buttons.github.io/buttons.js"></script>
 <style>
   .welcome {
     animation: welcome-animation 1s cubic-bezier(0.25, 0.1, 0.25, 1) both;
@@ -82,8 +81,9 @@
   </h3>
   <div style="display: flex; gap: 1rem; justify-content: center; align-items: center; margin-top: 1.5rem;">
     <button class="button" onclick="window.scrollTo({top: document.querySelector('main').offsetTop - document.querySelector('header').offsetHeight, behavior: 'smooth'})">Get Started</button>
-    <a class="github-button" href="https://github.com/max-sixty/worktrunk" data-size="large" data-show-count="true"
-      aria-label="Star max-sixty/worktrunk on GitHub">Star</a>
+    <a href="https://github.com/max-sixty/worktrunk" aria-label="Star on GitHub">
+      <img src="https://img.shields.io/badge/Star-GitHub-black?style=social&logo=github" alt="Star on GitHub">
+    </a>
   </div>
 </section>
 <img class="hero-image" src="{{ get_url(path='logo.png') }}" srcset="{{ get_url(path='logo.png') }} 1x, {{ get_url(path='logo@2x.png') }} 2x" alt="Worktrunk logo" decoding="sync" fetchpriority="high">
