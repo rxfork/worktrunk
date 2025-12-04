@@ -9,8 +9,10 @@ repos:
       - id: trailing-whitespace
         # rustfmt handles rust files, and in snapshots we expect trailing spaces.
         exclude: '.*\.(rs|snap)$'
+  # Commit hash silences mutable ref warning; autoupdate reverts to v1 tag
+  # TODO: Update periodically
   - repo: https://github.com/crate-ci/typos
-    rev: v1
+    rev: 802d5794ff9cf7b15610c47eca99cd1ab757d8d4
     hooks:
       - id: typos
         # https://github.com/crate-ci/typos/issues/347
@@ -24,8 +26,10 @@ repos:
     hooks:
       - id: clippy
         args: ["--all-targets", "--", "-D", "warnings"]
+  # Commit hash silences mutable ref warning; autoupdate reverts to nightly tag
+  # TODO: Update periodically
   - repo: https://github.com/lycheeverse/lychee
-    rev: nightly
+    rev: c513e7ee5d74d85aaaeaf2b4c67fb063f93e46e8
     hooks:
       # Fast PR mode - only check worktrunk domains (internal links validated by zola check)
       - id: lychee
