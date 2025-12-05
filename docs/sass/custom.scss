@@ -9,9 +9,6 @@ html {
     // Reserve scrollbar space to prevent layout shift when navigating
     // Browser support: Safari 17+, Chrome 94+, Firefox 97+. Graceful degradation.
     scrollbar-gutter: stable;
-    // Prevent page-level horizontal scroll on mobile touch devices
-    // (content overflow-x: auto handles internal scrolling for wide content)
-    overflow-x: hidden;
 }
 
 // ============================================================================
@@ -455,15 +452,17 @@ main {
 }
 
 // ============================================================================
-// Tables
+// Tables - Scrollable like code blocks
 // ============================================================================
 
 table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     border-collapse: collapse;
     width: 100%;
     margin: 1rem 0;
     border-radius: 0.5rem;
-    overflow: hidden;
     border: 1px solid var(--wt-color-border-subtle);
 
     th, td {
@@ -471,6 +470,7 @@ table {
         padding: 0.6rem 0.875rem;
         text-align: left;
         vertical-align: top;
+        white-space: nowrap;
     }
 
     th {
