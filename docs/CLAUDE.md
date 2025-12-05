@@ -6,7 +6,7 @@ See `dev/wt-demo/CLAUDE.md` for the full workflow. Quick reference:
 
 ```bash
 ./dev/wt-demo-build      # Build (auto-copies to docs/static/assets/)
-# View at http://127.0.0.1:1111/quickstart/
+# View at http://127.0.0.1:1111/why-worktrunk/
 ./scripts/publish-assets  # Publish to assets repo
 ```
 

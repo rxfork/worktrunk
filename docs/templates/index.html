@@ -98,9 +98,9 @@
 {% endblock toc %}
 
 {% block content %}
-{# Display quickstart content directly on homepage #}
+{# Display why-worktrunk content directly on homepage #}
 {% set docs_section = get_section(path="_index.md") %}
-{% set quickstart = docs_section.pages | filter(attribute="slug", value="quickstart") | first %}
-<div class="heading-text">{{ quickstart.title }}</div>
-{{ quickstart.content | safe }}
+{% set why_worktrunk = docs_section.pages | filter(attribute="slug", value="why-worktrunk") | first %}
+<div class="heading-text">{{ why_worktrunk.title }}</div>
+{{ why_worktrunk.content | safe }}
 {% endblock content %}
