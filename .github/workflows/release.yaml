@@ -37,7 +37,7 @@ permissions:
 #
 # If there's a prerelease-style suffix to the version, then the release(s)
 # will be marked as a prerelease.
-name: Release
+name: release
 
 on:
   pull_request:
