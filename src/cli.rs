@@ -926,7 +926,7 @@ Symbols appear in the Status column in this order:
 | Remote | `⇡` | Ahead of remote |
 | | `⇣` | Behind remote |
 | | `⇅` | Diverged from remote |
-| Other | `⎇` | Branch without worktree |
+| Other | `/` | Branch without worktree |
 | | `⌫` | Prunable (directory missing) |
 | | `⊠` | Locked worktree |
 

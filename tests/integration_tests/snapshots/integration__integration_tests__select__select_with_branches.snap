@@ -6,7 +6,7 @@ expression: normalized
     Branch           Status         HEAD±    main↕  Path    │Enter: switch | Esc: cancel | ctrl-u/d: scroll | alt-p: tog
 > @ main                 ^                          ./repo  │
   + active-worktree     _                           ./repo..│⚪ main has no uncommitted changes
-    orphan-branch       _  ⎇                                │
+    orphan-branch       _  /                                │
                                                             │
                                                             │
                                                             │
