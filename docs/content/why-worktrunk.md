@@ -22,7 +22,9 @@ But git worktrees' UX is clunky: `git worktree add -b feature ../repo.feature`, 
 
 ## What Worktrunk adds
 
-Worktrunk makes worktrees easy to use — branch-based navigation, unified status, and workflow automation:
+Worktrunk makes worktrees easy to use — branch-based navigation, unified status, and workflow automation.
+
+**Core commands:**
 
 | Task                  | Worktrunk                        | Plain git                                                                     |
 | --------------------- | -------------------------------- | ----------------------------------------------------------------------------- |
@@ -31,11 +33,13 @@ Worktrunk makes worktrees easy to use — branch-based navigation, unified statu
 | Clean up              | `wt remove`                      | `cd ../repo && git worktree remove ../repo.feature && git branch -d feature`  |
 | List with status      | `wt list`                        | `git worktree list` (paths only)                                              |
 
+**Workflow automation:**
+
 - **[Lifecycle hooks](@/hooks.md)** — run commands on create, pre-merge, post-merge
 - **[LLM commit messages](@/llm-commits.md)** — generate commit messages from diffs via [llm](https://llm.datasette.io/)
 - **[Merge workflow](@/merge.md)** — squash, rebase, merge, clean up in one command
 
-## In practice
+## Core commands in practice
 
 Create a worktree for a new task:
 
