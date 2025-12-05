@@ -91,9 +91,10 @@ static RUST_RAW_STRING_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
 /// Regex to find README section markers (synced from docs)
 /// Format: <!-- ⚠️ AUTO-GENERATED-SECTION from path#start..end — edit source to update -->
 /// The anchor can be a single section (e.g., #install) or a range (e.g., #install..further-reading)
+/// Captures the full "path#anchor" as a single ID for use with update_section()
 static SECTION_MARKER_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?s)<!-- ⚠️ AUTO-GENERATED-SECTION from ([^\s]+)#([^\s]+) — edit source to update -->\n+(.*?)\n*<!-- END AUTO-GENERATED-SECTION -->",
+        r"(?s)<!-- ⚠️ AUTO-GENERATED-SECTION from ([^\s]+#[^\s]+) — edit source to update -->\n+(.*?)\n*<!-- END AUTO-GENERATED-SECTION -->",
     )
     .unwrap()
 });
@@ -121,6 +122,8 @@ enum OutputFormat {
     DocsHtml,
     /// Help: rendered markdown (no wrapper)
     Help,
+    /// Section: markdown content synced from docs (no wrapper)
+    Section,
 }
 
 /// Parse a snapshot file into raw stdout/stderr components
@@ -205,6 +208,12 @@ fn format_replacement(id: &str, content: &str, format: &OutputFormat) -> String 
         OutputFormat::Help => {
             format!(
                 "<!-- ⚠️ AUTO-GENERATED from `{}` — edit source to update -->\n\n{}\n\n<!-- END AUTO-GENERATED -->",
+                id, content
+            )
+        }
+        OutputFormat::Section => {
+            format!(
+                "<!-- ⚠️ AUTO-GENERATED-SECTION from {} — edit source to update -->\n\n{}\n\n<!-- END AUTO-GENERATED-SECTION -->",
                 id, content
             )
         }
@@ -756,10 +765,15 @@ fn transform_zola_to_github(content: &str) -> String {
 
 /// Get section content from docs file, transformed for README
 ///
-/// Extracts section(s) by anchor (supports ranges like `start..end`),
-/// and transforms Zola links to GitHub URLs.
-fn get_docs_section_for_readme(docs_path: &Path, anchor: &str) -> Result<String, String> {
-    let content = fs::read_to_string(docs_path)
+/// Parses `path#anchor` ID format, extracts section(s) by anchor
+/// (supports ranges like `start..end`), and transforms Zola links to GitHub URLs.
+fn get_docs_section_for_readme(id: &str, project_root: &Path) -> Result<String, String> {
+    let (path, anchor) = id
+        .split_once('#')
+        .ok_or_else(|| format!("Invalid section ID (missing #): {}", id))?;
+
+    let docs_path = project_root.join(path);
+    let content = fs::read_to_string(&docs_path)
         .map_err(|e| format!("Failed to read {}: {}", docs_path.display(), e))?;
 
     let section = extract_section_by_anchor(&content, anchor)
@@ -771,57 +785,19 @@ fn get_docs_section_for_readme(docs_path: &Path, anchor: &str) -> Result<String,
 
 /// Sync section markers in README from docs source files
 ///
-/// Finds markers like:
-/// `<!-- ⚠️ AUTO-GENERATED-SECTION from docs/content/why-worktrunk.md#section-anchor — edit source to update -->`
-///
-/// And replaces the content with the transformed section from the docs file.
+/// Uses update_section() infrastructure with SECTION_MARKER_PATTERN.
 fn sync_readme_sections(
     readme_content: &str,
     project_root: &Path,
 ) -> Result<(String, usize), Vec<String>> {
-    let mut result = readme_content.to_string();
-    let mut errors = Vec::new();
-    let mut updated = 0;
-
-    // Collect all matches first (to avoid borrowing issues)
-    let matches: Vec<_> = SECTION_MARKER_PATTERN
-        .captures_iter(readme_content)
-        .map(|cap| {
-            let full_match = cap.get(0).unwrap();
-            let path = cap.get(1).unwrap().as_str().to_string();
-            let anchor = cap.get(2).unwrap().as_str().to_string();
-            let current = trim_lines(cap.get(3).unwrap().as_str());
-            (full_match.start(), full_match.end(), path, anchor, current)
-        })
-        .collect();
-
-    // Process in reverse order to preserve positions
-    for (start, end, path, anchor, current) in matches.into_iter().rev() {
-        let docs_path = project_root.join(&path);
-
-        let expected = match get_docs_section_for_readme(&docs_path, &anchor) {
-            Ok(content) => trim_lines(&content),
-            Err(e) => {
-                errors.push(format!("❌ {}#{}: {}", path, anchor, e));
-                continue;
-            }
-        };
-
-        if current != expected {
-            let replacement = format!(
-                "<!-- ⚠️ AUTO-GENERATED-SECTION from {}#{} — edit source to update -->\n\n{}\n\n<!-- END AUTO-GENERATED-SECTION -->",
-                path, anchor, expected
-            );
-            result.replace_range(start..end, &replacement);
-            updated += 1;
-        }
-    }
-
-    if errors.is_empty() {
-        Ok((result, updated))
-    } else {
-        Err(errors)
-    }
+    let project_root = project_root.to_path_buf();
+    update_section(
+        readme_content,
+        &SECTION_MARKER_PATTERN,
+        OutputFormat::Section,
+        |id, _current| get_docs_section_for_readme(id, &project_root).map(|c| trim_lines(&c)),
+    )
+    .map(|(content, updated, _total)| (content, updated))
 }
 
 #[test]
