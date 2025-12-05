@@ -7,7 +7,7 @@ This is the Zola-based documentation site for Worktrunk, published at worktrunk.
 Start the dev server from the docs directory:
 
 ```bash
-cd docs && zola serve -p 0  # Picks an available port
+cd docs && zola serve -p $((10000 + RANDOM))
 ```
 
 ### Verifying changes
