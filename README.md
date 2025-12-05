@@ -11,7 +11,7 @@
 <!-- [![Downloads](https://img.shields.io/crates/d/worktrunk?style=for-the-badge&logo=rust)](https://crates.io/crates/worktrunk) -->
 <!-- [![Stars](https://img.shields.io/github/stars/max-sixty/worktrunk?style=for-the-badge&logo=github)](https://github.com/max-sixty/worktrunk/stargazers) -->
 
-> **December 2025**: I've been using Worktrunk as my daily driver, and am releasing it as Open Source this week. It's built with love (there's no slop!). If social proof is helpful: I also created [PRQL](https://github.com/PRQL/prql) (10k stars) and am a maintainer of [Xarray](https://github.com/pydata/xarray) (4k stars), [Insta](https://github.com/mitsuhiko/insta), & [Numbagg](https://github.com/numbagg/numbagg).
+> **December 2025**: I've been using Worktrunk as my daily driver, and am releasing it as Open Source this week; I think folks will find it really helpful. It's built with love (there's no slop!). If social proof is helpful: I also created [PRQL](https://github.com/PRQL/prql) (10k stars) and am a maintainer of [Xarray](https://github.com/pydata/xarray) (4k stars), [Insta](https://github.com/mitsuhiko/insta), & [Numbagg](https://github.com/numbagg/numbagg).
 
 Worktrunk is a CLI for git worktree management, designed for parallel AI agent workflows. Git worktrees give each agent an isolated branch and directory; Worktrunk adds branch-based navigation, unified status, and lifecycle hooks. Creating a new agent workspace is as immediate as `git switch`.
 
@@ -47,6 +47,7 @@ Worktrunk makes worktrees easy to use — branch-based navigation, unified statu
 - **[Lifecycle hooks](https://worktrunk.dev/hooks/)** — run commands on create, pre-merge, post-merge
 - **[LLM commit messages](https://worktrunk.dev/llm-commits/)** — generate commit messages from diffs via [llm](https://llm.datasette.io/)
 - **[Merge workflow](https://worktrunk.dev/merge/)** — squash, rebase, merge, clean up in one command
+- ...and lots more.
 
 <!-- END AUTO-GENERATED-SECTION -->
 

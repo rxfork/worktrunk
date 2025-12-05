@@ -38,6 +38,7 @@ Worktrunk makes worktrees easy to use — branch-based navigation, unified statu
 - **[Lifecycle hooks](@/hooks.md)** — run commands on create, pre-merge, post-merge
 - **[LLM commit messages](@/llm-commits.md)** — generate commit messages from diffs via [llm](https://llm.datasette.io/)
 - **[Merge workflow](@/merge.md)** — squash, rebase, merge, clean up in one command
+- ...and lots more.
 
 ## Core commands in practice
 
