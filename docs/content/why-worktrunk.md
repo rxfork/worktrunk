@@ -11,7 +11,7 @@ Worktrunk is a CLI for git worktree management, designed for parallel AI agent w
 
 AI agents like Claude and Codex can increasingly handle longer tasks without supervision. Running several in parallel is practical. But on a single checkout they step on each other's uncommitted changes.
 
-Git worktrees solve this: multiple working directories backed by one `.git`. Each has its own files and index. All share the repository's history and objects. Creating one is instant. Delete it and only the working files disappear.
+Git worktrees solve this: multiple working directories backed by one `.git`. Each gets its own files and index but shares the repository's history and objects.
 
 But the built-in commands are path-oriented: `git worktree add ../repo.feature`, then `cd ../repo.feature`, then later `git worktree remove ../repo.feature`.
 
