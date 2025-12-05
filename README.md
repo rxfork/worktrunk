@@ -19,6 +19,8 @@ Worktrunk is a CLI for git worktree management, designed for parallel AI agent w
 
 > ## 📚 Full documentation at [worktrunk.dev](https://worktrunk.dev) 📚
 
+<!-- ⚠️ AUTO-GENERATED-SECTION from docs/content/why-worktrunk.md#context-git-worktrees..what-worktrunk-adds — edit source to update -->
+
 ## Context: git worktrees
 
 AI agents like Claude and Codex can increasingly handle longer tasks without supervision, and it's very practical to run several in parallel. But on a single file tree they step on each other's uncommitted changes.
@@ -33,18 +35,20 @@ Worktrunk makes worktrees easy to use — branch-based navigation, unified statu
 
 **Core commands:**
 
-| Task | Worktrunk | Plain git |
-|------|-----------|-----------|
-| Switch worktrees | `wt switch feature` | `cd ../repo.feature` |
+| Task                  | Worktrunk                        | Plain git                                                                     |
+| --------------------- | -------------------------------- | ----------------------------------------------------------------------------- |
+| Switch worktrees      | `wt switch feature`              | `cd ../repo.feature`                                                          |
 | Create + start Claude | `wt switch -c -x claude feature` | `git worktree add -b feature ../repo.feature && cd ../repo.feature && claude` |
-| Clean up | `wt remove` | `cd ../repo && git worktree remove ../repo.feature && git branch -d feature` |
-| List with status | `wt list` | `git worktree list` (paths only) |
+| Clean up              | `wt remove`                      | `cd ../repo && git worktree remove ../repo.feature && git branch -d feature`  |
+| List with status      | `wt list`                        | `git worktree list` (paths only)                                              |
 
 **Workflow automation:**
 
 - **[Lifecycle hooks](https://worktrunk.dev/hooks/)** — run commands on create, pre-merge, post-merge
 - **[LLM commit messages](https://worktrunk.dev/llm-commits/)** — generate commit messages from diffs via [llm](https://llm.datasette.io/)
 - **[Merge workflow](https://worktrunk.dev/merge/)** — squash, rebase, merge, clean up in one command
+
+<!-- END AUTO-GENERATED-SECTION -->
 
 ## Core commands in practice
 
@@ -97,6 +101,8 @@ $ wt remove
 
 <!-- END AUTO-GENERATED -->
 
+<!-- ⚠️ AUTO-GENERATED-SECTION from docs/content/why-worktrunk.md#install..further-reading — edit source to update -->
+
 ## Install
 
 **Homebrew (macOS & Linux):**
@@ -122,8 +128,11 @@ $ wt config shell install
 
 ## Further reading
 
-- **[Worktrunk documentation](https://worktrunk.dev)** — full docs, examples, and command reference
 - [Claude Code: Best practices for agentic coding](https://www.anthropic.com/engineering/claude-code-best-practices) — Anthropic's official guide, including the worktree pattern
 - [Shipping faster with Claude Code and Git Worktrees](https://incident.io/blog/shipping-faster-with-claude-code-and-git-worktrees) — incident.io's workflow for parallel agents
 - [Git worktree pattern discussion](https://github.com/anthropics/claude-code/issues/1052) — Community discussion in the Claude Code repo
 - [git-worktree documentation](https://git-scm.com/docs/git-worktree) — Official git reference
+
+<!-- END AUTO-GENERATED-SECTION -->
+
+> ## 📚 Full documentation at [worktrunk.dev](https://worktrunk.dev) 📚

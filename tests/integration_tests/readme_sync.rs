@@ -88,6 +88,21 @@ static RUST_RAW_STRING_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
         .unwrap()
 });
 
+/// Regex to find README section markers (synced from docs)
+/// Format: <!-- ⚠️ AUTO-GENERATED-SECTION from path#start..end — edit source to update -->
+/// The anchor can be a single section (e.g., #install) or a range (e.g., #install..further-reading)
+static SECTION_MARKER_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?s)<!-- ⚠️ AUTO-GENERATED-SECTION from ([^\s]+)#([^\s]+) — edit source to update -->\n+(.*?)\n*<!-- END AUTO-GENERATED-SECTION -->",
+    )
+    .unwrap()
+});
+
+/// Regex to convert Zola internal links to full URLs
+/// Matches: [text](@/page.md) or [text](@/page.md#anchor)
+static ZOLA_LINK_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\[([^\]]+)\]\(@/([^)#]+)\.md(#[^)]*)?\)").unwrap());
+
 // =============================================================================
 // Unified Template Infrastructure
 // =============================================================================
@@ -655,6 +670,160 @@ fn extract_templates(content: &str) -> std::collections::HashMap<String, String>
         .collect()
 }
 
+// =============================================================================
+// Docs-to-README Section Sync
+// =============================================================================
+
+/// Extract sections from markdown content by anchor range
+///
+/// If `anchor` contains `..`, extracts from start anchor through end anchor (inclusive).
+/// Otherwise extracts a single section.
+fn extract_section_by_anchor(content: &str, anchor: &str) -> Option<String> {
+    let (start_anchor, end_anchor) = if let Some((start, end)) = anchor.split_once("..") {
+        (start, Some(end))
+    } else {
+        (anchor, None)
+    };
+
+    let lines: Vec<&str> = content.lines().collect();
+
+    // Find the start heading
+    let start_idx = lines.iter().position(|line| {
+        line.strip_prefix("## ")
+            .or_else(|| line.strip_prefix("### "))
+            .is_some_and(|text| heading_to_anchor(text) == start_anchor)
+    })?;
+
+    // Find the end: either after end_anchor section, or next same-level heading
+    let end_idx = if let Some(end_anchor) = end_anchor {
+        // Find where end_anchor's section ends
+        let end_heading_idx = lines.iter().skip(start_idx + 1).position(|line| {
+            line.strip_prefix("## ")
+                .or_else(|| line.strip_prefix("### "))
+                .is_some_and(|text| heading_to_anchor(text) == end_anchor)
+        })? + start_idx
+            + 1;
+
+        // Find the next ## heading after end_anchor (or EOF)
+        lines
+            .iter()
+            .skip(end_heading_idx + 1)
+            .position(|line| line.starts_with("## "))
+            .map(|i| i + end_heading_idx + 1)
+            .unwrap_or(lines.len())
+    } else {
+        // Single section: find next ## heading
+        lines
+            .iter()
+            .skip(start_idx + 1)
+            .position(|line| line.starts_with("## "))
+            .map(|i| i + start_idx + 1)
+            .unwrap_or(lines.len())
+    };
+
+    let section = lines[start_idx..end_idx].join("\n").trim().to_string();
+    Some(section)
+}
+
+/// Convert heading text to anchor format (lowercase, spaces to hyphens)
+fn heading_to_anchor(heading: &str) -> String {
+    heading
+        .to_lowercase()
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c } else { '-' })
+        .collect::<String>()
+        .split('-')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("-")
+}
+
+/// Transform Zola-flavored markdown to GitHub-flavored markdown
+///
+/// Converts:
+/// - `[text](@/page.md)` → `[text](https://worktrunk.dev/page/)`
+/// - `[text](@/page.md#anchor)` → `[text](https://worktrunk.dev/page/#anchor)`
+fn transform_zola_to_github(content: &str) -> String {
+    ZOLA_LINK_PATTERN
+        .replace_all(content, |caps: &regex::Captures| {
+            let text = caps.get(1).unwrap().as_str();
+            let page = caps.get(2).unwrap().as_str();
+            let anchor = caps.get(3).map_or("", |m| m.as_str());
+            format!("[{text}](https://worktrunk.dev/{page}/{anchor})")
+        })
+        .into_owned()
+}
+
+/// Get section content from docs file, transformed for README
+///
+/// Extracts section(s) by anchor (supports ranges like `start..end`),
+/// and transforms Zola links to GitHub URLs.
+fn get_docs_section_for_readme(docs_path: &Path, anchor: &str) -> Result<String, String> {
+    let content = fs::read_to_string(docs_path)
+        .map_err(|e| format!("Failed to read {}: {}", docs_path.display(), e))?;
+
+    let section = extract_section_by_anchor(&content, anchor)
+        .ok_or_else(|| format!("Section '{}' not found in {}", anchor, docs_path.display()))?;
+
+    // Transform Zola links to GitHub URLs
+    Ok(transform_zola_to_github(&section))
+}
+
+/// Sync section markers in README from docs source files
+///
+/// Finds markers like:
+/// `<!-- ⚠️ AUTO-GENERATED-SECTION from docs/content/why-worktrunk.md#section-anchor — edit source to update -->`
+///
+/// And replaces the content with the transformed section from the docs file.
+fn sync_readme_sections(
+    readme_content: &str,
+    project_root: &Path,
+) -> Result<(String, usize), Vec<String>> {
+    let mut result = readme_content.to_string();
+    let mut errors = Vec::new();
+    let mut updated = 0;
+
+    // Collect all matches first (to avoid borrowing issues)
+    let matches: Vec<_> = SECTION_MARKER_PATTERN
+        .captures_iter(readme_content)
+        .map(|cap| {
+            let full_match = cap.get(0).unwrap();
+            let path = cap.get(1).unwrap().as_str().to_string();
+            let anchor = cap.get(2).unwrap().as_str().to_string();
+            let current = trim_lines(cap.get(3).unwrap().as_str());
+            (full_match.start(), full_match.end(), path, anchor, current)
+        })
+        .collect();
+
+    // Process in reverse order to preserve positions
+    for (start, end, path, anchor, current) in matches.into_iter().rev() {
+        let docs_path = project_root.join(&path);
+
+        let expected = match get_docs_section_for_readme(&docs_path, &anchor) {
+            Ok(content) => trim_lines(&content),
+            Err(e) => {
+                errors.push(format!("❌ {}#{}: {}", path, anchor, e));
+                continue;
+            }
+        };
+
+        if current != expected {
+            let replacement = format!(
+                "<!-- ⚠️ AUTO-GENERATED-SECTION from {}#{} — edit source to update -->\n\n{}\n\n<!-- END AUTO-GENERATED-SECTION -->",
+                path, anchor, expected
+            );
+            result.replace_range(start..end, &replacement);
+            updated += 1;
+        }
+    }
+
+    if errors.is_empty() {
+        Ok((result, updated))
+    } else {
+        Err(errors)
+    }
+}
+
 #[test]
 fn test_config_example_templates_are_in_sync() {
     let project_root = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -792,6 +961,16 @@ fn test_readme_examples_are_in_sync() {
             updated_content = new_content;
             total_updated += updated_count;
             checked += total_count;
+        }
+        Err(errs) => errors.extend(errs),
+    }
+
+    // Update section markers (synced from docs)
+    match sync_readme_sections(&updated_content, project_root) {
+        Ok((new_content, updated_count)) => {
+            updated_content = new_content;
+            total_updated += updated_count;
+            checked += updated_count.max(1); // Count at least 1 if we have section markers
         }
         Err(errs) => errors.extend(errs),
     }
