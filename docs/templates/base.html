@@ -16,16 +16,46 @@
 {# _variables.html is already included by the theme at line 12 of juice/templates/index.html #}
 {# Zola resolves it to our custom templates/_variables.html, so no need to include it again #}
 <script>
-// Firefox iOS/Chrome iOS viewport fix: svh incorrectly behaves like dvh
-// causing scroll jank when browser chrome appears/disappears.
-// Root cause: Missing minimumViewportInset/maximumViewportInset WebKit APIs
-// https://github.com/mozilla-mobile/firefox-ios/issues/11574
+// iOS viewport height polyfill: svh/lvh are broken on Firefox iOS and Chrome iOS
+// due to missing minimumViewportInset/maximumViewportInset WebKit APIs.
+// This sets a stable --vh-full CSS variable by tracking the minimum viewport height.
+// See: https://github.com/mozilla-mobile/firefox-ios/issues/11574
 (function() {
-    var ua = navigator.userAgent;
-    if (/FxiOS/.test(ua) || /CriOS/.test(ua)) {
-        // Capture initial viewport height (with browser chrome visible)
-        // and use it as a stable value instead of broken svh
-        document.documentElement.style.setProperty('--vh-full', window.innerHeight + 'px');
+    // Only run on iOS WebKit browsers (Safari, Chrome iOS, Firefox iOS, in-app webviews)
+    var isIOS = /iP(hone|ad|od)/.test(navigator.platform) ||
+                (/Macintosh/.test(navigator.userAgent) && 'ontouchend' in document);
+    if (!isIOS) return;
+
+    var raf, lastHeight;
+
+    function setViewportHeight() {
+        // Use the smallest of available height measurements to approximate "small viewport"
+        var c1 = window.innerHeight;
+        var c2 = document.documentElement.clientHeight;
+        var c3 = (window.visualViewport && window.visualViewport.height) || c1;
+        var h = Math.min(c1 || Infinity, c2 || Infinity, c3 || Infinity);
+        if (h && h !== lastHeight) {
+            lastHeight = h;
+            document.documentElement.style.setProperty('--vh-full', h + 'px');
+        }
+    }
+
+    function schedule() {
+        if (raf) return;
+        raf = requestAnimationFrame(function() {
+            raf = null;
+            setViewportHeight();
+        });
+    }
+
+    // Set initial value immediately
+    setViewportHeight();
+
+    // Update on relevant events (passive for performance)
+    window.addEventListener('resize', schedule, { passive: true });
+    window.addEventListener('orientationchange', schedule, { passive: true });
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', schedule, { passive: true });
     }
 })();
 </script>
