@@ -1,192 +1,172 @@
-{% extends "juice/templates/index.html" %}
+{% import "macros.html" as macros %}
+<!DOCTYPE html>
+<html lang="en">
 
-{% block favicon %}
-<link rel="icon" type="image/png" href="/favicon.png">
-{% endblock favicon %}
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}{{ config.title }}{% endblock title %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <link rel="icon" type="image/png" href="/favicon.png">
 
-{% block fonts %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="preload" href="{{ get_url(path='logo@2x.png') }}" as="image" media="(-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi)">
-<link rel="preload" href="{{ get_url(path='logo.png') }}" as="image" media="not all and (-webkit-min-device-pixel-ratio: 2), not all and (min-resolution: 192dpi)">
-{% endblock fonts %}
+    {% include "_variables.html" %}
 
-{% block head %}
-{# _variables.html is already included by the theme at line 12 of juice/templates/index.html #}
-{# Zola resolves it to our custom templates/_variables.html, so no need to include it again #}
-<script>
-// iOS viewport jank fix: Firefox/Chrome iOS have broken svh/lvh units that
-// behave like dvh, causing the hero to resize when browser chrome appears.
-// Root cause: Missing WebKit minimumViewportInset/maximumViewportInset APIs.
-// https://github.com/mozilla-mobile/firefox-ios/issues/11574
-//
-// Solution: Capture height ONCE on load, set --vh-full CSS variable.
-// CSS uses var(--vh-full, 100lvh) so iOS gets stable pixels, others get lvh.
-//
-// What didn't work:
-// - Pure 100lvh: janks on Firefox iOS (lvh broken too)
-// - -webkit-fill-available: overridden by media queries / didn't help
-// - Updating on resize/visualViewport events: made jank WORSE
-//
-// TODO: Simplify if Firefox iOS ever fixes their WebKit wrapper.
-(function() {
-    // Only run on iOS WebKit browsers
-    var isIOS = /iP(hone|ad|od)/.test(navigator.platform) ||
-                (/Macintosh/.test(navigator.userAgent) && 'ontouchend' in document);
-    if (!isIOS) return;
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="preload" href="{{ get_url(path='logo@2x.png') }}" as="image" media="(-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi)">
+    <link rel="preload" href="{{ get_url(path='logo.png') }}" as="image" media="not all and (-webkit-min-device-pixel-ratio: 2), not all and (min-resolution: 192dpi)">
 
-    // Capture initial viewport height ONCE (with browser chrome visible)
-    // and use it as a stable value. Never update on resize.
-    var h = window.innerHeight;
-    if (h) {
-        document.documentElement.style.setProperty('--vh-full', h + 'px');
-    }
+    <script>
+    // iOS viewport jank fix: Firefox/Chrome iOS have broken svh/lvh units that
+    // behave like dvh, causing the hero to resize when browser chrome appears.
+    // Root cause: Missing WebKit minimumViewportInset/maximumViewportInset APIs.
+    // https://github.com/mozilla-mobile/firefox-ios/issues/11574
+    //
+    // Solution: Capture height ONCE on load, set --vh-full CSS variable.
+    // CSS uses var(--vh-full, 100lvh) so iOS gets stable pixels, others get lvh.
+    (function() {
+        var isIOS = /iP(hone|ad|od)/.test(navigator.platform) ||
+                    (/Macintosh/.test(navigator.userAgent) && 'ontouchend' in document);
+        if (!isIOS) return;
 
-    // Only update on orientation change (actual device rotation)
-    window.addEventListener('orientationchange', function() {
-        // Small delay to let the new orientation settle
-        setTimeout(function() {
-            var newH = window.innerHeight;
-            if (newH) {
-                document.documentElement.style.setProperty('--vh-full', newH + 'px');
-            }
-        }, 100);
-    });
-})();
-</script>
-<meta name="view-transition" content="same-origin">
-<meta name="description" content="{{ config.extra.site_description }}">
-
-<!-- OpenGraph -->
-<meta property="og:type" content="website">
-<meta property="og:url" content="{{ current_url | default(value=config.base_url) }}">
-<meta property="og:title" content="{% if page.title %}{{ page.title }} | {{ config.title }}{% else %}{{ config.title }}{% endif %}">
-<meta property="og:description" content="{{ config.extra.site_description }}">
-<meta property="og:image" content="{{ config.base_url }}social-card.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-
-<!-- Twitter Card -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{% if page.title %}{{ page.title }} | {{ config.title }}{% else %}{{ config.title }}{% endif %}">
-<meta name="twitter:description" content="{{ config.extra.site_description }}">
-<meta name="twitter:image" content="{{ config.base_url }}social-card.png">
-
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-6YY8BDJ4QH"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-6YY8BDJ4QH');
-</script>
-<script>
-// Disable the Juice theme's scroll-spy by intercepting IntersectionObserver
-// Juice creates an observer with threshold: 1 to highlight TOC items on scroll
-// This causes confusing behavior - we want TOC to show current PAGE, not viewport
-(function() {
-    const RealIntersectionObserver = window.IntersectionObserver;
-    window.IntersectionObserver = function(callback, options) {
-        // Juice's scroll-spy uses threshold: 1 - return a no-op observer
-        if (options && options.threshold === 1) {
-            return {
-                observe: function() {},
-                unobserve: function() {},
-                disconnect: function() {}
-            };
+        var h = window.innerHeight;
+        if (h) {
+            document.documentElement.style.setProperty('--vh-full', h + 'px');
         }
-        // For other observers, use the real implementation
-        return new RealIntersectionObserver(callback, options);
-    };
-    // Preserve prototype for instanceof checks
-    window.IntersectionObserver.prototype = RealIntersectionObserver.prototype;
-})();
-</script>
-<link rel="preload" href="/custom.css" as="style">
-<link rel="stylesheet" href="/custom.css">
-<!-- Syntax highlighting themes - preload and load conditionally by color scheme -->
-<link rel="preload" href="/syntax-light.css" as="style" media="(prefers-color-scheme: light)">
-<link rel="preload" href="/syntax-dark.css" as="style" media="(prefers-color-scheme: dark)">
-<link rel="stylesheet" href="/syntax-light.css" media="(prefers-color-scheme: light)">
-<link rel="stylesheet" href="/syntax-dark.css" media="(prefers-color-scheme: dark)">
-<script src="/elasticlunr.min.js" defer></script>
-<script src="/search_index.en.js" defer></script>
-<script src="/search.js" defer></script>
-<script src="/code-copy.js" defer></script>
-<script src="/mobile-menu.js" defer></script>
-<script src="//instant.page/5.2.0" type="module" integrity="sha384-jnZyxPjiipYXnSU0ygqeac2q7CVYMbh84q0uHVRRxEtvFPiQYbXWUorga2aqZJ0z"></script>
-{% endblock head %}
 
-{% block header %}
-<!-- iOS 26 Liquid Glass fix: solid scrim behind translucent browser chrome -->
-<div class="ios-chrome-scrim" aria-hidden="true"></div>
-<header>
-    <button class="mobile-menu-toggle" aria-label="Open menu" aria-expanded="false">
-        <svg class="menu-icon" aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-        </svg>
-        <svg class="close-icon" aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-    </button>
-    <a href="/">
-        <div class="logo">
-            <img src="{{ get_url(path=config.extra.juice_logo_path) }}" srcset="{{ get_url(path='logo.png') }} 1x, {{ get_url(path='logo@2x.png') }} 2x" alt="logo" width="44" height="44" decoding="sync" fetchpriority="high">
-            {{ config.extra.juice_logo_name }}
+        window.addEventListener('orientationchange', function() {
+            setTimeout(function() {
+                var newH = window.innerHeight;
+                if (newH) {
+                    document.documentElement.style.setProperty('--vh-full', newH + 'px');
+                }
+            }, 100);
+        });
+    })();
+    </script>
+    <meta name="view-transition" content="same-origin">
+    <meta name="description" content="{{ config.extra.site_description }}">
+
+    <!-- OpenGraph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ current_url | default(value=config.base_url) }}">
+    <meta property="og:title" content="{% if page.title %}{{ page.title }} | {{ config.title }}{% else %}{{ config.title }}{% endif %}">
+    <meta property="og:description" content="{{ config.extra.site_description }}">
+    <meta property="og:image" content="{{ config.base_url }}social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% if page.title %}{{ page.title }} | {{ config.title }}{% else %}{{ config.title }}{% endif %}">
+    <meta name="twitter:description" content="{{ config.extra.site_description }}">
+    <meta name="twitter:image" content="{{ config.base_url }}social-card.png">
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-6YY8BDJ4QH"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-6YY8BDJ4QH');
+    </script>
+
+    <link rel="stylesheet" href="/normalize.css">
+    <link rel="preload" href="/custom.css" as="style">
+    <link rel="stylesheet" href="/custom.css">
+    <!-- Syntax highlighting themes - preload and load conditionally by color scheme -->
+    <link rel="preload" href="/syntax-light.css" as="style" media="(prefers-color-scheme: light)">
+    <link rel="preload" href="/syntax-dark.css" as="style" media="(prefers-color-scheme: dark)">
+    <link rel="stylesheet" href="/syntax-light.css" media="(prefers-color-scheme: light)">
+    <link rel="stylesheet" href="/syntax-dark.css" media="(prefers-color-scheme: dark)">
+    <script src="/elasticlunr.min.js" defer></script>
+    <script src="/search_index.en.js" defer></script>
+    <script src="/search.js" defer></script>
+    <script src="/code-copy.js" defer></script>
+    <script src="/mobile-menu.js" defer></script>
+    <script src="//instant.page/5.2.0" type="module" integrity="sha384-jnZyxPjiipYXnSU0ygqeac2q7CVYMbh84q0uHVRRxEtvFPiQYbXWUorga2aqZJ0z"></script>
+</head>
+
+<body>
+    <!-- iOS 26 Liquid Glass fix: solid scrim behind translucent browser chrome -->
+    <div class="ios-chrome-scrim" aria-hidden="true"></div>
+    <header>
+        <button class="mobile-menu-toggle" aria-label="Open menu" aria-expanded="false">
+            <svg class="menu-icon" aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+            <svg class="close-icon" aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+        <a href="/">
+            <div class="logo">
+                <img src="{{ get_url(path=config.extra.logo_path) }}" srcset="{{ get_url(path='logo.png') }} 1x, {{ get_url(path='logo@2x.png') }} 2x" alt="logo" width="44" height="44" decoding="sync" fetchpriority="high">
+                {{ config.extra.logo_name }}
+            </div>
+        </a>
+        <nav>
+            <div class="search-container">
+                <input id="userinput" type="search" placeholder="Search..." aria-label="Search documentation">
+                <div id="suggestions"></div>
+            </div>
+            {% for menu in config.extra.extra_menu %}
+            <a class="nav-item" href="{{ menu.link | safe }}">{{ menu.title }}</a>
+            {% endfor %}
+        </nav>
+    </header>
+
+    <!-- Mobile menu drawer -->
+    <div class="mobile-menu-overlay" aria-hidden="true"></div>
+    <nav class="mobile-menu" aria-hidden="true">
+        <div class="mobile-menu-content">
+            <div class="mobile-menu-section">
+                {% for menu in config.extra.extra_menu %}
+                <a class="mobile-nav-item" href="{{ menu.link | safe }}">{{ menu.title }}</a>
+                {% endfor %}
+            </div>
+            <div class="mobile-menu-divider"></div>
+            <div class="mobile-menu-section mobile-menu-toc">
+                {% set docs_section = get_section(path="_index.md") %}
+                {% set current_group = "" %}
+                {% for doc_page in docs_section.pages %}
+                {% set page_group = doc_page.extra.group | default(value="") %}
+                {% if page_group != current_group and page_group != "" %}
+                <div class="mobile-toc-group">{{ page_group }}</div>
+                {% set_global current_group = page_group %}
+                {% endif %}
+                <a class="mobile-toc-item" href="{{ doc_page.permalink | safe }}">{{ doc_page.title }}</a>
+                {% endfor %}
+            </div>
         </div>
-    </a>
-    <nav>
-        <div class="search-container">
-            <input id="userinput" type="search" placeholder="Search..." aria-label="Search documentation">
-            <div id="suggestions"></div>
-        </div>
-        {% for menu in config.extra.juice_extra_menu %}
-        <a class="nav-item subtitle-text" href="{{ menu.link | safe }}">{{ menu.title }}</a>
-        {% endfor %}
     </nav>
-</header>
 
-<!-- Mobile menu drawer -->
-<div class="mobile-menu-overlay" aria-hidden="true"></div>
-<nav class="mobile-menu" aria-hidden="true">
-    <div class="mobile-menu-content">
-        <div class="mobile-menu-section">
-            {% for menu in config.extra.juice_extra_menu %}
-            <a class="mobile-nav-item" href="{{ menu.link | safe }}">{{ menu.title }}</a>
-            {% endfor %}
-        </div>
-        <div class="mobile-menu-divider"></div>
-        <div class="mobile-menu-section mobile-menu-toc">
-            {% set docs_section = get_section(path="_index.md") %}
-            {% set current_group = "" %}
-            {% for doc_page in docs_section.pages %}
-            {% set page_group = doc_page.extra.group | default(value="") %}
-            {% if page_group != current_group and page_group != "" %}
-            <div class="mobile-toc-group">{{ page_group }}</div>
-            {% set_global current_group = page_group %}
-            {% endif %}
-            <a class="mobile-toc-item" href="{{ doc_page.permalink | safe }}">{{ doc_page.title }}</a>
-            {% endfor %}
-        </div>
+    <div class="hero">
+        {% block hero %}{% endblock hero %}
     </div>
-</nav>
-<div class="hero">
-    {% block hero %}{% endblock hero %}
-</div>
-{% endblock header %}
 
-{% block sidebar %}
-{% endblock sidebar %}
+    <main>
+        {% block toc %}
+        {% set docs_section = get_section(path="_index.md") %}
+        {{ macros::toc_nav(docs_section=docs_section) }}
+        {% endblock toc %}
 
-{% block footer %}
-<footer>
-  <span><a href="https://github.com/max-sixty/worktrunk">GitHub</a></span>
-  <span><a href="https://crates.io/crates/worktrunk">Crates.io</a></span>
-  <span><a href="/">Documentation</a></span>
-  <span><a href="https://github.com/max-sixty/worktrunk/issues">Issues</a></span>
-</footer>
-{% endblock footer %}
+        <div class="content">
+            {% block content %}
+            {{ section.content | safe }}
+            {% endblock content %}
+        </div>
+    </main>
+
+    <footer>
+        <span><a href="https://github.com/max-sixty/worktrunk">GitHub</a></span>
+        <span><a href="https://crates.io/crates/worktrunk">Crates.io</a></span>
+        <span><a href="/">Documentation</a></span>
+        <span><a href="https://github.com/max-sixty/worktrunk/issues">Issues</a></span>
+    </footer>
+</body>
+
+</html>

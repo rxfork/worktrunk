@@ -11,27 +11,37 @@ html {
     scrollbar-gutter: stable;
 }
 
-// ============================================================================
-// Typography
-// ============================================================================
-
 body {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    // iOS viewport jank fix: --vh-full is set by JS in base.html for iOS browsers.
+    // Fallback to 100lvh for other browsers. See base.html for full explanation.
+    min-height: var(--vh-full, 100lvh);
     font-family: var(--wt-font-sans);
     font-size: 15px;
     line-height: 1.5;
     color: var(--wt-color-text);
     background-color: var(--wt-color-bg);
-    // iOS viewport jank fix: --vh-full is set by JS in base.html for iOS browsers.
-    // Fallback to 100lvh for other browsers. See base.html for full explanation.
-    min-height: var(--vh-full, 100lvh);
 }
 
-// Override Juice theme's .text class (sets font-size: 18px, we want 15px)
-.text {
-    font-size: inherit;
-    line-height: inherit;
-    letter-spacing: inherit;
+a {
+    text-decoration: none;
 }
+
+// ============================================================================
+// Utility Classes
+// ============================================================================
+
+.text-center {
+    text-align: center;
+}
+
+// ============================================================================
+// Typography
+// ============================================================================
 
 // Headings
 h1, h2, h3, h4, h5, h6 {
@@ -41,14 +51,12 @@ h1, h2, h3, h4, h5, h6 {
     scroll-margin-top: calc(var(--wt-header-height) + var(--wt-main-padding-top));
 }
 
-h1, .heading-text {
+h1 {
     font-size: 1.75rem;
     font-weight: 650;
     letter-spacing: -0.02em;
     margin-top: 0;
     margin-bottom: 0.5rem;
-    border-left: none;
-    padding: 0;
 }
 
 h2 {
@@ -87,6 +95,17 @@ h4 {
     font-weight: 550;
 }
 
+// Page title heading (used on content pages)
+.heading-text {
+    font-family: var(--wt-font-head);
+    font-size: 1.75rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    color: var(--wt-color-text);
+}
+
 // ============================================================================
 // Header & Bench Rail
 // ============================================================================
@@ -94,18 +113,20 @@ h4 {
 header {
     // Height includes safe-area-inset so content isn't compressed on notched devices
     height: calc(var(--wt-header-height) + env(safe-area-inset-top, 0px));
-    box-sizing: border-box; // Include border in height
-    background-color: var(--wt-color-bg-soft) !important;
+    box-sizing: border-box;
+    background-color: var(--wt-color-bg-soft);
     border-bottom: 1px solid var(--wt-color-border-subtle);
     padding: 0 50px;
     // iOS safe area: push content below notch/Dynamic Island
     padding-top: env(safe-area-inset-top, 0px);
-    box-shadow: none !important;
     position: sticky;
     top: 0;
     // Z-index hierarchy: overlay(199) < scrim(200) = menu(200) < header(201)
     // Header on top so toggle button remains clickable when menu is open
     z-index: 201;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 // iOS 26 Liquid Glass fix: solid scrim behind translucent browser chrome
@@ -141,13 +162,11 @@ header {
     font-weight: 600;
     font-size: 1.25rem;
     color: var(--wt-color-text);
-    margin: 0; // Override Juice's margin: 0 40px
 
     img {
         width: 44px;
         height: 44px;
         object-fit: contain;
-        margin: 0; // Override Juice's margin: 0 25px
     }
 }
 
@@ -170,7 +189,6 @@ nav {
     &:hover {
         color: var(--wt-color-text);
         background: var(--wt-color-bg-soft);
-        text-decoration: none;
     }
 }
 
@@ -260,18 +278,20 @@ nav {
 // ============================================================================
 
 main {
+    display: flex;
+    flex-grow: 1;
     background-color: var(--wt-color-bg);
     padding: var(--wt-main-padding-top) 80px;
-    gap: 2.5rem; // Space between TOC and content
+    gap: 2.5rem;
 }
 
 .content {
-    display: block; // Override Juice's display: flex - fixes text selection across blocks
-    box-sizing: border-box; // Include padding/border in width for consistent sizing
-    width: 100%; // Fill available space in flex container
-    max-width: 922px; // Cap width for readability
-    min-width: 0; // Override Juice's min-width: 800px
-    overflow-x: auto; // Allow wide content (tables) to scroll without page overflow
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 922px;
+    min-width: 0;
+    overflow-x: auto;
     padding: 1.5rem 30px;
     background-color: var(--wt-color-bg-elevated);
     border-radius: 12px;
@@ -292,11 +312,11 @@ main {
 
 .content img {
     display: block;
-    max-width: 100%; // Scale down to fit, but don't upscale
-    box-sizing: border-box; // Include border in width calculation
+    max-width: 100%;
+    box-sizing: border-box;
     border: 1px solid var(--wt-color-code-border);
     border-left: 3px solid var(--wt-color-accent);
-    border-radius: 0 0.5rem 0.5rem 0; // Square left (accent), rounded right
+    border-radius: 0 0.5rem 0.5rem 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
@@ -304,10 +324,10 @@ main {
 .content figure.demo {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    margin-top: 0.25rem; // Minimal gap after intro text
+    margin-top: 0.25rem;
 
     img {
-        min-width: 800px; // Shrink until readable, then scroll
+        min-width: 800px;
     }
 }
 
@@ -440,20 +460,17 @@ main {
     }
 
     // Softer bold for table headers and branch names
-    // Default <b> is 700 (too heavy), reduce to semibold
     b {
         font-weight: 550;
     }
 
     // ANSI color classes for terminal output
-    .d { opacity: 0.67; }              // dim
-    .g { color: var(--green, #0a0); }  // green
-    .r { color: var(--red, #a00); }    // red
-    .c { color: var(--cyan, #0aa); }   // cyan
+    .d { opacity: 0.67; }
+    .g { color: var(--green, #0a0); }
+    .r { color: var(--red, #a00); }
+    .c { color: var(--cyan, #0aa); }
 
     // Gutter spans - extend vertically to form continuous line
-    // These are single-space spans with background color at line start
-    // Math: gap = (line-height - 1) / 2 = (1.5 - 1) / 2 = 0.25
     span[style*="background:var(--bright-white"] {
         display: inline-block;
         margin: -0.25em 0;
@@ -514,13 +531,11 @@ table {
         font-size: 0.9rem;
     }
 
-    // First column - row labels
     td:first-child {
         font-weight: 550;
         color: var(--wt-color-text);
     }
 
-    // Row dividers instead of zebra striping
     tbody tr {
         border-bottom: 1px solid var(--wt-color-border-subtle);
 
@@ -541,8 +556,8 @@ table {
 
 .toc-sticky {
     position: sticky;
-    top: calc(var(--wt-header-height) + var(--wt-main-padding-top)); // Definitionally matches natural position
-    box-sizing: border-box; // Include padding/border in max-height calculation
+    top: calc(var(--wt-header-height) + var(--wt-main-padding-top));
+    box-sizing: border-box;
     border-radius: 0.5rem;
     background-color: var(--wt-color-bg-elevated);
     border: 1px solid var(--wt-color-border-subtle);
@@ -551,79 +566,72 @@ table {
     // iOS jank fix: --vh-full set by JS, fallback to lvh. See base.html.
     max-height: calc(var(--vh-full, 100lvh) - var(--wt-header-height) - var(--wt-main-padding-top) - 20px);
     overflow-y: auto;
-    overscroll-behavior: contain; // Trap scroll events within TOC
+    overscroll-behavior: contain;
 }
 
-// Use `main` prefix to override juice.scss specificity (main .toc-item)
-main {
-    // Moderate tightening with clear section headers
-    .toc-group-label {
-        font-size: 0.7rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+.toc-group-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--wt-color-text-soft);
+    padding: 0.6rem 0.45rem 0.2rem;
+    margin: 0.5rem 0.4rem 0;
+
+    &:first-child {
+        margin-top: 0;
+    }
+}
+
+.toc-item {
+    padding: 0;
+    margin: 0 0.4rem;
+
+    a {
+        display: block;
+        padding: 0.55rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.8rem;
+        color: var(--wt-color-text-muted);
+        transition: all 150ms;
+
+        &:hover {
+            background: var(--wt-color-bg-soft);
+            color: var(--wt-color-text);
+        }
+
+        &.active {
+            border-left: 3px solid var(--wt-color-accent);
+            background: var(--wt-color-accent-soft);
+            color: var(--wt-color-text);
+            padding-left: calc(0.5rem - 3px);
+        }
+    }
+}
+
+.toc-item-child {
+    padding: 0 0.45rem 0.2rem 1rem;
+    margin: 0 0.4rem;
+
+    a {
+        font-size: 0.75rem;
         color: var(--wt-color-text-soft);
-        padding: 0.6rem 0.45rem 0.2rem;
-        margin: 0.5rem 0.4rem 0;  // More top margin for clear section breaks
+        padding: 0.1rem 0.35rem;
+        border-radius: 0.2rem;
+        display: block;
+        transition: all 150ms;
 
-        &:first-child {
-            margin-top: 0;
-        }
-    }
-
-    .toc-item {
-        padding: 0;
-        margin: 0 0.4rem;
-
-        a {
-            display: block;
-            padding: 0.55rem 0.5rem;
-            border-radius: 0.25rem;
-            font-size: 0.8rem;
+        &:hover {
             color: var(--wt-color-text-muted);
-            transition: all 150ms;
-
-            &:hover {
-                background: var(--wt-color-bg-soft);
-                color: var(--wt-color-text);
-                text-decoration: none;
-            }
-
-            &.active {
-                border-left: 3px solid var(--wt-color-accent);
-                background: var(--wt-color-accent-soft);
-                color: var(--wt-color-text);
-                // No font-weight change - prevents layout shift
-                padding-left: calc(0.5rem - 3px);
-            }
+            background: var(--wt-color-bg-soft);
         }
     }
 
-    .toc-item-child {
-        padding: 0 0.45rem 0.2rem 1rem;
-        margin: 0 0.4rem;
+    &.nested {
+        padding-left: 1.6rem;
 
         a {
-            font-size: 0.75rem;
-            color: var(--wt-color-text-soft);
-            padding: 0.1rem 0.35rem;
-            border-radius: 0.2rem;
-            display: block;
-            transition: all 150ms;
-
-            &:hover {
-                color: var(--wt-color-text-muted);
-                background: var(--wt-color-bg-soft);
-                text-decoration: none;
-            }
-        }
-
-        &.nested {
-            padding-left: 1.6rem;
-
-            a {
-                font-size: 0.7rem;
-            }
+            font-size: 0.7rem;
         }
     }
 }
@@ -648,7 +656,6 @@ main {
 
         &:hover {
             background: var(--wt-color-accent-soft);
-            text-decoration: none;
         }
     }
 }
@@ -687,10 +694,10 @@ footer {
     // Warm gradient background with subtle radial glow
     background: radial-gradient(ellipse 80% 60% at 70% 40%, rgba(254, 243, 199, 0.7) 0%, transparent 60%),
                 radial-gradient(ellipse 50% 40% at 30% 70%, rgba(251, 243, 219, 0.5) 0%, transparent 50%),
-                var(--wt-color-bg-soft) !important;
+                var(--wt-color-bg-soft);
     // iOS jank fix: --vh-full set by JS, fallback to lvh. See base.html.
-    height: calc(var(--vh-full, 100lvh) - var(--wt-header-height) - env(safe-area-inset-top, 0px)) !important;
-    max-height: calc(var(--vh-full, 100lvh) - var(--wt-header-height) - env(safe-area-inset-top, 0px)) !important;
+    height: calc(var(--vh-full, 100lvh) - var(--wt-header-height) - env(safe-area-inset-top, 0px));
+    max-height: calc(var(--vh-full, 100lvh) - var(--wt-header-height) - env(safe-area-inset-top, 0px));
     padding: 4rem 40px 3rem;
     position: relative;
     display: flex;
@@ -738,8 +745,6 @@ footer {
         font-size: 1.25rem;
         font-weight: 400;
         color: var(--wt-color-text-muted);
-        border-left: none;
-        padding-left: 0;
         max-width: 35ch;
     }
 
@@ -751,7 +756,6 @@ footer {
         color: var(--wt-color-text-muted);
         cursor: pointer;
         transition: color 150ms;
-        // Gentle floating animation
         animation: float 3s ease-in-out infinite;
 
         &:hover {
@@ -771,7 +775,7 @@ footer {
     .hero {
         background: radial-gradient(ellipse 80% 60% at 70% 40%, rgba(245, 158, 11, 0.08) 0%, transparent 60%),
                     radial-gradient(ellipse 50% 40% at 30% 70%, rgba(139, 115, 85, 0.06) 0%, transparent 50%),
-                    var(--wt-color-bg-soft) !important;
+                    var(--wt-color-bg-soft);
 
         .hero-image {
             filter: drop-shadow(0 8px 24px rgba(245, 158, 11, 0.2));
@@ -787,7 +791,7 @@ footer {
 .button {
     display: inline-block;
     background: var(--wt-color-accent);
-    color: white !important;
+    color: white;
     padding: 0.6rem 1.5rem;
     border-radius: 999px;
     font-weight: 600;
@@ -798,7 +802,6 @@ footer {
 
     &:hover {
         background: var(--wt-color-accent-strong);
-        text-decoration: none;
     }
 }
 
@@ -815,6 +818,7 @@ button.explore-more {
 
 ul, ol {
     padding-left: 1.5rem;
+    margin-top: 0.5rem;
 }
 
 ul > li, ol > li {
@@ -832,7 +836,6 @@ ul > li::marker {
 
 figure {
     margin: 1.5rem 0;
-    // Image styling inherited from .content img
 }
 
 figcaption {
@@ -848,7 +851,7 @@ figcaption {
 
 @media screen and (max-width: 1024px) {
     :root {
-        --wt-main-padding-top: 30px; // Override for tablet
+        --wt-main-padding-top: 30px;
     }
 
     main {
@@ -868,7 +871,7 @@ figcaption {
 // ============================================================================
 
 .mobile-menu-toggle {
-    display: none; // Hidden by default, shown at 768px breakpoint
+    display: none;
     align-items: center;
     justify-content: center;
     background: none;
@@ -916,7 +919,6 @@ figcaption {
 .mobile-menu {
     display: none;
     position: fixed;
-    // Position below header (which may include safe-area-inset on iOS)
     top: calc(var(--wt-header-height) + env(safe-area-inset-top, 0px));
     left: 0;
     width: min(260px, 70vw);
@@ -957,7 +959,6 @@ figcaption {
 
     &:hover {
         background: var(--wt-color-bg-soft);
-        text-decoration: none;
     }
 }
 
@@ -996,7 +997,6 @@ figcaption {
     &:hover {
         background: var(--wt-color-bg-soft);
         color: var(--wt-color-text);
-        text-decoration: none;
     }
 }
 
@@ -1007,7 +1007,6 @@ body.mobile-menu-open {
 
 @media screen and (max-width: 768px) {
     :root {
-        // Mobile header is fixed height (logo + toggle only, nav hidden)
         --wt-header-height: 50px;
         --wt-main-padding-top: 20px;
     }
@@ -1017,10 +1016,8 @@ body.mobile-menu-open {
     }
 
     header {
-        // Height includes safe-area-inset so content isn't compressed
         height: calc(var(--wt-header-height) + env(safe-area-inset-top, 0px));
         padding: 10px 20px;
-        // Push content below notch/Dynamic Island
         padding-top: calc(env(safe-area-inset-top, 0px) + 10px);
         display: flex;
         flex-direction: row;
@@ -1028,7 +1025,7 @@ body.mobile-menu-open {
         justify-content: space-between;
     }
 
-    // Hide desktop nav on mobile - use hamburger menu instead
+    // Hide desktop nav on mobile
     header nav {
         display: none;
     }
@@ -1052,7 +1049,6 @@ body.mobile-menu-open {
     }
 
     .hero {
-        // iOS jank fix: --vh-full set by JS, fallback to lvh. See base.html.
         height: calc(var(--vh-full, 100lvh) - var(--wt-header-height) - env(safe-area-inset-top, 0px));
         padding: 2rem 20px;
         flex-direction: column;
@@ -1067,7 +1063,6 @@ body.mobile-menu-open {
         display: none;
     }
 
-    // Show mobile menu toggle on mobile
     .mobile-menu-toggle {
         display: flex;
     }
@@ -1128,7 +1123,6 @@ input:focus-visible {
 // Content links - animated underline
 .content a:not(.button) {
     position: relative;
-    text-decoration: none;
 
     &::after {
         content: "";
@@ -1150,7 +1144,7 @@ input:focus-visible {
     }
 }
 
-// Button - enhanced hover (subtle shadow only, no lift)
+// Button - enhanced hover
 .button {
     box-shadow: 0 2px 4px rgba(217, 119, 6, 0.15);
 
@@ -1188,16 +1182,15 @@ input:focus-visible {
     scrollbar-color: var(--wt-color-border-subtle) transparent;
 }
 
-// Custom text selection - brand colors
+// Custom text selection
 ::selection {
     background: var(--wt-color-accent-soft);
     color: var(--wt-color-text);
 }
 
-// Footer link underlines - extend the animated underline pattern
+// Footer link underlines
 footer a {
     position: relative;
-    text-decoration: none;
 
     &::after {
         content: "";
@@ -1235,12 +1228,12 @@ header nav .nav-item {
     }
 }
 
-// TOC hover indicator (non-active items) - just background, no border to avoid jiggle
+// TOC hover indicator
 .toc-item a:not(.active):hover {
     background: var(--wt-color-bg-soft);
 }
 
-// Code block hover glow - enhance the existing shadow
+// Code block hover glow
 .content pre {
     transition: box-shadow 50ms;
 
@@ -1252,7 +1245,7 @@ header nav .nav-item {
 }
 
 
-// Logo hover effect - subtle glow
+// Logo hover effect
 header .logo:hover img {
     filter: drop-shadow(0 0 8px rgba(217, 119, 6, 0.3));
     transition: filter 200ms ease;
@@ -1271,16 +1264,12 @@ button.explore-more {
 // ============================================================================
 // Dark Mode Adjustments
 // ============================================================================
-// Syntax highlighting is handled by Zola's CSS-based themes (syntax-light.css,
-// syntax-dark.css) loaded conditionally in base.html via prefers-color-scheme.
 
 @media (prefers-color-scheme: dark) {
-    // Tell browser we're in dark mode (affects form controls, scrollbars)
     :root {
         color-scheme: dark;
     }
 
-    // Search results highlight
     #suggestions {
         .search-title b,
         .search-excerpt b {

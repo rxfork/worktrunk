@@ -35,7 +35,7 @@ View changes: http://127.0.0.1:<port>
 
 ## Theme architecture
 
-The docs use a "warm workbench" theme built on top of the Juice Zola theme. Key files:
+The docs use a standalone "warm workbench" theme. Key files:
 
 | File | Purpose |
 |------|---------|
@@ -63,7 +63,7 @@ When either variable changes (including via media queries), all dependent values
 
 1. **`box-sizing: border-box` on header** - Border is included in height, simplifying calculations
 2. **`scrollbar-gutter: stable`** - Reserves scrollbar space to prevent layout shift on navigation
-3. **IntersectionObserver intercept** - Disables Juice's scroll-spy which conflicts with our TOC styling
+3. **IntersectionObserver intercept** - Ensures scroll-spy doesn't conflict with TOC styling
 4. **Logo preload** - Prevents flash when navigating between pages
 5. **WCAG AA colors** - `--wt-color-text-soft` is #78716a for 4.5:1 contrast
 6. **iOS viewport polyfill** - Sets stable `--vh-full` variable for Firefox iOS/Chrome iOS (see `templates/base.html` for details on the jank issue and what we tried)

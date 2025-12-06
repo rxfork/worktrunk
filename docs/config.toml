@@ -4,7 +4,6 @@ base_url = "https://worktrunk.dev/"
 compile_sass = true
 build_search_index = true
 
-theme = "juice"
 title = "Worktrunk"
 
 [markdown]
@@ -17,12 +16,12 @@ highlight_themes_css = [
 error_on_missing_highlight = true
 
 [extra]
-juice_logo_name = "Worktrunk"
-juice_logo_path = "logo.png"
+logo_name = "Worktrunk"
+logo_path = "logo.png"
 rust_crate = "worktrunk"
 github_repo = "max-sixty/worktrunk"
 site_description = "CLI for Git worktree management, designed for parallel AI agent workflows."
-juice_extra_menu = [
+extra_menu = [
     { title = "Why Worktrunk?", link = "/why-worktrunk" },
     { title = "Tips", link = "/tips-patterns" },
     { title = "GitHub", link = "https://github.com/max-sixty/worktrunk" },

@@ -62,6 +62,4 @@ root_dir = "docs/static"
 # Exclude source files from link checking
 exclude_path = [
     ".claude-plugin/skills/worktrunk/reference/README.md",
-    # Third-party theme - has its own linking conventions
-    "docs/themes/juice/README.md",
 ]
