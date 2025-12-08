@@ -7,7 +7,9 @@ use worktrunk::styling::format_with_gutter;
 use super::commit::{CommitGenerator, CommitOptions};
 use super::context::CommandEnv;
 use super::hooks::HookPipeline;
-use super::merge::{execute_post_merge_commands, run_pre_merge_commands};
+use super::merge::{
+    execute_post_merge_commands, execute_pre_remove_commands, run_pre_merge_commands,
+};
 use super::project_config::collect_commands_for_hooks;
 use super::repository_ext::RepositoryCliExt;
 
@@ -53,6 +55,10 @@ pub fn handle_standalone_run_hook(hook_type: HookType, force: bool) -> anyhow::R
             // represents what branch we're on (vs. in `wt merge` where it's the
             // branch being merged into)
             execute_post_merge_commands(&ctx, &env.branch, false)
+        }
+        HookType::PreRemove => {
+            check_hook_configured(&project_config.pre_remove, hook_type)?;
+            execute_pre_remove_commands(&ctx, false)
         }
     }
 }
