@@ -23,98 +23,77 @@ exit_code: 0
 ----- stdout -----
 [
   {
-    "head_sha": "133d1f05a73a1478707f3438625069c7ebd8eb27",
     "branch": "main",
-    "timestamp": 0,
-    "commit_message": "Same content on main",
-    "ahead": 0,
-    "behind": 0,
-    "upstream_remote": null,
-    "upstream_ahead": 0,
-    "upstream_behind": 0,
-    "pr_status": null,
-    "status": {
-      "working_tree": {
-        "untracked": false,
-        "modified": false,
-        "staged": false,
-        "renamed": false,
-        "deleted": false
-      },
-      "branch_op_state": "",
-      "main_divergence": "IsMain",
-      "upstream_divergence": "",
-      "worktree_state": ""
-    },
-    "status_symbols": {
-      "working_tree": "",
-      "branch_op_state": "",
-      "main_divergence": "^",
-      "upstream_divergence": "",
-      "worktree_state": ""
-    },
-    "status_line": "main  /u001b[2m^/u001b[22m",
-    "type": "worktree",
     "path": "[REPO]",
-    "bare": false,
-    "detached": false,
-    "working_tree_diff": {
-      "added": 0,
-      "deleted": 0
+    "kind": "worktree",
+    "commit": {
+      "sha": "133d1f05a73a1478707f3438625069c7ebd8eb27",
+      "short_sha": "133d1f0",
+      "message": "Same content on main",
+      "timestamp": 0
     },
-    "working_tree_diff_with_main": {
-      "added": 0,
-      "deleted": 0
+    "working_tree": {
+      "staged": false,
+      "modified": false,
+      "untracked": false,
+      "renamed": false,
+      "deleted": false,
+      "diff": {
+        "added": 0,
+        "deleted": 0
+      },
+      "diff_vs_main": {
+        "added": 0,
+        "deleted": 0
+      }
+    },
+    "worktree": {
+      "detached": false,
+      "bare": false
     },
     "is_main": true,
-    "is_current": true
+    "is_current": true,
+    "statusline": "main  /u001b[2m^/u001b[22m",
+    "symbols": "^"
   },
   {
-    "head_sha": "d78d130165cc11f6df39113ded5bbf1c16f8ebc3",
     "branch": "feature-merged",
-    "timestamp": 0,
-    "commit_message": "Merge main into feature",
-    "ahead": 2,
-    "behind": 0,
-    "upstream_remote": null,
-    "upstream_ahead": 0,
-    "upstream_behind": 0,
-    "pr_status": null,
-    "status": {
-      "working_tree": {
-        "untracked": false,
-        "modified": false,
-        "staged": false,
-        "renamed": false,
-        "deleted": false
-      },
-      "branch_op_state": "NoAddedChanges",
-      "main_divergence": "Ahead",
-      "upstream_divergence": "",
-      "worktree_state": ""
-    },
-    "status_symbols": {
-      "working_tree": "",
-      "branch_op_state": "⊂",
-      "main_divergence": "↑",
-      "upstream_divergence": "",
-      "worktree_state": ""
-    },
-    "commits_display": "/u001b[32m↑2/u001b[0m",
-    "status_line": "feature-merged  /u001b[2m⊂/u001b[22m/u001b[2m↑/u001b[22m  /u001b[32m↑2/u001b[0m",
-    "type": "worktree",
     "path": "[REPO].feature-merged",
-    "bare": false,
-    "detached": false,
-    "working_tree_diff": {
-      "added": 0,
-      "deleted": 0
+    "kind": "worktree",
+    "commit": {
+      "sha": "d78d130165cc11f6df39113ded5bbf1c16f8ebc3",
+      "short_sha": "d78d130",
+      "message": "Merge main into feature",
+      "timestamp": 0
     },
-    "working_tree_diff_with_main": {
-      "added": 0,
-      "deleted": 0
+    "working_tree": {
+      "staged": false,
+      "modified": false,
+      "untracked": false,
+      "renamed": false,
+      "deleted": false,
+      "diff": {
+        "added": 0,
+        "deleted": 0
+      },
+      "diff_vs_main": {
+        "added": 0,
+        "deleted": 0
+      }
     },
-    "is_main": false
+    "branch_state": "integrated",
+    "integration_reason": "no_added_changes",
+    "main": {
+      "ahead": 2,
+      "behind": 0
+    },
+    "worktree": {
+      "detached": false,
+      "bare": false
+    },
+    "is_main": false,
+    "statusline": "feature-merged  /u001b[2m⊂/u001b[22m/u001b[2m↑/u001b[22m  /u001b[32m↑2/u001b[0m",
+    "symbols": "⊂↑"
   }
 ]
 

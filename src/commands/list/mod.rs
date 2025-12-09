@@ -120,6 +120,7 @@ pub mod ci_status;
 pub(crate) mod collect;
 mod collect_progressive_impl;
 mod columns;
+mod json_output;
 pub(crate) mod layout;
 pub mod model;
 pub mod progressive;
@@ -189,9 +190,10 @@ pub fn handle_list(
 
     match format {
         crate::OutputFormat::Json => {
-            // Display fields are already computed in collect()
+            // Convert to new JSON structure
+            let json_items = json_output::to_json_items(&items);
             let json =
-                serde_json::to_string_pretty(&items).context("Failed to serialize to JSON")?;
+                serde_json::to_string_pretty(&json_items).context("Failed to serialize to JSON")?;
             crate::output::data(json)?;
         }
         crate::OutputFormat::Table => {

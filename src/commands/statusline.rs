@@ -262,9 +262,9 @@ fn get_git_status(repo: &Repository, cwd: &Path) -> Result<Option<String>> {
         },
     )?;
 
-    // Return the pre-formatted status line
-    if let Some(ref status_line) = items[0].display.status_line {
-        Ok(Some(status_line.clone()))
+    // Return the pre-formatted statusline
+    if let Some(ref statusline) = items[0].display.statusline {
+        Ok(Some(statusline.clone()))
     } else {
         // Fallback: just show branch name
         Ok(Some(wt.branch.as_deref().unwrap_or("HEAD").to_string()))

@@ -145,28 +145,40 @@ Rows are dimmed when the branch content is already in main ([2m·[0m same comm
 Query structured data with [2m--format=json[0m:
 
   [2m# Worktrees with conflicts[0m
-  [2mwt list --format=json | jq '.[] | select(.status.branch_state == "Conflicts")'[0m
+  [2mwt list --format=json | jq '.[] | select(.branch_state == "conflicts")'[0m
   [2m[0m
   [2m# Uncommitted changes[0m
-  [2mwt list --format=json | jq '.[] | select(.status.working_tree.modified)'[0m
+  [2mwt list --format=json | jq '.[] | select(.working_tree.modified)'[0m
   [2m[0m
   [2m# Current worktree[0m
-  [2mwt list --format=json | jq '.[] | select(.is_current == true)'[0m
+  [2mwt list --format=json | jq '.[] | select(.is_current)'[0m
   [2m[0m
   [2m# Branches ahead of main[0m
-  [2mwt list --format=json | jq '.[] | select(.status.main_divergence == "Ahead")'[0m
+  [2mwt list --format=json | jq '.[] | select(.main.ahead > 0)'[0m
+  [2m[0m
+  [2m# Integrated branches (ready to clean up)[0m
+  [2mwt list --format=json | jq '.[] | select(.branch_state == "integrated" or .branch_state == "same_commit")'[0m
 
-[1mStatus fields:[0m
-- [2mworking_tree[0m: [2m{untracked, modified, staged, renamed, deleted}[0m
-- [2mbranch_state[0m: [2m""[0m | [2m"Conflicts"[0m | [2m"MergeTreeConflicts"[0m | [2m"TreesMatch"[0m | [2m"NoAddedChanges"[0m | [2m"MergeAddsNothing"[0m
-- [2mgit_operation[0m: [2m""[0m | [2m"Rebase"[0m | [2m"Merge"[0m
-- [2mmain_divergence[0m: [2m""[0m | [2m"Ahead"[0m | [2m"Behind"[0m | [2m"Diverged"[0m
-- [2mupstream_divergence[0m: [2m""[0m | [2m"Ahead"[0m | [2m"Behind"[0m | [2m"Diverged"[0m
+[1mFields:[0m
 
-[1mPosition fields:[0m
-- [2mis_main[0m — Main worktree
-- [2mis_current[0m — Current directory
-- [2mis_previous[0m — Previous worktree from wt switch
+  Field               Description                                                                              
+  ──────────────────  ─────────────────────────────────────────────────────────────────────────────────────────
+  [2mbranch[0m              Branch name (null for detached HEAD)                                                     
+  [2mpath[0m                Worktree path (absent for branches without worktrees)                                    
+  [2mkind[0m                [2m"worktree"[0m or [2m"branch"[0m                                                                   
+  [2mcommit[0m              [2m{sha, short_sha, message, timestamp}[0m                                                     
+  [2mworking_tree[0m        [2m{staged, modified, untracked, renamed, deleted, diff, diff_vs_main}[0m                      
+  [2mbranch_state[0m        [2m"conflicts"[0m [2m"rebase"[0m [2m"merge"[0m [2m"would_conflict"[0m [2m"same_commit"[0m [2m"integrated"[0m                 
+  [2mintegration_reason[0m  [2m"trees_match"[0m [2m"no_added_changes"[0m [2m"merge_adds_nothing"[0m (when [2mbranch_state == "integrated"[0m)
+  [2mmain[0m                [2m{ahead, behind, diff}[0m (absent when [2mis_main[0m)                                              
+  [2mremote[0m              [2m{name, branch, ahead, behind}[0m (absent when no tracking branch)                           
+  [2mworktree[0m            [2m{state, reason, detached, bare}[0m                                                          
+  [2mis_main[0m             Main worktree                                                                            
+  [2mis_current[0m          Current worktree                                                                         
+  [2mis_previous[0m         Previous worktree from wt switch                                                         
+  [2mpr[0m                  [2m{ci, source, stale, url}[0m — CI status from PR or branch (absent when no CI)               
+  [2mstatusline[0m          Pre-formatted status with ANSI colors                                                    
+  [2msymbols[0m             Raw status symbols without colors (e.g., [2m"!?↓"[0m)                                          
 
 [32mSee also[0m
 

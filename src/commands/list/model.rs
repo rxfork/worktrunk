@@ -21,9 +21,9 @@ pub struct DisplayFields {
     /// Pre-formatted single-line representation for statusline tools.
     /// Format: `branch  status  @working  commits  ^branch_diff  upstream  ci` (2-space separators)
     ///
-    /// Use via JSON: `wt list --format=json | jq '.[] | select(.is_current) | .status_line'`
+    /// Use via JSON: `wt list --format=json | jq '.[] | select(.is_current) | .statusline'`
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub status_line: Option<String>,
+    pub statusline: Option<String>,
 }
 
 impl DisplayFields {
@@ -57,7 +57,7 @@ impl DisplayFields {
             upstream_display,
             ci_status_display,
             status_display: None,
-            status_line: None,
+            statusline: None,
         }
     }
 }
@@ -218,7 +218,7 @@ pub struct ListItem {
     pub branch_diff: Option<BranchDiffTotals>,
     /// Whether HEAD's tree SHA matches main's tree SHA.
     /// True when committed content is identical regardless of commit history.
-    /// Internal field used to compute BranchOpState::TreesMatch.
+    /// Internal field used to compute `BranchState::Integrated(TreesMatch)`.
     #[serde(skip)]
     pub committed_trees_match: Option<bool>,
     /// Whether branch has file changes beyond the merge-base with main.
@@ -476,7 +476,7 @@ impl ListItem {
             &self.upstream,
             &self.pr_status,
         );
-        self.display.status_line = Some(self.format_statusline());
+        self.display.statusline = Some(self.format_statusline());
 
         if let ItemKind::Worktree(ref mut wt_data) = self.kind
             && let Some(ref working_tree_diff) = wt_data.working_tree_diff
@@ -497,7 +497,7 @@ impl ListItem {
         default_branch: Option<&str>,
         has_merge_tree_conflicts: bool,
         user_marker: Option<String>,
-        working_tree_symbols: Option<&str>,
+        working_tree_status: Option<WorkingTreeStatus>,
         has_conflicts: bool,
     ) {
         // Common fields for both worktrees and branches
@@ -535,15 +535,15 @@ impl ListItem {
                     &data.working_tree_diff_with_main,
                 );
 
-                // Apply priority: Conflicts > Rebase > Merge > MergeTreeConflicts > base_state
-                let branch_op_state = if has_conflicts {
-                    BranchOpState::Conflicts
+                // Apply priority: Conflicts > Rebase > Merge > WouldConflict > base_state
+                let branch_state = if has_conflicts {
+                    BranchState::Conflicts
                 } else if data.git_operation == GitOperationState::Rebase {
-                    BranchOpState::Rebase
+                    BranchState::Rebase
                 } else if data.git_operation == GitOperationState::Merge {
-                    BranchOpState::Merge
+                    BranchState::Merge
                 } else if has_merge_tree_conflicts {
-                    BranchOpState::MergeTreeConflicts
+                    BranchState::WouldConflict
                 } else {
                     base_state
                 };
@@ -556,11 +556,11 @@ impl ListItem {
                 };
 
                 self.status_symbols = Some(StatusSymbols {
-                    branch_op_state,
+                    branch_state,
                     worktree_state,
                     main_divergence,
                     upstream_divergence,
-                    working_tree: working_tree_symbols.unwrap_or("").to_string(),
+                    working_tree: working_tree_status.unwrap_or_default(),
                     user_marker,
                 });
             }
@@ -568,37 +568,37 @@ impl ListItem {
                 // Simplified status computation for branches
                 // Only compute symbols that apply to branches (no working tree, git operation, or worktree attrs)
 
-                // Branch op state - branches can show MergeTreeConflicts or integration states
-                let branch_op_state = if has_merge_tree_conflicts {
-                    BranchOpState::MergeTreeConflicts
+                // Branch state - branches can show WouldConflict or integration states
+                let branch_state = if has_merge_tree_conflicts {
+                    BranchState::WouldConflict
                 } else if self.is_ancestor == Some(true) {
                     // Branch HEAD is ancestor of main - same commit or already merged
-                    BranchOpState::SameCommit
+                    BranchState::SameCommit
                 } else if self.has_file_changes == Some(false) {
                     // No file changes beyond merge-base - content is integrated
-                    BranchOpState::NoAddedChanges
+                    BranchState::Integrated(IntegrationReason::NoAddedChanges)
                 } else if self.committed_trees_match == Some(true) {
                     // Tree SHA matches main - content is identical
-                    BranchOpState::TreesMatch
+                    BranchState::Integrated(IntegrationReason::TreesMatch)
                 } else if self.would_merge_add == Some(false) {
                     // Merge simulation shows no changes would be added (--full only)
-                    BranchOpState::MergeAddsNothing
+                    BranchState::Integrated(IntegrationReason::MergeAddsNothing)
                 } else if let Some(ref c) = self.counts {
                     if c.ahead == 0 {
-                        BranchOpState::SameCommit
+                        BranchState::SameCommit
                     } else {
-                        BranchOpState::None
+                        BranchState::None
                     }
                 } else {
-                    BranchOpState::None
+                    BranchState::None
                 };
 
                 self.status_symbols = Some(StatusSymbols {
-                    branch_op_state,
+                    branch_state,
                     worktree_state: WorktreeState::Branch,
                     main_divergence,
                     upstream_divergence,
-                    working_tree: String::new(),
+                    working_tree: WorkingTreeStatus::default(),
                     user_marker,
                 });
             }
@@ -608,20 +608,20 @@ impl ListItem {
 
 /// Determine branch state for a worktree.
 ///
-/// Returns a [`BranchOpState`] that corresponds to an [`worktrunk::git::IntegrationReason`] when
-/// the branch content is considered integrated into main.
+/// Returns a [`BranchState`] indicating whether the branch content is integrated into main
+/// and how (via [`IntegrationReason`]).
 ///
 /// # States (priority order)
 ///
 /// 1. **`SameCommit`**: Branch HEAD is ancestor of main (same commit or already merged).
 ///
-/// 2. **`NoAddedChanges`**: Commits exist but no file changes beyond merge-base.
+/// 2. **`Integrated(NoAddedChanges)`**: Commits exist but no file changes beyond merge-base.
 ///    The three-dot diff (`main...branch`) is empty.
 ///
-/// 3. **`TreesMatch`**: Tree SHA matches main, or working tree matches main.
+/// 3. **`Integrated(TreesMatch)`**: Tree SHA matches main, or working tree matches main.
 ///    Examples: merge commits that pull in main, rebases, squash merges.
 ///
-/// 4. **`MergeAddsNothing`**: Merge simulation adds nothing to main.
+/// 4. **`Integrated(MergeAddsNothing)`**: Merge simulation adds nothing to main.
 ///    Catches squash-merged branches where main has advanced.
 ///
 /// # Parameters
@@ -642,26 +642,26 @@ fn determine_worktree_base_state(
     would_merge_add: Option<bool>,
     working_tree_diff: Option<&LineDiff>,
     working_tree_diff_with_main: &Option<Option<LineDiff>>,
-) -> BranchOpState {
+) -> BranchState {
     if is_main || default_branch.is_none() {
-        return BranchOpState::None;
+        return BranchState::None;
     }
 
     let is_clean = working_tree_diff.map(|d| d.is_empty()).unwrap_or(true);
 
     // Priority 1: Branch is ancestor of main (same commit or already merged)
     if is_ancestor == Some(true) && is_clean {
-        return BranchOpState::SameCommit;
+        return BranchState::SameCommit;
     }
 
     // Priority 2: No file changes beyond merge-base (squash-merged)
     if has_file_changes == Some(false) && is_clean {
-        return BranchOpState::NoAddedChanges;
+        return BranchState::Integrated(IntegrationReason::NoAddedChanges);
     }
 
     // Priority 3: Tree SHA matches main (squash merge/rebase with identical content)
     if committed_trees_match && is_clean {
-        return BranchOpState::TreesMatch;
+        return BranchState::Integrated(IntegrationReason::TreesMatch);
     }
 
     // Priority 4: Working tree matches main
@@ -671,15 +671,15 @@ fn determine_worktree_base_state(
         .is_some_and(|diff| diff.is_empty());
 
     if working_tree_matches_main {
-        return BranchOpState::TreesMatch;
+        return BranchState::Integrated(IntegrationReason::TreesMatch);
     }
 
     // Priority 5: Merge simulation shows no changes (--full only)
     if would_merge_add == Some(false) && is_clean {
-        return BranchOpState::MergeAddsNothing;
+        return BranchState::Integrated(IntegrationReason::MergeAddsNothing);
     }
 
-    BranchOpState::None
+    BranchState::None
 }
 
 /// Main branch divergence state
@@ -858,30 +858,21 @@ impl serde::Serialize for WorktreeState {
     }
 }
 
-/// Combined branch and operation state
+/// Branch state: operation states, conflict states, or integration states
 ///
 /// Represents the primary state of a branch/worktree in a single position.
 /// Priority order determines which symbol is shown when multiple conditions apply:
 /// 1. Conflicts (✘) - blocking, must resolve
 /// 2. Rebase (⤴) - active operation
 /// 3. Merge (⤵) - active operation
-/// 4. MergeTreeConflicts (✗) - potential problem
-/// 5. SameCommit (·) - removable, maps to [`IntegrationReason::SameCommit`]
-/// 6. NoAddedChanges (⊂) - removable, maps to [`IntegrationReason::NoAddedChanges`]
-/// 7. TreesMatch (⊂) - removable, maps to [`IntegrationReason::TreesMatch`]
-/// 8. MergeAddsNothing (⊂) - removable, maps to [`IntegrationReason::MergeAddsNothing`]
+/// 4. WouldConflict (✗) - potential problem (merge-tree simulation)
+/// 5. SameCommit (·) - removable, branch is ancestor of main
+/// 6. Integrated (⊂) - removable, content is in main via different history
 ///
-/// Integration states use two symbols:
-/// - `·` for identical commit (SameCommit)
-/// - `⊂` for content integrated via different history (all others)
-///
-/// [`IntegrationReason::SameCommit`]: worktrunk::git::IntegrationReason::SameCommit
-/// [`IntegrationReason::TreesMatch`]: worktrunk::git::IntegrationReason::TreesMatch
-/// [`IntegrationReason::NoAddedChanges`]: worktrunk::git::IntegrationReason::NoAddedChanges
-/// [`IntegrationReason::MergeAddsNothing`]: worktrunk::git::IntegrationReason::MergeAddsNothing
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::IntoStaticStr)]
-pub enum BranchOpState {
-    #[strum(serialize = "")]
+/// The `Integrated` variant carries an [`IntegrationReason`] explaining how the
+/// content was integrated (trees match, no added changes, or merge adds nothing).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BranchState {
     /// Normal working branch
     #[default]
     None,
@@ -892,68 +883,94 @@ pub enum BranchOpState {
     /// Merge in progress
     Merge,
     /// Merge-tree conflicts with main (simulated via git merge-tree)
-    MergeTreeConflicts,
-    /// Branch HEAD is same commit as main or ancestor of main.
-    /// Maps to [`worktrunk::git::IntegrationReason::SameCommit`].
+    WouldConflict,
+    /// Branch HEAD is same commit as main or ancestor of main
     SameCommit,
-    /// Tree SHA matches main - identical file contents.
-    /// Maps to [`worktrunk::git::IntegrationReason::TreesMatch`].
+    /// Content is integrated into main via different history
+    Integrated(IntegrationReason),
+}
+
+/// Reason why branch content is considered integrated into main
+///
+/// These explain HOW the content was integrated, separate from the fact
+/// that it IS integrated.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum IntegrationReason {
+    /// Tree SHA matches main - identical file contents
     TreesMatch,
-    /// No file changes beyond merge-base (three-dot diff empty).
-    /// Maps to [`worktrunk::git::IntegrationReason::NoAddedChanges`].
+    /// No file changes beyond merge-base (three-dot diff empty)
     NoAddedChanges,
-    /// Merge simulation adds nothing to main.
-    /// Maps to [`worktrunk::git::IntegrationReason::MergeAddsNothing`].
+    /// Merge simulation adds nothing to main
     MergeAddsNothing,
 }
 
-impl std::fmt::Display for BranchOpState {
+impl IntegrationReason {
+    /// Returns the JSON string representation for integration_reason field.
+    pub fn as_json_str(self) -> &'static str {
+        match self {
+            Self::TreesMatch => "trees_match",
+            Self::NoAddedChanges => "no_added_changes",
+            Self::MergeAddsNothing => "merge_adds_nothing",
+        }
+    }
+}
+
+impl std::fmt::Display for BranchState {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Self::None => Ok(()),
             Self::Conflicts => write!(f, "✘"),
             Self::Rebase => write!(f, "⤴"),
             Self::Merge => write!(f, "⤵"),
-            Self::MergeTreeConflicts => write!(f, "✗"),
+            Self::WouldConflict => write!(f, "✗"),
             Self::SameCommit => write!(f, "·"),
-            // All other integration states use ⊂ (content is subset of main)
-            Self::TreesMatch | Self::NoAddedChanges | Self::MergeAddsNothing => write!(f, "⊂"),
+            // All integration reasons use ⊂ (content is subset of main)
+            Self::Integrated(_) => write!(f, "⊂"),
         }
     }
 }
 
-impl BranchOpState {
+impl BranchState {
     /// Returns styled symbol with appropriate color, or None for None variant.
     ///
     /// Color semantics:
     /// - ERROR (red): Conflicts - blocking problems
-    /// - WARNING (yellow): Rebase, Merge, MergeTreeConflicts - active/stuck states
-    /// - HINT (dimmed): SameCommit, TreesMatch, NoAddedChanges, MergeAddsNothing - low urgency removability indicators
+    /// - WARNING (yellow): Rebase, Merge, WouldConflict - active/stuck states
+    /// - HINT (dimmed): SameCommit, Integrated - low urgency removability indicators
     pub fn styled(&self) -> Option<String> {
         use color_print::cformat;
         match self {
             Self::None => None,
             Self::Conflicts => Some(cformat!("<red>{self}</>")),
-            Self::Rebase | Self::Merge | Self::MergeTreeConflicts => {
-                Some(cformat!("<yellow>{self}</>"))
-            }
-            Self::SameCommit | Self::TreesMatch | Self::NoAddedChanges | Self::MergeAddsNothing => {
-                Some(cformat!("<dim>{self}</>"))
-            }
+            Self::Rebase | Self::Merge | Self::WouldConflict => Some(cformat!("<yellow>{self}</>")),
+            Self::SameCommit | Self::Integrated(_) => Some(cformat!("<dim>{self}</>")),
         }
     }
 
-    /// Returns true if this state indicates the branch content is integrated into main.
-    /// These states correspond to [`worktrunk::git::IntegrationReason`] variants.
-    pub fn is_integrated(&self) -> bool {
-        matches!(
-            self,
-            Self::SameCommit | Self::TreesMatch | Self::NoAddedChanges | Self::MergeAddsNothing
-        )
+    /// Returns the integration reason if this is an integrated state, None otherwise.
+    pub fn integration_reason(&self) -> Option<IntegrationReason> {
+        match self {
+            Self::Integrated(reason) => Some(*reason),
+            _ => None,
+        }
+    }
+
+    /// Returns the JSON string representation for branch_state field.
+    pub fn as_json_str(self) -> Option<&'static str> {
+        match self {
+            Self::None => None,
+            Self::Conflicts => Some("conflicts"),
+            Self::Rebase => Some("rebase"),
+            Self::Merge => Some("merge"),
+            Self::WouldConflict => Some("would_conflict"),
+            Self::SameCommit => Some("same_commit"),
+            Self::Integrated(_) => Some("integrated"),
+        }
     }
 }
 
-impl serde::Serialize for BranchOpState {
+impl serde::Serialize for BranchState {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -1001,7 +1018,7 @@ impl PositionMask {
     const STAGED: usize = 0; // + (staged changes)
     const MODIFIED: usize = 1; // ! (modified files)
     const UNTRACKED: usize = 2; // ? (untracked files)
-    const BRANCH_OP_STATE: usize = 3; // Combined: branch state + git operation
+    const BRANCH_STATE: usize = 3; // Branch state (conflicts, rebase, merge, integrated, etc.)
     const MAIN_DIVERGENCE: usize = 4;
     const UPSTREAM_DIVERGENCE: usize = 5;
     const WORKTREE_STATE: usize = 6;
@@ -1014,7 +1031,7 @@ impl PositionMask {
             1, // STAGED: + (1 char)
             1, // MODIFIED: ! (1 char)
             1, // UNTRACKED: ? (1 char)
-            1, // BRANCH_OP_STATE: ✘⤴⤵✗·⊂ (1 char, priority: conflicts > rebase > merge > merge-tree > same-commit > integrated)
+            1, // BRANCH_STATE: ✘⤴⤵✗·⊂ (1 char, priority: conflicts > rebase > merge > would_conflict > same_commit > integrated)
             1, // MAIN_DIVERGENCE: ^, ↑, ↓, ↕ (1 char)
             1, // UPSTREAM_DIVERGENCE: ⇡, ⇣, ⇅ (1 char)
             1, // WORKTREE_STATE: / for branches, ⚑⊟⊞ for worktrees (priority: path_mismatch > prunable > locked)
@@ -1061,9 +1078,9 @@ impl PositionMask {
 /// - Working tree symbols (+!?): Can have multiple types of changes
 #[derive(Debug, Clone, Default)]
 pub struct StatusSymbols {
-    /// Combined branch and operation state (mutually exclusive with priority)
-    /// Priority: Conflicts (✘) > Rebase (⤴) > Merge (⤵) > MergeTreeConflicts (✗) > SameCommit (·) > others (⊂)
-    pub(crate) branch_op_state: BranchOpState,
+    /// Branch state (mutually exclusive with priority)
+    /// Priority: Conflicts (✘) > Rebase (⤴) > Merge (⤵) > WouldConflict (✗) > SameCommit (·) > Integrated (⊂)
+    pub(crate) branch_state: BranchState,
 
     /// Worktree state: / for branches, ⚑⊟⊞ for worktrees (priority: path_mismatch > prunable > locked)
     pub(crate) worktree_state: WorktreeState,
@@ -1074,8 +1091,8 @@ pub struct StatusSymbols {
     /// Remote/upstream divergence state (mutually exclusive)
     pub(crate) upstream_divergence: UpstreamDivergence,
 
-    /// Working tree changes: +, !, ? (NOT mutually exclusive, can have multiple)
-    pub(crate) working_tree: String,
+    /// Working tree changes (NOT mutually exclusive, can have multiple)
+    pub(crate) working_tree: WorkingTreeStatus,
 
     /// User-defined status annotation (custom labels, e.g., 💬, 🤖)
     pub(crate) user_marker: Option<String>,
@@ -1124,11 +1141,11 @@ impl StatusSymbols {
 
     /// Check if symbols are empty
     pub fn is_empty(&self) -> bool {
-        self.branch_op_state == BranchOpState::None
+        self.branch_state == BranchState::None
             && self.worktree_state == WorktreeState::None
             && self.main_divergence == MainDivergence::None
             && self.upstream_divergence == UpstreamDivergence::None
-            && self.working_tree.is_empty()
+            && !self.working_tree.is_dirty()
             && self.user_marker.is_none()
     }
 
@@ -1156,19 +1173,19 @@ impl StatusSymbols {
         use color_print::cformat;
 
         // Working tree symbols split into 3 fixed columns for vertical alignment
-        let style_working = |sym: char| -> (String, bool) {
-            if self.working_tree.contains(sym) {
+        let style_working = |has: bool, sym: char| -> (String, bool) {
+            if has {
                 (cformat!("<cyan>{sym}</>"), true)
             } else {
                 (String::new(), false)
             }
         };
-        let (staged_str, has_staged) = style_working('+');
-        let (modified_str, has_modified) = style_working('!');
-        let (untracked_str, has_untracked) = style_working('?');
+        let (staged_str, has_staged) = style_working(self.working_tree.staged, '+');
+        let (modified_str, has_modified) = style_working(self.working_tree.modified, '!');
+        let (untracked_str, has_untracked) = style_working(self.working_tree.untracked, '?');
 
-        let (branch_op_state_str, has_branch_op_state) = self
-            .branch_op_state
+        let (branch_state_str, has_branch_state) = self
+            .branch_state
             .styled()
             .map_or((String::new(), false), |s| (s, true));
         let (main_divergence_str, has_main_divergence) = self
@@ -1199,9 +1216,9 @@ impl StatusSymbols {
             (PositionMask::MODIFIED, modified_str, has_modified),
             (PositionMask::UNTRACKED, untracked_str, has_untracked),
             (
-                PositionMask::BRANCH_OP_STATE,
-                branch_op_state_str,
-                has_branch_op_state,
+                PositionMask::BRANCH_STATE,
+                branch_state_str,
+                has_branch_state,
             ),
             (
                 PositionMask::MAIN_DIVERGENCE,
@@ -1227,35 +1244,74 @@ impl StatusSymbols {
     }
 }
 
-/// Working tree changes parsed into structured booleans
-#[derive(Debug, Clone, serde::Serialize)]
-struct WorkingTreeChanges {
-    untracked: bool,
-    modified: bool,
-    staged: bool,
-    renamed: bool,
-    deleted: bool,
+/// Working tree changes as structured booleans
+///
+/// This is the canonical internal representation. Display strings are derived from this.
+#[derive(Debug, Clone, Copy, Default, serde::Serialize)]
+pub struct WorkingTreeStatus {
+    pub staged: bool,
+    pub modified: bool,
+    pub untracked: bool,
+    pub renamed: bool,
+    pub deleted: bool,
 }
 
-impl WorkingTreeChanges {
-    fn from_symbols(symbols: &str) -> Self {
+impl WorkingTreeStatus {
+    /// Create from git status parsing results
+    pub fn new(
+        staged: bool,
+        modified: bool,
+        untracked: bool,
+        renamed: bool,
+        deleted: bool,
+    ) -> Self {
         Self {
-            untracked: symbols.contains('?'),
-            modified: symbols.contains('!'),
-            staged: symbols.contains('+'),
-            renamed: symbols.contains('»'),
-            deleted: symbols.contains('✘'),
+            staged,
+            modified,
+            untracked,
+            renamed,
+            deleted,
         }
+    }
+
+    /// Returns true if any changes are present
+    pub fn is_dirty(&self) -> bool {
+        self.staged || self.modified || self.untracked || self.renamed || self.deleted
+    }
+
+    /// Format as display string for JSON serialization and raw output (e.g., "+!?").
+    ///
+    /// For styled terminal rendering, use `StatusSymbols::styled_symbols()` instead.
+    pub fn to_symbols(self) -> String {
+        let mut s = String::with_capacity(5);
+        if self.staged {
+            s.push('+');
+        }
+        if self.modified {
+            s.push('!');
+        }
+        if self.untracked {
+            s.push('?');
+        }
+        if self.renamed {
+            s.push('»');
+        }
+        if self.deleted {
+            s.push('✘');
+        }
+        s
     }
 }
 
 /// Status variant names (for queryability)
 ///
-/// Field order matches display order in STATUS SYMBOLS: working_tree → branch_op_state → ...
+/// Field order matches display order in STATUS SYMBOLS: working_tree → branch_state → ...
 #[derive(Debug, Clone, serde::Serialize)]
 struct QueryableStatus {
-    working_tree: WorkingTreeChanges,
-    branch_op_state: &'static str,
+    working_tree: WorkingTreeStatus,
+    branch_state: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    integration_reason: Option<IntegrationReason>,
     main_divergence: &'static str,
     upstream_divergence: &'static str,
     worktree_state: &'static str,
@@ -1265,11 +1321,11 @@ struct QueryableStatus {
 
 /// Status symbols (for display)
 ///
-/// Field order matches display order in STATUS SYMBOLS: working_tree → branch_op_state → ...
+/// Field order matches display order in STATUS SYMBOLS: working_tree → branch_state → ...
 #[derive(Debug, Clone, serde::Serialize)]
 struct DisplaySymbols {
     working_tree: String,
-    branch_op_state: String,
+    branch_state: String,
     main_divergence: String,
     upstream_divergence: String,
     worktree_state: String,
@@ -1285,8 +1341,11 @@ impl serde::Serialize for StatusSymbols {
         use serde::ser::SerializeStruct;
         let mut state = serializer.serialize_struct("StatusSymbols", 2)?;
 
+        // Get branch state string and optional integration reason
+        let branch_state_str = self.branch_state.as_json_str().unwrap_or("");
+        let integration_reason = self.branch_state.integration_reason();
+
         // Status variant names (derived via strum::IntoStaticStr)
-        let branch_op_state_variant: &'static str = self.branch_op_state.into();
         let main_divergence_variant: &'static str = self.main_divergence.into();
         let upstream_divergence_variant: &'static str = self.upstream_divergence.into();
 
@@ -1294,8 +1353,9 @@ impl serde::Serialize for StatusSymbols {
         let worktree_state_variant: &'static str = self.worktree_state.into();
 
         let queryable_status = QueryableStatus {
-            working_tree: WorkingTreeChanges::from_symbols(&self.working_tree),
-            branch_op_state: branch_op_state_variant,
+            working_tree: self.working_tree,
+            branch_state: branch_state_str,
+            integration_reason,
             main_divergence: main_divergence_variant,
             upstream_divergence: upstream_divergence_variant,
             worktree_state: worktree_state_variant,
@@ -1303,8 +1363,8 @@ impl serde::Serialize for StatusSymbols {
         };
 
         let display_symbols = DisplaySymbols {
-            working_tree: self.working_tree.clone(),
-            branch_op_state: self.branch_op_state.to_string(),
+            working_tree: self.working_tree.to_symbols(),
+            branch_state: self.branch_state.to_string(),
             main_divergence: self.main_divergence.to_string(),
             upstream_divergence: self.upstream_divergence.to_string(),
             worktree_state: self.worktree_state.to_string(),
@@ -1321,4 +1381,119 @@ impl serde::Serialize for StatusSymbols {
 /// Helper for serde skip_serializing_if
 fn git_operation_is_none(state: &GitOperationState) -> bool {
     *state == GitOperationState::None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_working_tree_status_is_dirty() {
+        // Empty status is not dirty
+        assert!(!WorkingTreeStatus::default().is_dirty());
+
+        // Each flag individually makes it dirty
+        assert!(WorkingTreeStatus::new(true, false, false, false, false).is_dirty());
+        assert!(WorkingTreeStatus::new(false, true, false, false, false).is_dirty());
+        assert!(WorkingTreeStatus::new(false, false, true, false, false).is_dirty());
+        assert!(WorkingTreeStatus::new(false, false, false, true, false).is_dirty());
+        assert!(WorkingTreeStatus::new(false, false, false, false, true).is_dirty());
+
+        // Multiple flags
+        assert!(WorkingTreeStatus::new(true, true, true, true, true).is_dirty());
+    }
+
+    #[test]
+    fn test_working_tree_status_to_symbols() {
+        // Empty
+        assert_eq!(WorkingTreeStatus::default().to_symbols(), "");
+
+        // Individual symbols
+        assert_eq!(
+            WorkingTreeStatus::new(true, false, false, false, false).to_symbols(),
+            "+"
+        );
+        assert_eq!(
+            WorkingTreeStatus::new(false, true, false, false, false).to_symbols(),
+            "!"
+        );
+        assert_eq!(
+            WorkingTreeStatus::new(false, false, true, false, false).to_symbols(),
+            "?"
+        );
+        assert_eq!(
+            WorkingTreeStatus::new(false, false, false, true, false).to_symbols(),
+            "»"
+        );
+        assert_eq!(
+            WorkingTreeStatus::new(false, false, false, false, true).to_symbols(),
+            "✘"
+        );
+
+        // Combined symbols (order: staged, modified, untracked, renamed, deleted)
+        assert_eq!(
+            WorkingTreeStatus::new(true, true, false, false, false).to_symbols(),
+            "+!"
+        );
+        assert_eq!(
+            WorkingTreeStatus::new(true, true, true, false, false).to_symbols(),
+            "+!?"
+        );
+        assert_eq!(
+            WorkingTreeStatus::new(true, true, true, true, true).to_symbols(),
+            "+!?»✘"
+        );
+    }
+
+    #[test]
+    fn test_branch_state_as_json_str() {
+        assert_eq!(BranchState::None.as_json_str(), None);
+        assert_eq!(BranchState::Conflicts.as_json_str(), Some("conflicts"));
+        assert_eq!(BranchState::Rebase.as_json_str(), Some("rebase"));
+        assert_eq!(BranchState::Merge.as_json_str(), Some("merge"));
+        assert_eq!(
+            BranchState::WouldConflict.as_json_str(),
+            Some("would_conflict")
+        );
+        assert_eq!(BranchState::SameCommit.as_json_str(), Some("same_commit"));
+        assert_eq!(
+            BranchState::Integrated(IntegrationReason::TreesMatch).as_json_str(),
+            Some("integrated")
+        );
+    }
+
+    #[test]
+    fn test_integration_reason_as_json_str() {
+        assert_eq!(IntegrationReason::TreesMatch.as_json_str(), "trees_match");
+        assert_eq!(
+            IntegrationReason::NoAddedChanges.as_json_str(),
+            "no_added_changes"
+        );
+        assert_eq!(
+            IntegrationReason::MergeAddsNothing.as_json_str(),
+            "merge_adds_nothing"
+        );
+    }
+
+    #[test]
+    fn test_branch_state_integration_reason() {
+        // Non-integrated states return None
+        assert_eq!(BranchState::None.integration_reason(), None);
+        assert_eq!(BranchState::Conflicts.integration_reason(), None);
+        assert_eq!(BranchState::SameCommit.integration_reason(), None);
+
+        // Integrated states return the reason
+        assert_eq!(
+            BranchState::Integrated(IntegrationReason::TreesMatch).integration_reason(),
+            Some(IntegrationReason::TreesMatch)
+        );
+        assert_eq!(
+            BranchState::Integrated(IntegrationReason::NoAddedChanges).integration_reason(),
+            Some(IntegrationReason::NoAddedChanges)
+        );
+        assert_eq!(
+            BranchState::Integrated(IntegrationReason::MergeAddsNothing).integration_reason(),
+            Some(IntegrationReason::MergeAddsNothing)
+        );
+    }
 }

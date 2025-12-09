@@ -213,13 +213,13 @@ pub enum CiSource {
     Branch,
 }
 
-/// PR/MR status including CI state and staleness
+/// CI status from PR/MR or branch workflow
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrStatus {
     pub ci_status: CiStatus,
     /// Source of the CI status (PR/MR or branch workflow)
     pub source: CiSource,
-    /// True if local HEAD differs from PR HEAD (unpushed changes)
+    /// True if local HEAD differs from remote HEAD (unpushed changes)
     pub is_stale: bool,
     /// URL to the PR/MR (if available)
     #[serde(skip_serializing_if = "Option::is_none")]

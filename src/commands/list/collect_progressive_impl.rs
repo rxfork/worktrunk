@@ -30,7 +30,9 @@ use worktrunk::styling::warning_message;
 
 use super::ci_status::PrStatus;
 use super::collect::{ExpectedResults, TaskKind, TaskResult, detect_git_operation};
-use super::model::{AheadBehind, BranchDiffTotals, CommitDetails, UpstreamStatus};
+use super::model::{
+    AheadBehind, BranchDiffTotals, CommitDetails, UpstreamStatus, WorkingTreeStatus,
+};
 
 // ============================================================================
 // Options and Context
@@ -342,7 +344,7 @@ impl Task for BranchDiffTask {
     }
 }
 
-/// Task 5 (worktree only): Working tree diff + status symbols
+/// Task 5 (worktree only): Working tree diff + status flags
 pub struct WorkingTreeDiffTask;
 
 impl Task for WorkingTreeDiffTask {
@@ -358,14 +360,14 @@ impl Task for WorkingTreeDiffTask {
                     item_idx: ctx.item_idx,
                     working_tree_diff: LineDiff::default(),
                     working_tree_diff_with_main: None,
-                    working_tree_symbols: String::new(),
+                    working_tree_status: WorkingTreeStatus::default(),
                     has_conflicts: false,
                 };
             }
         };
 
-        let (working_tree_symbols, is_dirty, has_conflicts) =
-            parse_status_for_symbols(&status_output);
+        let (working_tree_status, is_dirty, has_conflicts) =
+            parse_working_tree_status(&status_output);
 
         let working_tree_diff = if is_dirty {
             repo.working_tree_diff_stats().unwrap_or_default()
@@ -382,7 +384,7 @@ impl Task for WorkingTreeDiffTask {
             item_idx: ctx.item_idx,
             working_tree_diff,
             working_tree_diff_with_main,
-            working_tree_symbols,
+            working_tree_status,
             has_conflicts,
         }
     }
@@ -643,9 +645,9 @@ pub fn collect_branch_progressive(
 // Helper Functions
 // ============================================================================
 
-/// Parse git status output to extract working tree symbols and conflict state.
-/// Returns (symbols, is_dirty, has_conflicts).
-fn parse_status_for_symbols(status_output: &str) -> (String, bool, bool) {
+/// Parse git status output to extract working tree status and conflict state.
+/// Returns (WorkingTreeStatus, is_dirty, has_conflicts).
+fn parse_working_tree_status(status_output: &str) -> (WorkingTreeStatus, bool, bool) {
     let mut has_untracked = false;
     let mut has_modified = false;
     let mut has_staged = false;
@@ -695,23 +697,17 @@ fn parse_status_for_symbols(status_output: &str) -> (String, bool, bool) {
         }
     }
 
-    // Build working tree string (priority order: staged > modified > untracked)
-    // Only show top 3 most actionable symbols to save space
-    // Renamed (») and deleted (✘) are still detected for is_dirty but not displayed
-    let mut working_tree = String::new();
-    if has_staged {
-        working_tree.push('+');
-    }
-    if has_modified {
-        working_tree.push('!');
-    }
-    if has_untracked {
-        working_tree.push('?');
-    }
+    let working_tree_status = WorkingTreeStatus::new(
+        has_staged,
+        has_modified,
+        has_untracked,
+        has_renamed,
+        has_deleted,
+    );
 
-    let is_dirty = has_untracked || has_modified || has_staged || has_renamed || has_deleted;
+    let is_dirty = working_tree_status.is_dirty();
 
-    (working_tree, is_dirty, has_conflicts)
+    (working_tree_status, is_dirty, has_conflicts)
 }
 
 #[cfg(test)]
@@ -721,16 +717,16 @@ mod tests {
     #[test]
     fn test_parse_status_ad_not_conflict() {
         // AD = added to index, deleted from worktree (not a conflict)
-        let (symbols, is_dirty, has_conflicts) = parse_status_for_symbols("AD file.txt\n");
+        let (status, is_dirty, has_conflicts) = parse_working_tree_status("AD file.txt\n");
         assert!(!has_conflicts, "AD should not be treated as conflict");
         assert!(is_dirty);
-        assert!(symbols.contains('+'), "AD should show staged symbol");
+        assert!(status.staged, "AD should show staged symbol");
     }
 
     #[test]
     fn test_parse_status_da_not_conflict() {
         // DA = deleted from index, then restored to worktree (not a conflict)
-        let (_, is_dirty, has_conflicts) = parse_status_for_symbols("DA file.txt\n");
+        let (_, is_dirty, has_conflicts) = parse_working_tree_status("DA file.txt\n");
         assert!(!has_conflicts, "DA should not be treated as conflict");
         assert!(is_dirty);
     }
@@ -738,21 +734,21 @@ mod tests {
     #[test]
     fn test_parse_status_uu_is_conflict() {
         // UU = both modified (actual conflict)
-        let (_, _, has_conflicts) = parse_status_for_symbols("UU file.txt\n");
+        let (_, _, has_conflicts) = parse_working_tree_status("UU file.txt\n");
         assert!(has_conflicts, "UU should be treated as conflict");
     }
 
     #[test]
     fn test_parse_status_aa_is_conflict() {
         // AA = both added (actual conflict)
-        let (_, _, has_conflicts) = parse_status_for_symbols("AA file.txt\n");
+        let (_, _, has_conflicts) = parse_working_tree_status("AA file.txt\n");
         assert!(has_conflicts, "AA should be treated as conflict");
     }
 
     #[test]
     fn test_parse_status_dd_is_conflict() {
         // DD = both deleted (actual conflict)
-        let (_, _, has_conflicts) = parse_status_for_symbols("DD file.txt\n");
+        let (_, _, has_conflicts) = parse_working_tree_status("DD file.txt\n");
         assert!(has_conflicts, "DD should be treated as conflict");
     }
 
@@ -761,7 +757,7 @@ mod tests {
         // All U codes indicate conflicts
         for code in ["AU", "UA", "DU", "UD"] {
             let input = format!("{} file.txt\n", code);
-            let (_, _, has_conflicts) = parse_status_for_symbols(&input);
+            let (_, _, has_conflicts) = parse_working_tree_status(&input);
             assert!(has_conflicts, "{} should be treated as conflict", code);
         }
     }
@@ -769,7 +765,7 @@ mod tests {
     #[test]
     fn test_parse_status_md_not_conflict() {
         // MD = modified in index, deleted from worktree (not a conflict)
-        let (_, is_dirty, has_conflicts) = parse_status_for_symbols("MD file.txt\n");
+        let (_, is_dirty, has_conflicts) = parse_working_tree_status("MD file.txt\n");
         assert!(!has_conflicts, "MD should not be treated as conflict");
         assert!(is_dirty);
     }
@@ -777,30 +773,24 @@ mod tests {
     #[test]
     fn test_parse_status_intent_to_add() {
         // " A" = intent-to-add (git add -N): file recorded but content not staged
-        let (symbols, is_dirty, has_conflicts) = parse_status_for_symbols(" A file.txt\n");
+        let (status, is_dirty, has_conflicts) = parse_working_tree_status(" A file.txt\n");
         assert!(
             !has_conflicts,
             "intent-to-add should not be treated as conflict"
         );
         assert!(is_dirty, "intent-to-add should be dirty");
-        assert!(
-            symbols.contains('!'),
-            "intent-to-add should show modified symbol"
-        );
+        assert!(status.modified, "intent-to-add should show modified symbol");
     }
 
     #[test]
     fn test_parse_status_type_change() {
         // " T" = type change in worktree (e.g., file changed to symlink)
-        let (symbols, is_dirty, has_conflicts) = parse_status_for_symbols(" T file.txt\n");
+        let (status, is_dirty, has_conflicts) = parse_working_tree_status(" T file.txt\n");
         assert!(
             !has_conflicts,
             "type change should not be treated as conflict"
         );
         assert!(is_dirty, "type change should be dirty");
-        assert!(
-            symbols.contains('!'),
-            "type change should show modified symbol"
-        );
+        assert!(status.modified, "type change should show modified symbol");
     }
 }

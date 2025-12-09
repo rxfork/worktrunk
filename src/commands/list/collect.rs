@@ -30,11 +30,13 @@ use super::model::{
     ListItem, UpstreamStatus, WorktreeData,
 };
 
+use super::model::WorkingTreeStatus;
+
 /// Context for status symbol computation during result processing
 struct StatusContext {
     has_merge_tree_conflicts: bool,
     user_marker: Option<String>,
-    working_tree_symbols: Option<String>,
+    working_tree_status: Option<WorkingTreeStatus>,
     has_conflicts: bool,
 }
 
@@ -89,13 +91,13 @@ pub(super) enum TaskResult {
         item_idx: usize,
         branch_diff: BranchDiffTotals,
     },
-    /// Working tree diff and symbols (?, !, +, », ✘)
+    /// Working tree diff and status
     WorkingTreeDiff {
         item_idx: usize,
         working_tree_diff: LineDiff,
         working_tree_diff_with_main: Option<LineDiff>,
-        /// Symbols for uncommitted changes (?, !, +, », ✘)
-        working_tree_symbols: String,
+        /// Working tree change flags
+        working_tree_status: WorkingTreeStatus,
         has_conflicts: bool,
     },
     /// Potential merge conflicts with main (merge-tree simulation)
@@ -242,7 +244,7 @@ fn drain_results(
         .map(|_| StatusContext {
             has_merge_tree_conflicts: false,
             user_marker: None,
-            working_tree_symbols: None,
+            working_tree_status: None,
             has_conflicts: false,
         })
         .collect();
@@ -345,7 +347,7 @@ fn drain_results(
                 item_idx,
                 working_tree_diff,
                 working_tree_diff_with_main,
-                working_tree_symbols,
+                working_tree_status,
                 has_conflicts,
             } => {
                 if let ItemKind::Worktree(data) = &mut items[item_idx].kind {
@@ -353,7 +355,7 @@ fn drain_results(
                     data.working_tree_diff_with_main = Some(working_tree_diff_with_main);
                 }
                 // Store for status_symbols computation
-                status_contexts[item_idx].working_tree_symbols = Some(working_tree_symbols);
+                status_contexts[item_idx].working_tree_status = Some(working_tree_status);
                 status_contexts[item_idx].has_conflicts = has_conflicts;
             }
             TaskResult::MergeTreeConflicts {
@@ -793,7 +795,7 @@ pub fn collect(
                 item_default_branch,
                 ctx.has_merge_tree_conflicts,
                 ctx.user_marker.clone(),
-                ctx.working_tree_symbols.as_deref(),
+                ctx.working_tree_status,
                 ctx.has_conflicts,
             );
 
@@ -1075,7 +1077,7 @@ pub fn populate_items(
             item_default_branch,
             ctx.has_merge_tree_conflicts,
             ctx.user_marker.clone(),
-            ctx.working_tree_symbols.as_deref(),
+            ctx.working_tree_status,
             ctx.has_conflicts,
         );
     });

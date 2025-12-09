@@ -1410,29 +1410,41 @@ Query structured data with `--format=json`:
 
 ```console
 # Worktrees with conflicts
-wt list --format=json | jq '.[] | select(.status.branch_state == "Conflicts")'
+wt list --format=json | jq '.[] | select(.branch_state == "conflicts")'
 
 # Uncommitted changes
-wt list --format=json | jq '.[] | select(.status.working_tree.modified)'
+wt list --format=json | jq '.[] | select(.working_tree.modified)'
 
 # Current worktree
-wt list --format=json | jq '.[] | select(.is_current == true)'
+wt list --format=json | jq '.[] | select(.is_current)'
 
 # Branches ahead of main
-wt list --format=json | jq '.[] | select(.status.main_divergence == "Ahead")'
+wt list --format=json | jq '.[] | select(.main.ahead > 0)'
+
+# Integrated branches (ready to clean up)
+wt list --format=json | jq '.[] | select(.branch_state == "integrated" or .branch_state == "same_commit")'
 ```
 
-**Status fields:**
-- `working_tree`: `{untracked, modified, staged, renamed, deleted}`
-- `branch_state`: `""` | `"Conflicts"` | `"MergeTreeConflicts"` | `"TreesMatch"` | `"NoAddedChanges"` | `"MergeAddsNothing"`
-- `git_operation`: `""` | `"Rebase"` | `"Merge"`
-- `main_divergence`: `""` | `"Ahead"` | `"Behind"` | `"Diverged"`
-- `upstream_divergence`: `""` | `"Ahead"` | `"Behind"` | `"Diverged"`
+**Fields:**
 
-**Position fields:**
-- `is_main` — Main worktree
-- `is_current` — Current directory
-- `is_previous` — Previous worktree from [wt switch](@/switch.md)
+| Field | Description |
+|-------|-------------|
+| `branch` | Branch name (null for detached HEAD) |
+| `path` | Worktree path (absent for branches without worktrees) |
+| `kind` | `"worktree"` or `"branch"` |
+| `commit` | `{sha, short_sha, message, timestamp}` |
+| `working_tree` | `{staged, modified, untracked, renamed, deleted, diff, diff_vs_main}` |
+| `branch_state` | `"conflicts"` `"rebase"` `"merge"` `"would_conflict"` `"same_commit"` `"integrated"` |
+| `integration_reason` | `"trees_match"` `"no_added_changes"` `"merge_adds_nothing"` (when `branch_state == "integrated"`) |
+| `main` | `{ahead, behind, diff}` (absent when `is_main`) |
+| `remote` | `{name, branch, ahead, behind}` (absent when no tracking branch) |
+| `worktree` | `{state, reason, detached, bare}` |
+| `is_main` | Main worktree |
+| `is_current` | Current worktree |
+| `is_previous` | Previous worktree from [wt switch](@/switch.md) |
+| `pr` | `{ci, source, stale, url}` — CI status from PR or branch (absent when no CI) |
+| `statusline` | Pre-formatted status with ANSI colors |
+| `symbols` | Raw status symbols without colors (e.g., `"!?↓"`) |
 
 ## See also
 
