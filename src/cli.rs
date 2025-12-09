@@ -1419,10 +1419,10 @@ Symbols appear in the Status column in this order:
 | Working tree | `+` | Staged files |
 | | `!` | Modified files (unstaged) |
 | | `?` | Untracked files |
-| | `✖` | Merge conflicts |
+| Branch state | `✖` | Merge conflicts |
 | | `↻` | Rebase in progress |
 | | `⋈` | Merge in progress |
-| Branch state | `⚔` | Would conflict if merged to main |
+| | `⚔` | Would conflict if merged to main |
 | | `≡` | Matches main (identical contents) |
 | | `_` | No commits ahead, clean working tree |
 | Main divergence | `^` | Is the main branch |
