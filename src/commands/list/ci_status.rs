@@ -2,12 +2,31 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::process::Command;
 use worktrunk::git::Repository;
 
-/// Extract owner from a git remote URL (works for GitHub, GitLab, Bitbucket, etc.)
+/// Extract owner from a git remote URL.
 ///
-/// Supports formats:
-/// - `https://<host>/<owner>/<repo>.git`
-/// - `git@<host>:<owner>/<repo>.git`
-/// - `ssh://git@<host>/<owner>/<repo>.git`
+/// Used for client-side filtering of PRs/MRs by source repository. When multiple users
+/// have PRs with the same branch name (e.g., everyone has a `feature` branch), we need
+/// to identify which PR comes from *our* fork/remote, not just which PR we authored.
+///
+/// # Why not use `--author`?
+///
+/// The `gh pr list --author` flag filters by who *created* the PR, not whose fork
+/// the PR comes *from*. These are usually the same, but not always:
+/// - Maintainers may create PRs from contributor forks
+/// - Bots may create PRs on behalf of users
+/// - Organization repos: `--author company` doesn't match individual user PRs
+///
+/// # Why client-side filtering?
+///
+/// Neither `gh` nor `glab` CLI support server-side filtering by source repository.
+/// The `gh pr list --head` flag only accepts branch name, not `owner:branch` format.
+/// So we fetch PRs matching the branch name, then filter by `headRepositoryOwner`.
+///
+/// # Supported URL formats
+///
+/// - `https://<host>/<owner>/<repo>.git` → `owner`
+/// - `git@<host>:<owner>/<repo>.git` → `owner`
+/// - `ssh://git@<host>/<owner>/<repo>.git` → `owner`
 fn parse_remote_owner(url: &str) -> Option<&str> {
     let url = url.trim();
 
@@ -33,22 +52,26 @@ fn parse_remote_owner(url: &str) -> Option<&str> {
 mod tests {
     use super::*;
 
+    /// Test URL parsing for various git remote formats.
+    ///
+    /// This is critical for PR/MR filtering - if we parse the wrong owner,
+    /// we'll show CI status for the wrong PRs.
     #[test]
     fn test_parse_remote_owner() {
         // GitHub HTTPS
         assert_eq!(
-            parse_remote_owner("https://github.com/owner/repo.git"),
-            Some("owner")
+            parse_remote_owner("https://github.com/max-sixty/worktrunk.git"),
+            Some("max-sixty")
         );
         assert_eq!(
             parse_remote_owner("  https://github.com/owner/repo\n"),
             Some("owner")
         );
 
-        // GitHub SSH (git@ form)
+        // GitHub SSH (git@ form) - most common for developers
         assert_eq!(
-            parse_remote_owner("git@github.com:owner/repo.git"),
-            Some("owner")
+            parse_remote_owner("git@github.com:max-sixty/worktrunk.git"),
+            Some("max-sixty")
         );
 
         // GitHub SSH (ssh:// form)
@@ -85,6 +108,12 @@ mod tests {
         assert_eq!(
             parse_remote_owner("git@bitbucket.org:owner/repo.git"),
             Some("owner")
+        );
+
+        // Organization repos - owner is the org, not the user
+        assert_eq!(
+            parse_remote_owner("https://github.com/company-org/project.git"),
+            Some("company-org")
         );
 
         // Malformed URLs
@@ -193,7 +222,24 @@ mod tests {
     }
 }
 
-/// Get the owner of the origin remote (for fork detection)
+/// Maximum number of PRs/MRs to fetch when filtering by source repository.
+///
+/// We fetch multiple results because the same branch name may exist in
+/// multiple forks. 20 should be sufficient for most cases.
+///
+/// # Limitation
+///
+/// If more than 20 PRs/MRs exist for the same branch name, we only search the
+/// first page. This means in extremely busy repos with many forks, our PR/MR
+/// could be on page 2+ and not be found. This is a trade-off: pagination would
+/// require multiple API calls and slow down status detection. In practice, 20
+/// is sufficient for most workflows.
+const MAX_PRS_TO_FETCH: u8 = 20;
+
+/// Get the owner of the origin remote (for GitHub fork detection).
+///
+/// Used for client-side filtering of PRs by source repository.
+/// See [`parse_remote_owner`] for details on why this is necessary.
 fn get_origin_owner(repo_root: &str) -> Option<String> {
     let output = Command::new("git")
         .args(["remote", "get-url", "origin"])
@@ -206,6 +252,45 @@ fn get_origin_owner(repo_root: &str) -> Option<String> {
     } else {
         None
     }
+}
+
+/// Get the GitLab project ID for the current repository.
+///
+/// Used for client-side filtering of MRs by source project.
+/// This is the GitLab equivalent of [`get_origin_owner`] for GitHub.
+///
+/// Returns None if glab is not available or not configured for this repo.
+///
+/// # Performance Note
+///
+/// This function is called during GitLab detection regardless of whether
+/// the repo is actually GitLab-hosted. If glab is installed but the repo
+/// is GitHub, this adds an unnecessary CLI call. A future optimization
+/// could check the remote URL first and skip for non-GitLab remotes.
+fn get_gitlab_project_id(repo_root: &str) -> Option<u64> {
+    // Use glab repo view to get the project info as JSON
+    let mut cmd = Command::new("glab");
+    cmd.args(["repo", "view", "--output", "json"]);
+    cmd.current_dir(repo_root);
+    // Disable color/pager to avoid ANSI noise in JSON output
+    disable_color_output(&mut cmd);
+    cmd.env("PAGER", "cat");
+
+    let output = cmd.output().ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    // Parse the JSON to extract the project ID
+    #[derive(Deserialize)]
+    struct RepoInfo {
+        id: u64,
+    }
+
+    serde_json::from_slice::<RepoInfo>(&output.stdout)
+        .ok()
+        .map(|info| info.id)
 }
 
 /// Configure command to disable color output
@@ -634,6 +719,23 @@ impl PrStatus {
         Self::detect_gitlab_pipeline(branch, local_head)
     }
 
+    /// Detect GitHub PR CI status for a branch.
+    ///
+    /// # Filtering Strategy
+    ///
+    /// We need to find PRs where the head branch comes from *our* fork, not just
+    /// PRs we authored. The `--author` flag filters by PR creator, but we want
+    /// to filter by source repository.
+    ///
+    /// Since `gh pr list --head` doesn't support `owner:branch` format, we:
+    /// 1. Fetch all open PRs with matching branch name (up to 20)
+    /// 2. Include `headRepositoryOwner` in the JSON output
+    /// 3. Filter client-side by comparing `headRepositoryOwner.login` to our origin owner
+    ///
+    /// This correctly handles:
+    /// - Fork workflows (PRs from your fork to upstream)
+    /// - Organization repos (PRs from org branches)
+    /// - Multiple users with same branch name
     fn detect_github(branch: &str, local_head: &str, repo_root: &str) -> Option<Self> {
         // Check if gh is available and authenticated
         let auth = Command::new("gh").args(["auth", "status"]).output();
@@ -649,26 +751,31 @@ impl PrStatus {
             _ => {}
         }
 
+        // Get origin owner for filtering (see parse_remote_owner docs for why)
+        let origin_owner = get_origin_owner(repo_root);
+        if origin_owner.is_none() {
+            log::debug!("Could not determine origin owner for {}", repo_root);
+        }
+
         // Use `gh pr list --head` instead of `gh pr view` to handle numeric branch names correctly.
         // When branch name is all digits (e.g., "4315"), `gh pr view` interprets it as a PR number,
         // but `gh pr list --head` correctly treats it as a branch name.
         //
-        // Use --author to filter to PRs from the origin remote owner, avoiding false matches
-        // with other forks that have branches with the same name (e.g., everyone's fork has "master")
+        // We fetch up to MAX_PRS_TO_FETCH PRs to handle branch name collisions, then filter
+        // client-side by headRepositoryOwner to find PRs from our fork.
         let mut cmd = Command::new("gh");
         cmd.args([
             "pr",
             "list",
             "--head",
             branch,
+            "--state",
+            "open",
             "--limit",
-            "1",
+            &MAX_PRS_TO_FETCH.to_string(),
             "--json",
-            "state,headRefOid,mergeStateStatus,statusCheckRollup,url",
+            "headRefOid,mergeStateStatus,statusCheckRollup,url,headRepositoryOwner",
         ]);
-        if let Some(origin_owner) = get_origin_owner(repo_root) {
-            cmd.args(["--author", &origin_owner]);
-        }
 
         disable_color_output(&mut cmd);
         cmd.current_dir(repo_root);
@@ -690,14 +797,38 @@ impl PrStatus {
             return None;
         }
 
-        // gh pr list returns an array, take the first (and only) item
+        // gh pr list returns an array - find the first PR from our origin
         let pr_list: Vec<GitHubPrInfo> = parse_json(&output.stdout, "gh pr list", branch)?;
-        let pr_info = pr_list.first()?;
 
-        // Only process open PRs
-        if pr_info.state != "OPEN" {
-            return None;
-        }
+        // Filter to PRs from our origin (case-insensitive comparison for GitHub usernames).
+        // If headRepositoryOwner is missing (older GH CLI, Enterprise, or permissions),
+        // treat it as a potential match to avoid false negatives.
+        let pr_info = if let Some(ref owner) = origin_owner {
+            let matched = pr_list.iter().find(|pr| {
+                pr.head_repository_owner
+                    .as_ref()
+                    .map(|h| h.login.eq_ignore_ascii_case(owner))
+                    .unwrap_or(true) // Missing owner field = potential match
+            });
+            if matched.is_none() && !pr_list.is_empty() {
+                log::debug!(
+                    "Found {} PRs for branch {} but none from origin owner {}",
+                    pr_list.len(),
+                    branch,
+                    owner
+                );
+            }
+            matched
+        } else {
+            // If we can't determine origin owner, fall back to first open PR
+            // This is less accurate but better than nothing
+            log::debug!(
+                "No origin owner for {}, using first open PR for branch {}",
+                repo_root,
+                branch
+            );
+            pr_list.first()
+        }?;
 
         // Determine CI status using priority: conflicts > running > failed > passed > no_ci
         let ci_status = if pr_info.merge_state_status.as_deref() == Some("DIRTY") {
@@ -720,14 +851,30 @@ impl PrStatus {
         })
     }
 
+    /// Detect GitLab MR CI status for a branch.
+    ///
+    /// # Filtering Strategy
+    ///
+    /// Similar to GitHub (see `detect_github`), we need to find MRs where the
+    /// source branch comes from *our* project, not just MRs we authored.
+    ///
+    /// Since `glab mr list` doesn't support filtering by source project, we:
+    /// 1. Get the current project ID via `glab repo view`
+    /// 2. Fetch all open MRs with matching branch name (up to 20)
+    /// 3. Filter client-side by comparing `source_project_id` to our project ID
     fn detect_gitlab(branch: &str, local_head: &str, repo_root: &str) -> Option<Self> {
         if !tool_available("glab", &["--version"]) {
             return None;
         }
 
-        // Use glab mr list with --source-branch and --author to filter to MRs from the origin
-        // remote owner, avoiding false matches with other forks that have branches with the
-        // same name (similar to the GitHub --author fix)
+        // Get current project ID for filtering
+        let project_id = get_gitlab_project_id(repo_root);
+        if project_id.is_none() {
+            log::debug!("Could not determine GitLab project ID for {}", repo_root);
+        }
+
+        // Fetch MRs with matching source branch.
+        // We filter client-side by source_project_id (numeric project ID comparison).
         let mut cmd = Command::new("glab");
         cmd.args([
             "mr",
@@ -735,13 +882,10 @@ impl PrStatus {
             "--source-branch",
             branch,
             "--state=opened",
-            "--per-page=1",
+            &format!("--per-page={}", MAX_PRS_TO_FETCH),
             "--output",
             "json",
         ]);
-        if let Some(origin_owner) = get_origin_owner(repo_root) {
-            cmd.args(["--author", &origin_owner]);
-        }
         cmd.current_dir(repo_root);
 
         let output = match cmd.output() {
@@ -759,12 +903,40 @@ impl PrStatus {
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             log::debug!("glab mr list failed for {}: {}", branch, stderr.trim());
+            // Return error status for retriable failures (rate limit, network) so they
+            // surface as warnings instead of being cached as "no CI"
+            if is_retriable_error(&stderr) {
+                return Some(Self::error());
+            }
             return None;
         }
 
-        // glab mr list returns an array, take the first item
+        // glab mr list returns an array - find the first MR from our project
         let mr_list: Vec<GitLabMrInfo> = parse_json(&output.stdout, "glab mr list", branch)?;
-        let mr_info = mr_list.first()?;
+
+        // Filter to MRs from our project (numeric project ID comparison)
+        let mr_info = if let Some(proj_id) = project_id {
+            let matched = mr_list
+                .iter()
+                .find(|mr| mr.source_project_id == Some(proj_id));
+            if matched.is_none() && !mr_list.is_empty() {
+                log::debug!(
+                    "Found {} MRs for branch {} but none from project ID {}",
+                    mr_list.len(),
+                    branch,
+                    proj_id
+                );
+            }
+            matched
+        } else {
+            // If we can't determine project ID, fall back to first MR
+            log::debug!(
+                "No project ID for {}, using first MR for branch {}",
+                repo_root,
+                branch
+            );
+            mr_list.first()
+        }?;
 
         // Determine CI status using priority: conflicts > running > failed > passed > no_ci
         let ci_status = if mr_info.has_conflicts
@@ -901,9 +1073,14 @@ impl PrStatus {
     }
 }
 
+/// GitHub PR info from `gh pr list --json ...`
+///
+/// Note: We include `headRepositoryOwner` for client-side filtering by source fork.
+/// See [`parse_remote_owner`] for why this is necessary.
+///
+/// Note: We don't include `state` because we already filter with `--state open`.
 #[derive(Debug, Deserialize)]
 struct GitHubPrInfo {
-    state: String,
     #[serde(rename = "headRefOid")]
     head_ref_oid: Option<String>,
     #[serde(rename = "mergeStateStatus")]
@@ -911,6 +1088,17 @@ struct GitHubPrInfo {
     #[serde(rename = "statusCheckRollup")]
     status_check_rollup: Option<Vec<GitHubCheck>>,
     url: Option<String>,
+    /// The owner of the repository the PR's head branch comes from.
+    /// Used to filter PRs by source fork (see [`parse_remote_owner`]).
+    #[serde(rename = "headRepositoryOwner")]
+    head_repository_owner: Option<HeadRepositoryOwner>,
+}
+
+/// Owner info for the head repository of a PR.
+#[derive(Debug, Deserialize)]
+struct HeadRepositoryOwner {
+    /// The login (username/org name) of the repository owner.
+    login: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -976,6 +1164,10 @@ impl GitHubWorkflowRun {
     }
 }
 
+/// GitLab MR info from `glab mr list --output json`
+///
+/// Note: We include `source_project_id` for client-side filtering by source project.
+/// See [`parse_remote_owner`] for why we filter by source, not by author.
 #[derive(Debug, Deserialize)]
 struct GitLabMrInfo {
     sha: String,
@@ -983,6 +1175,9 @@ struct GitLabMrInfo {
     detailed_merge_status: Option<String>,
     head_pipeline: Option<GitLabPipeline>,
     pipeline: Option<GitLabPipeline>,
+    /// The source project ID (the project the MR's branch comes from).
+    /// Used to filter MRs by source project.
+    source_project_id: Option<u64>,
 }
 
 impl GitLabMrInfo {
