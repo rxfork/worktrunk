@@ -29,7 +29,7 @@ fn test_switch_internal_directive() {
         ----- stdout -----
 
         ----- stderr -----
-        ❌ [31mBranch [1mmy-feature[22m not found[39m
+        [0m❌ [31mBranch [1mmy-feature[22m not found[39m
 
         💡 [2mUse [90m--create[39m to create a new branch, or [90mwt list --branches --remotes[39m for available branches[22m
         ");
@@ -90,7 +90,7 @@ fn test_remove_internal_directive() {
         ----- stdout -----
 
         ----- stderr -----
-        ❌ [31mThe main worktree cannot be removed[39m
+        [0m❌ [31mThe main worktree cannot be removed[39m
         ");
     });
 }

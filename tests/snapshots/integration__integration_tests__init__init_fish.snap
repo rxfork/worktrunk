@@ -61,11 +61,6 @@ if type -q wt; or test -n "$WORKTRUNK_BIN"
             if test "$arg" = "--source"; set use_source true; else; set -a args $arg; end
         end
 
-        # Force colors if stderr is a TTY (respects NO_COLOR/CLICOLOR_FORCE)
-        if not set -q NO_COLOR; and not set -q CLICOLOR_FORCE; and isatty stderr
-            set -x CLICOLOR_FORCE 1
-        end
-
         # --source: use cargo run (builds from source)
         if test $use_source = true
             cargo run --quiet -- --internal $args | string collect --allow-empty | read --local -z script

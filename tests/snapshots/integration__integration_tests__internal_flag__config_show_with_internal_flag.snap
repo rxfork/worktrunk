@@ -35,3 +35,4 @@ exit_code: 0
 [2m⚪ Skipped bash; ~/.bashrc not found[22m
 [2m⚪ Skipped zsh; ~/.zshrc not found[22m
 [2m⚪ Skipped fish; ~/.config/fish/conf.d not found[22m
+[0m

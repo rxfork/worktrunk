@@ -105,6 +105,11 @@ impl OutputHandler for DirectiveOutput {
     }
 
     fn terminate_output(&mut self) -> io::Result<()> {
+        // Reset ANSI state before returning to shell.
+        // wt's colored messages set terminal state on stderr.
+        write!(self.stderr, "{}", anstyle::Reset)?;
+        self.stderr.flush()?;
+
         // Emit shell script to stdout with buffered directives
         // The shell wrapper captures this via $(...) and evals it
         let mut stdout = io::stdout();
@@ -122,7 +127,6 @@ impl OutputHandler for DirectiveOutput {
 
         // exec command (if one was set via --execute)
         if let Some(ref cmd) = self.exec_command {
-            // Command is written directly - it's already shell code
             writeln!(stdout, "{}", cmd)?;
         }
 

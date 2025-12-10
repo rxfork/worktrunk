@@ -35,3 +35,4 @@ echo 'line2'
 🔄 [36mExecuting (--execute):[39m
 [107m [0m  [2m[0m[2m[34mecho[0m[2m [0m[2m[32m'line1'[0m[2m[0m
 [107m [0m  [2m[0m[2m[34mecho[0m[2m [0m[2m[32m'line2'[0m[2m[0m
+[0m

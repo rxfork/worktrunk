@@ -56,11 +56,6 @@ wt_exec() {
             if [[ "$arg" == "--source" ]]; then use_source=true; else args+=("$arg"); fi
         done
 
-        # Force colors if stderr is a TTY (respects NO_COLOR/CLICOLOR_FORCE)
-        if [[ -z "${NO_COLOR:-}" && -z "${CLICOLOR_FORCE:-}" && -t 2 ]]; then
-            export CLICOLOR_FORCE=1
-        fi
-
         # Completion mode: call binary directly, bypassing --internal and wt_exec.
         # This check MUST be here (not in the binary) because clap's completion
         # handler runs before argument parsing - we can't detect --internal there.
