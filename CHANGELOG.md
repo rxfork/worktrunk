@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.17
+
+### Added
+
+- **User-level hooks**: Define hooks in `~/.config/wt.toml` that run for all repositories. New `wt hook show` command displays configured hooks and their sources. ([#118](https://github.com/max-sixty/worktrunk/pull/118))
+- **SSH URL support**: Git SSH URLs (e.g., `git@github.com:user/repo.git`) now work correctly for remote operations and branch name escaping. ([92c2cef](https://github.com/max-sixty/worktrunk/commit/92c2cef8))
+- **Help text wrapping**: CLI help text now wraps to terminal width for better readability. ([fe981c2](https://github.com/max-sixty/worktrunk/commit/fe981c2e))
+
+### Changed
+
+- **JSON output redesign**: `wt list --format=json` now outputs a query-friendly format. This is a breaking change for existing JSON consumers. ([236eae8](https://github.com/max-sixty/worktrunk/commit/236eae81))
+- **Status symbols**: Reorganized status column symbols for better scannability. Same-commit now distinguished from ancestor in integration detection. ([5053af8](https://github.com/max-sixty/worktrunk/commit/5053af88), [a087962](https://github.com/max-sixty/worktrunk/commit/a0879623))
+
+### Fixed
+
+- **ANSI state reset**: Reset terminal ANSI state before returning to shell, preventing color bleeding into subsequent commands. ([334f6d9](https://github.com/max-sixty/worktrunk/commit/334f6d99))
+- **Empty staging error**: Fail early with a clear error when trying to generate a commit message with nothing staged. ([b9522bc](https://github.com/max-sixty/worktrunk/commit/b9522bc6))
+
 ## 0.1.16
 
 ### Added
