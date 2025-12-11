@@ -55,9 +55,11 @@ fn format_switch_success_message(
 /// Determine the effective target for integration checks.
 ///
 /// If the upstream of the local target (e.g., `origin/main`) is strictly ahead of
-/// the local target (i.e., local is an ancestor of upstream), uses the upstream.
-/// This handles the common case where a branch was merged remotely but the user
-/// hasn't pulled yet.
+/// the local target (i.e., local is an ancestor of upstream but not the same commit),
+/// uses the upstream. This handles the common case where a branch was merged remotely
+/// but the user hasn't pulled yet.
+///
+/// When local and upstream are the same commit, prefers local for clearer messaging.
 ///
 /// Returns the effective target ref to check against.
 ///
@@ -70,6 +72,11 @@ fn effective_integration_target(repo: &Repository, local_target: &str) -> String
         Ok(Some(upstream)) => upstream,
         _ => return local_target.to_string(),
     };
+
+    // If local and upstream are the same commit, prefer local for clearer messaging
+    if repo.same_commit(local_target, &upstream).unwrap_or(false) {
+        return local_target.to_string();
+    }
 
     // Check if local is strictly behind upstream (local is ancestor of upstream)
     // This means upstream has commits that local doesn't have
