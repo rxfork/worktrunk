@@ -8,7 +8,7 @@ Worktrunk is a CLI for git worktree management, designed for parallel AI agent w
 Here's a quick demo:
 
 <figure class="demo">
-<img src="/assets/wt-demo.gif" alt="Worktrunk demo showing wt list, wt switch, and wt merge">
+<img src="/assets/wt-demo.gif" alt="Worktrunk demo showing wt list, wt switch, and wt merge" width="1600" height="900">
 <figcaption>Listing worktrees, creating a worktree, working, merging back</figcaption>
 </figure>
 

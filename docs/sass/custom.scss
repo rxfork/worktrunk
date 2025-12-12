@@ -275,7 +275,7 @@ nav {
     background: var(--wt-color-bg-elevated);
     border: 1px solid var(--wt-color-border-subtle);
     border-radius: 0.5rem;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 30px var(--wt-shadow-medium);
     z-index: 1000;
 }
 
@@ -337,7 +337,7 @@ main {
     background-color: var(--wt-color-bg-elevated);
     border-radius: 12px;
     border: 1px solid var(--wt-color-border-subtle);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 1px 3px var(--wt-shadow-soft);
     // Account for sticky header when scrolling to page anchor (e.g., /#worktrunk)
     scroll-margin-top: calc(var(--wt-header-height) + var(--wt-main-padding-top));
 }
@@ -356,11 +356,12 @@ main {
 .content img {
     display: block;
     max-width: 100%;
+    height: auto; // Maintain aspect ratio when width/height attrs set for CLS prevention
     box-sizing: border-box;
     border: 1px solid var(--wt-color-code-border);
     border-left: 3px solid var(--wt-color-accent);
     border-radius: 0 0.5rem 0.5rem 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 8px var(--wt-shadow-soft), 0 1px 2px var(--wt-shadow-medium);
 }
 
 // Demo GIFs - shrink to min-width, then horizontal scroll
@@ -411,7 +412,13 @@ main {
 // Code Blocks - Distinctive card style with left accent
 // ============================================================================
 
-.content pre {
+// Override syntect's background to use our theme colors
+.z-code {
+    background-color: transparent;
+}
+
+// Shared styles for code blocks and terminal output
+%code-block-base {
     position: relative;
     background-color: var(--wt-color-code-bg);
     border: 1px solid var(--wt-color-code-border);
@@ -420,11 +427,13 @@ main {
     padding: 0.875rem 1rem;
     overflow-x: auto;
     margin: 1.25rem 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
-    transition: box-shadow 150ms, border-color 150ms;
+    box-shadow: 0 2px 8px var(--wt-shadow-soft), 0 1px 2px var(--wt-shadow-medium);
+    transition: box-shadow 50ms;
 
     &:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 0 0 1px var(--wt-color-accent-soft),
+                    0 4px 16px var(--wt-shadow-accent),
+                    0 2px 8px var(--wt-shadow-medium);
     }
 
     code {
@@ -435,6 +444,10 @@ main {
         line-height: 1.6;
         color: var(--wt-color-text);
     }
+}
+
+.content pre {
+    @extend %code-block-base;
 }
 
 // Copy button for code blocks
@@ -468,29 +481,10 @@ main {
 
 // Terminal output styling (ANSI colors)
 .terminal {
-    position: relative;
-    background-color: var(--wt-color-code-bg);
-    border: 1px solid var(--wt-color-code-border);
-    border-left: 3px solid var(--wt-color-accent);
-    border-radius: 0 0.5rem 0.5rem 0;
-    padding: 0.875rem 1rem;
-    overflow-x: auto;
-    margin: 1.25rem 0;
+    @extend %code-block-base;
     font-family: var(--wt-font-mono);
     font-size: 0.875rem;
     line-height: 1.5;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
-    transition: box-shadow 150ms;
-
-    &:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.08);
-    }
-
-    code {
-        background-color: transparent;
-        color: var(--wt-color-text);
-        padding: 0;
-    }
 
     .prompt {
         color: var(--wt-color-text-soft);
@@ -543,21 +537,37 @@ main {
 // Tables - Scrollable like code blocks
 // ============================================================================
 
-table {
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    border-collapse: collapse;
-    width: 100%;
+// Use border-collapse: separate + overflow: clip for border-radius to work.
+// With separate borders, we remove cell borders on table edges to avoid doubling.
+// Tables naturally expand to content width; .content handles horizontal scroll.
+.content > table {
+    display: table;
+    width: max-content;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
     margin: 1rem 0;
     border-radius: 0.5rem;
     border: 1px solid var(--wt-color-border-subtle);
+    overflow: clip;
 
     th, td {
         border: 1px solid var(--wt-color-border-subtle);
+        border-top: none;
+        border-left: none;
         padding: 0.6rem 0.875rem;
         text-align: left;
         vertical-align: top;
+    }
+
+    // Remove right border on last column (table border handles it)
+    th:last-child, td:last-child {
+        border-right: none;
+    }
+
+    // Remove bottom border on last row (table border handles it)
+    tr:last-child td {
+        border-bottom: none;
     }
 
     th {
@@ -581,14 +591,6 @@ table {
     td:first-child {
         font-weight: 550;
         color: var(--wt-color-text);
-    }
-
-    tbody tr {
-        border-bottom: 1px solid var(--wt-color-border-subtle);
-
-        &:last-child {
-            border-bottom: none;
-        }
     }
 }
 
@@ -1185,7 +1187,7 @@ input:focus-visible {
 
 // Search - subtle glow on focus
 #userinput:focus {
-    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.12);
+    box-shadow: 0 0 0 3px var(--wt-shadow-accent);
 }
 
 // Content links - animated underline
@@ -1214,14 +1216,14 @@ input:focus-visible {
 
 // Button - enhanced hover
 .button {
-    box-shadow: 0 2px 4px rgba(217, 119, 6, 0.15);
+    box-shadow: 0 2px 4px var(--wt-shadow-accent);
 
     &:hover {
-        box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+        box-shadow: 0 4px 12px var(--wt-shadow-accent-strong);
     }
 
     &:active {
-        box-shadow: 0 1px 2px rgba(217, 119, 6, 0.2);
+        box-shadow: 0 1px 2px var(--wt-shadow-accent);
     }
 }
 
@@ -1282,21 +1284,9 @@ header nav .nav-item {
     background: var(--wt-color-bg-soft);
 }
 
-// Code block hover glow
-.content pre {
-    transition: box-shadow 50ms;
-
-    &:hover {
-        box-shadow: 0 0 0 1px var(--wt-color-accent-soft),
-                    0 4px 16px rgba(217, 119, 6, 0.15),
-                    0 2px 8px rgba(0, 0, 0, 0.06);
-    }
-}
-
-
 // Logo hover effect
 header .logo:hover img {
-    filter: drop-shadow(0 0 8px rgba(217, 119, 6, 0.3));
+    filter: drop-shadow(0 0 8px var(--wt-shadow-accent-strong));
     transition: filter 200ms ease;
 }
 
@@ -1324,5 +1314,82 @@ button.explore-more {
         .search-excerpt b {
             color: var(--wt-color-accent);
         }
+    }
+}
+
+// ============================================================================
+// Print Styles
+// ============================================================================
+
+@media print {
+    // Hide navigation elements
+    header,
+    footer,
+    .toc,
+    .hero,
+    .mobile-menu,
+    .mobile-menu-overlay,
+    .mobile-menu-toggle,
+    .code-copy-btn,
+    .page-nav {
+        display: none !important;
+    }
+
+    // Reset layout
+    body {
+        background: white;
+        color: black;
+        font-size: 12pt;
+    }
+
+    main {
+        display: block;
+        padding: 0;
+    }
+
+    .content {
+        max-width: 100%;
+        padding: 0;
+        border: none;
+        box-shadow: none;
+        background: transparent;
+    }
+
+    // Improve link visibility
+    .content a {
+        color: black;
+        text-decoration: underline;
+
+        &[href^="http"]::after {
+            content: " (" attr(href) ")";
+            font-size: 0.8em;
+            color: #666;
+        }
+    }
+
+    // Code blocks - keep together, remove decorative elements
+    // Use !important to override dark mode variables that might bleed through
+    .content pre,
+    .terminal {
+        border: 1px solid #ccc !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+        background: #f5f5f5 !important;
+    }
+
+    // Tables
+    .content > table {
+        page-break-inside: avoid;
+    }
+
+    // Headings - keep with following content
+    h1, h2, h3, h4, h5, h6 {
+        page-break-after: avoid;
+    }
+
+    // Images
+    img {
+        max-width: 100%;
+        page-break-inside: avoid;
     }
 }

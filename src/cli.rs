@@ -1619,7 +1619,7 @@ env = "cp {{ repo_root }}/.env.local .env"
     #[command(
         after_long_help = r#"Interactive worktree picker with live preview. Navigate worktrees with keyboard shortcuts and press Enter to switch.
 
-<!-- demo: wt-select.gif -->
+<!-- demo: wt-select.gif 1600x800 -->
 
 ## Examples
 

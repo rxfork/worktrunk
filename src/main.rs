@@ -458,6 +458,8 @@ fn format_subcommand_section(
 /// Transforms `<!-- demo: filename.gif -->` into an HTML figure with the `demo` class.
 /// The HTML comment is invisible in terminal --help output, but expands to a styled figure
 /// for web docs generated via --help-page.
+///
+/// Supports optional dimensions: `<!-- demo: filename.gif 1600x900 -->`
 fn expand_demo_placeholders(text: &str) -> String {
     const PREFIX: &str = "<!-- demo: ";
     const SUFFIX: &str = " -->";
@@ -466,12 +468,24 @@ fn expand_demo_placeholders(text: &str) -> String {
     while let Some(start) = result.find(PREFIX) {
         let after_prefix = start + PREFIX.len();
         if let Some(end_offset) = result[after_prefix..].find(SUFFIX) {
-            let filename = &result[after_prefix..after_prefix + end_offset];
+            let content = &result[after_prefix..after_prefix + end_offset];
+            // Parse "filename.gif" or "filename.gif 1600x900"
+            let mut parts = content.split_whitespace();
+            let filename = parts.next().unwrap_or("");
+            let dimensions = parts.next(); // Optional "WIDTHxHEIGHT"
+
             // Extract command name from filename (e.g., "wt-select.gif" -> "wt select")
             let alt_text = filename.trim_end_matches(".gif").replace('-', " ");
+
+            // Build dimension attributes if provided
+            let dim_attrs = dimensions
+                .and_then(|d| d.split_once('x'))
+                .map(|(w, h)| format!(" width=\"{w}\" height=\"{h}\""))
+                .unwrap_or_default();
+
             // Use figure.demo class for proper mobile styling (no shrink, horizontal scroll)
             let replacement = format!(
-                "<figure class=\"demo\">\n<img src=\"/assets/{filename}\" alt=\"{alt_text} demo\">\n</figure>"
+                "<figure class=\"demo\">\n<img src=\"/assets/{filename}\" alt=\"{alt_text} demo\"{dim_attrs}>\n</figure>"
             );
             let end = after_prefix + end_offset + SUFFIX.len();
             result.replace_range(start..end, &replacement);

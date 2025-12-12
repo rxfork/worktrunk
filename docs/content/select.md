@@ -11,7 +11,7 @@ group = "Commands"
 Interactive worktree picker with live preview. Navigate worktrees with keyboard shortcuts and press Enter to switch.
 
 <figure class="demo">
-<img src="/assets/wt-select.gif" alt="wt select demo">
+<img src="/assets/wt-select.gif" alt="wt select demo" width="1600" height="800">
 </figure>
 
 ## Examples
