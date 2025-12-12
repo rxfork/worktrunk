@@ -109,10 +109,9 @@ Arguments resolve by checking the filesystem before git branches:
 
 Windows Terminal uses `wt` as its command-line launcher, so running `wt` invokes Terminal instead of Worktrunk.
 
-As an immediate workaround, install as `git-wt`:
+**Workaround:** Use `git-wt` instead. Both `wt` and `git-wt` binaries are installed by default:
 
 ```bash
-cargo install worktrunk --features git-wt
 git-wt config shell install
 ```
 

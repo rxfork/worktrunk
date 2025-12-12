@@ -9,7 +9,7 @@
 
 ### Added
 
-- **`git-wt` binary for Windows**: New `git-wt` binary avoids conflict with Windows Terminal's `wt` command. Build with `--features git-wt`. Shell init/install now accept `--cmd` to specify which binary name to use. ([#177](https://github.com/max-sixty/worktrunk/pull/177))
+- **`git-wt` binary for Windows**: New `git-wt` binary avoids conflict with Windows Terminal's `wt` command. Both `wt` and `git-wt` are installed by default. Shell init/install now accept `--cmd` to specify which binary name to use. ([#177](https://github.com/max-sixty/worktrunk/pull/177))
 - **Diffstat in select preview**: The log preview (Tab 2) in `wt select` now shows line change statistics (+N -M) matching `wt list`'s HEAD± column format. ([#179](https://github.com/max-sixty/worktrunk/pull/179))
 
 ### Fixed
