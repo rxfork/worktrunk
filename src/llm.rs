@@ -433,10 +433,12 @@ pub fn generate_commit_message(
         let command = commit_generation_config.command.as_ref().unwrap();
         let args = &commit_generation_config.args;
         // Commit generation is explicitly configured - fail if it doesn't work
+        let llm_command = format_command_display(command, args);
         return try_generate_commit_message(command, args, commit_generation_config).map_err(|e| {
             worktrunk::git::GitError::LlmCommandFailed {
-                command: format_command_display(command, args),
+                command: llm_command.clone(),
                 error: e.to_string(),
+                reproduction_command: Some(format!("wt step commit --show-prompt | {llm_command}")),
             }
             .into()
         });
@@ -550,10 +552,12 @@ pub fn generate_squash_message(
             commit_generation_config,
         )?;
 
+        let llm_command = format_command_display(command, args);
         return execute_llm_command(command, args, &prompt).map_err(|e| {
             worktrunk::git::GitError::LlmCommandFailed {
-                command: format_command_display(command, args),
+                command: llm_command.clone(),
                 error: e.to_string(),
+                reproduction_command: Some(format!("wt step squash --show-prompt | {llm_command}")),
             }
             .into()
         });
@@ -668,6 +672,7 @@ pub fn test_commit_generation(
         worktrunk::git::GitError::LlmCommandFailed {
             command: format_command_display(command, args),
             error: e.to_string(),
+            reproduction_command: None, // Already a test command
         }
         .into()
     })

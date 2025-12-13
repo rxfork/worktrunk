@@ -121,6 +121,8 @@ pub enum GitError {
     LlmCommandFailed {
         command: String,
         error: String,
+        /// Full command to reproduce the failure, e.g., "wt step commit --show-prompt | llm"
+        reproduction_command: Option<String>,
     },
     ProjectConfigNotFound {
         config_path: PathBuf,
@@ -447,10 +449,16 @@ impl std::fmt::Display for GitError {
                 }
             }
 
-            GitError::LlmCommandFailed { command, error } => {
+            GitError::LlmCommandFailed {
+                command,
+                error,
+                reproduction_command,
+            } => {
                 let error_header = error_message("Commit generation command failed");
                 let error_block = format_error_block(error_header, error);
-                let command_gutter = format_with_gutter(command, "", None);
+                // Show full pipeline command if available, otherwise just the LLM command
+                let display_command = reproduction_command.as_ref().unwrap_or(command);
+                let command_gutter = format_with_gutter(display_command, "", None);
                 write!(
                     f,
                     "{}\n\n{}\n{}",

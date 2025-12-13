@@ -209,9 +209,21 @@ fn display_llm_command_failed() {
     let err = GitError::LlmCommandFailed {
         command: "llm --model claude".into(),
         error: "Error: API key not found".into(),
+        reproduction_command: None,
     };
 
     assert_snapshot!("llm_command_failed", err.to_string());
+}
+
+#[test]
+fn display_llm_command_failed_with_reproduction() {
+    let err = GitError::LlmCommandFailed {
+        command: "llm --model claude".into(),
+        error: "Error: API key not found".into(),
+        reproduction_command: Some("wt step commit --show-prompt | llm --model claude".into()),
+    };
+
+    assert_snapshot!("llm_command_failed_with_reproduction", err.to_string());
 }
 
 #[test]
