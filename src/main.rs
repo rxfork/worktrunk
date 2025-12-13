@@ -7,7 +7,8 @@ use worktrunk::config::{WorktrunkConfig, set_config_path};
 use worktrunk::git::{Repository, exit_code, set_base_path};
 use worktrunk::path::format_path_for_display;
 use worktrunk::styling::{
-    format_with_gutter, hint_message, info_message, println, success_message, warning_message,
+    error_message, format_with_gutter, hint_message, info_message, println, success_message,
+    warning_message,
 };
 
 mod cli;
@@ -1318,56 +1319,121 @@ fn main() {
                     let current_worktree = repo.worktree_root().ok();
 
                     // Partition worktrees into current, others, and branch-only using path-first
-                    // resolution, which checks expected path before falling back to branch lookup
+                    // resolution, which checks expected path before falling back to branch lookup.
+                    // Collect errors for invalid names so we can report all of them.
                     let mut others = Vec::new();
                     let mut branch_only = Vec::new();
                     let mut current: Option<(PathBuf, Option<String>)> = None;
+                    let mut errors: Vec<anyhow::Error> = Vec::new();
 
                     for worktree_name in &worktrees {
-                        match resolve_worktree_path_first(&repo, worktree_name, &config)? {
-                            ResolvedWorktree::Worktree { path, branch } => {
+                        match resolve_worktree_path_first(&repo, worktree_name, &config) {
+                            Ok(ResolvedWorktree::Worktree { path, branch }) => {
                                 if Some(&path) == current_worktree.as_ref() {
                                     current = Some((path, branch));
                                 } else {
                                     others.push((path, branch));
                                 }
                             }
-                            ResolvedWorktree::BranchOnly { branch } => {
+                            Ok(ResolvedWorktree::BranchOnly { branch }) => {
                                 branch_only.push(branch);
+                            }
+                            Err(e) => {
+                                errors.push(e);
                             }
                         }
                     }
 
+                    // If any names failed to resolve, report those errors
+                    // (resolution errors are fatal - we can't proceed with unknown names)
+                    if !errors.is_empty() {
+                        for e in &errors {
+                            output::print(error_message(e.to_string()))?;
+                        }
+                        anyhow::bail!(
+                            "Failed to resolve {} of {} specified names",
+                            errors.len(),
+                            worktrees.len()
+                        );
+                    }
+
+                    // Track removal errors so we can report all of them
+                    let mut removal_errors: Vec<anyhow::Error> = Vec::new();
+
                     // Remove other worktrees first (approval was handled at the gate)
                     for (path, branch) in &others {
                         if let Some(branch_name) = branch {
-                            let result = handle_remove(
+                            match handle_remove(
                                 branch_name,
                                 !delete_branch,
                                 force_delete,
                                 background,
-                            )?;
-                            handle_remove_output(&result, Some(branch_name), background, verify)?;
+                            ) {
+                                Ok(result) => {
+                                    handle_remove_output(
+                                        &result,
+                                        Some(branch_name),
+                                        background,
+                                        verify,
+                                    )?;
+                                }
+                                Err(e) => removal_errors.push(e),
+                            }
                         } else {
                             // Non-current worktree is detached - remove by path (no branch to delete)
-                            let result =
-                                handle_remove_by_path(path, None, force_delete, background)?;
-                            handle_remove_output(&result, None, background, verify)?;
+                            match handle_remove_by_path(path, None, force_delete, background) {
+                                Ok(result) => {
+                                    handle_remove_output(&result, None, background, verify)?;
+                                }
+                                Err(e) => removal_errors.push(e),
+                            }
                         }
                     }
 
                     // Handle branch-only cases (no worktree)
                     for branch in &branch_only {
-                        let result =
-                            handle_remove(branch, !delete_branch, force_delete, background)?;
-                        handle_remove_output(&result, Some(branch), background, verify)?;
+                        match handle_remove(branch, !delete_branch, force_delete, background) {
+                            Ok(result) => {
+                                handle_remove_output(&result, Some(branch), background, verify)?;
+                            }
+                            Err(e) => removal_errors.push(e),
+                        }
                     }
 
                     // Remove current worktree last (if it was in the list)
                     if let Some((_path, branch)) = current {
-                        let result =
-                            handle_remove_current(!delete_branch, force_delete, background)?;
-                        handle_remove_output(&result, branch.as_deref(), background, verify)?;
+                        match handle_remove_current(!delete_branch, force_delete, background) {
+                            Ok(result) => {
+                                handle_remove_output(
+                                    &result,
+                                    branch.as_deref(),
+                                    background,
+                                    verify,
+                                )?;
+                            }
+                            Err(e) => removal_errors.push(e),
+                        }
+                    }
+
+                    // Report all removal errors
+                    if !removal_errors.is_empty() {
+                        for e in &removal_errors {
+                            // Errors already have their own formatting (emoji + color)
+                            output::print(e.to_string())?;
+                        }
+                        // Only show summary for multiple targets (single target error is self-explanatory)
+                        if worktrees.len() > 1 {
+                            anyhow::bail!(
+                                "Failed to remove {} of {} specified targets",
+                                removal_errors.len(),
+                                worktrees.len()
+                            );
+                        } else {
+                            // Single target - error already printed, just exit with failure
+                            // Terminate output before exiting (handles directive mode)
+                            let _ = output::terminate_output();
+                            process::exit(1);
+                        }
                     }
 
                     Ok(())

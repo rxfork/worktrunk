@@ -121,6 +121,17 @@ fn test_remove_nonexistent_worktree(repo: TestRepo) {
 }
 
 #[rstest]
+fn test_remove_multiple_nonexistent_force(repo: TestRepo) {
+    // Try to force-remove multiple branches that don't exist
+    snapshot_remove(
+        "remove_multiple_nonexistent_force",
+        &repo,
+        &["-D", "foo", "bar", "baz"],
+        None,
+    );
+}
+
+#[rstest]
 fn test_remove_remote_only_branch(#[from(repo_with_remote)] repo: TestRepo) {
     // Create a remote-only branch by pushing a branch then deleting it locally
     Command::new("git")
