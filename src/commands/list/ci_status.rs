@@ -25,6 +25,12 @@ fn detect_platform_from_url(url: &str) -> Option<CiPlatform> {
 
 /// Get the CI platform for a repository by checking its origin remote URL.
 pub fn get_platform_for_repo(repo_root: &str) -> Option<CiPlatform> {
+    let url = get_remote_url_for_repo(repo_root)?;
+    detect_platform_from_url(&url)
+}
+
+/// Get the origin remote URL for a repository.
+fn get_remote_url_for_repo(repo_root: &str) -> Option<String> {
     let output = Command::new("git")
         .args(["remote", "get-url", "origin"])
         .current_dir(repo_root)
@@ -32,8 +38,21 @@ pub fn get_platform_for_repo(repo_root: &str) -> Option<CiPlatform> {
         .ok()?;
 
     if output.status.success() {
-        let url = String::from_utf8(output.stdout).ok()?;
-        detect_platform_from_url(&url)
+        String::from_utf8(output.stdout).ok()
+    } else {
+        None
+    }
+}
+
+/// Get the GitLab hostname for a repository by parsing its origin remote URL.
+///
+/// Returns the hostname if the remote URL contains "gitlab", None otherwise.
+/// Used to check glab auth status against a specific host.
+pub fn get_gitlab_host_for_repo(repo_root: &str) -> Option<String> {
+    let url = get_remote_url_for_repo(repo_root)?;
+    // Only return host if this looks like a GitLab URL
+    if detect_platform_from_url(&url) == Some(CiPlatform::GitLab) {
+        parse_remote_host(&url).map(|s| s.to_string())
     } else {
         None
     }
@@ -83,6 +102,38 @@ fn parse_remote_owner(url: &str) -> Option<&str> {
     }?;
 
     if owner.is_empty() { None } else { Some(owner) }
+}
+
+/// Extract hostname from a git remote URL.
+///
+/// Used to check auth status against a specific GitLab host instead of the default.
+///
+/// # Supported URL formats
+///
+/// - `https://<host>/<owner>/<repo>.git` → `host`
+/// - `git@<host>:<owner>/<repo>.git` → `host`
+/// - `ssh://git@<host>/<owner>/<repo>.git` → `host`
+fn parse_remote_host(url: &str) -> Option<&str> {
+    let url = url.trim();
+
+    let host = if let Some(rest) = url.strip_prefix("https://") {
+        // https://gitlab.example.com/owner/repo.git -> gitlab.example.com
+        rest.split('/').next()
+    } else if let Some(rest) = url.strip_prefix("http://") {
+        // http://gitlab.example.com/owner/repo.git -> gitlab.example.com
+        rest.split('/').next()
+    } else if let Some(rest) = url.strip_prefix("ssh://") {
+        // ssh://git@gitlab.example.com/owner/repo.git -> gitlab.example.com
+        let without_user = rest.split('@').next_back()?;
+        without_user.split('/').next()
+    } else if let Some(rest) = url.strip_prefix("git@") {
+        // git@gitlab.example.com:owner/repo.git -> gitlab.example.com
+        rest.split(':').next()
+    } else {
+        None
+    }?;
+
+    if host.is_empty() { None } else { Some(host) }
 }
 
 #[cfg(test)]
@@ -227,6 +278,54 @@ mod tests {
 
         // Unsupported protocols
         assert_eq!(parse_remote_owner("http://github.com/owner/repo.git"), None);
+    }
+
+    #[test]
+    fn test_parse_remote_host() {
+        // HTTPS
+        assert_eq!(
+            parse_remote_host("https://gitlab.com/owner/repo.git"),
+            Some("gitlab.com")
+        );
+        assert_eq!(
+            parse_remote_host("https://gitlab.example.com/owner/repo.git"),
+            Some("gitlab.example.com")
+        );
+        assert_eq!(
+            parse_remote_host("  https://github.com/owner/repo\n"),
+            Some("github.com")
+        );
+
+        // HTTP (legacy, common on self-hosted)
+        assert_eq!(
+            parse_remote_host("http://gitlab.internal.company.com/owner/repo.git"),
+            Some("gitlab.internal.company.com")
+        );
+
+        // SSH (git@ form)
+        assert_eq!(
+            parse_remote_host("git@gitlab.com:owner/repo.git"),
+            Some("gitlab.com")
+        );
+        assert_eq!(
+            parse_remote_host("git@gitlab.example.com:owner/repo.git"),
+            Some("gitlab.example.com")
+        );
+
+        // SSH (ssh:// form)
+        assert_eq!(
+            parse_remote_host("ssh://git@gitlab.example.com/owner/repo.git"),
+            Some("gitlab.example.com")
+        );
+        assert_eq!(
+            parse_remote_host("ssh://gitlab.example.com/owner/repo.git"),
+            Some("gitlab.example.com")
+        );
+
+        // Malformed URLs
+        assert_eq!(parse_remote_host("https://"), None);
+        assert_eq!(parse_remote_host("git@"), None);
+        assert_eq!(parse_remote_host(""), None);
     }
 
     #[test]
@@ -526,11 +625,20 @@ pub struct CiToolsStatus {
 
 impl CiToolsStatus {
     /// Check which CI tools are available
-    pub fn detect() -> Self {
+    ///
+    /// If `gitlab_host` is provided, checks glab auth status against that specific
+    /// host instead of the default. This is important for self-hosted GitLab instances
+    /// where the default host (gitlab.com) may be unreachable.
+    pub fn detect(gitlab_host: Option<&str>) -> Self {
         let gh_installed = tool_available("gh", &["--version"]);
         let gh_authenticated = gh_installed && tool_available("gh", &["auth", "status"]);
         let glab_installed = tool_available("glab", &["--version"]);
-        let glab_authenticated = glab_installed && tool_available("glab", &["auth", "status"]);
+        let glab_authenticated = glab_installed
+            && if let Some(host) = gitlab_host {
+                tool_available("glab", &["auth", "status", "--hostname", host])
+            } else {
+                tool_available("glab", &["auth", "status"])
+            };
         Self {
             gh_installed,
             gh_authenticated,

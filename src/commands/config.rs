@@ -468,7 +468,7 @@ fn render_binaries_status(out: &mut String) -> anyhow::Result<()> {
 
     writeln!(out, "{}", cformat!("<cyan>BINARIES</>"))?;
 
-    let ci_tools = CiToolsStatus::detect();
+    let ci_tools = CiToolsStatus::detect(None);
 
     // Detect platform from repo's remote URL (if in a repo)
     let platform = Repository::current()

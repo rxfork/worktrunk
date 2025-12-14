@@ -203,7 +203,13 @@ pub fn handle_list(
 
     // Show hint if CI status was requested but no tools can fetch it
     if show_full {
-        let ci_tools = ci_status::CiToolsStatus::detect();
+        // Check auth status against the specific GitLab host for this repo
+        let gitlab_host = repo
+            .worktree_root()
+            .ok()
+            .and_then(|p| p.to_str().map(|s| s.to_string()))
+            .and_then(|p| ci_status::get_gitlab_host_for_repo(&p));
+        let ci_tools = ci_status::CiToolsStatus::detect(gitlab_host.as_deref());
         if !ci_tools.any_available() {
             use ci_status::{CiPlatform, get_platform_for_repo};
             use color_print::cformat;
