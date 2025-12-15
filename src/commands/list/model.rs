@@ -496,16 +496,19 @@ impl ListItem {
                     self.would_merge_add,
                     data.working_tree_diff.as_ref(),
                     &data.working_tree_diff_with_main,
+                    working_tree_status.is_some_and(|s| s.untracked),
                 );
 
                 // Separately detect SameCommit: same commit as main but with uncommitted work
                 // This is NOT an integration state (has work that would be lost on delete)
+                let has_tracked_changes = data
+                    .working_tree_diff
+                    .as_ref()
+                    .is_some_and(|d| !d.is_empty());
+                let has_untracked = working_tree_status.is_some_and(|s| s.untracked);
                 let is_same_commit_dirty = self.is_ancestor == Some(true)
                     && self.counts.as_ref().is_some_and(|c| c.behind == 0)
-                    && data
-                        .working_tree_diff
-                        .as_ref()
-                        .is_some_and(|d| !d.is_empty());
+                    && (has_tracked_changes || has_untracked);
 
                 // Compute main state: combines is_main, would_conflict, integration, and divergence
                 let main_state = MainState::from_integration_and_counts(
@@ -542,6 +545,7 @@ impl ListItem {
                     self.would_merge_add,
                     Some(&empty_diff), // branches are always "clean" (no working tree)
                     &None,             // no working_tree_diff_with_main for branches
+                    false,             // branches have no working tree, can't have untracked files
                 );
 
                 // Compute main state
@@ -587,14 +591,17 @@ fn check_integration_state(
     would_merge_add: Option<bool>,
     working_tree_diff: Option<&LineDiff>,
     working_tree_diff_with_main: &Option<Option<LineDiff>>,
+    has_untracked: bool,
 ) -> Option<MainState> {
     if is_main || default_branch.is_none() {
         return None;
     }
 
-    // Require working_tree_diff to be loaded and empty. Don't assume clean when unknown
-    // to avoid premature integration state (which would cause UI flash during progressive loading).
-    let is_clean = working_tree_diff.is_some_and(|d| d.is_empty());
+    // Require working_tree_diff to be loaded and empty, and no untracked files.
+    // Don't assume clean when unknown to avoid premature integration state
+    // (which would cause UI flash during progressive loading).
+    // Untracked files would be lost on worktree removal, so they block integration.
+    let is_clean = working_tree_diff.is_some_and(|d| d.is_empty()) && !has_untracked;
 
     // Priority 1: Same commit as main + clean working tree = Empty (safe to delete)
     if is_ancestor == Some(true) && behind_main == Some(0) && is_clean {
@@ -1516,6 +1523,7 @@ mod tests {
                 None,                       // would_merge_add unknown
                 Some(&dirty_working_tree),  // has uncommitted changes
                 &working_tree_matches_main, // working tree matches main
+                false,                      // no untracked files
             ),
             None,
             "Priority 5 should reject dirty working tree"
@@ -1533,9 +1541,62 @@ mod tests {
                 None,
                 Some(&clean_working_tree),
                 &working_tree_matches_main,
+                false, // no untracked files
             ),
             Some(MainState::Integrated(IntegrationReason::TreesMatch)),
             "Priority 5 should accept clean working tree"
+        );
+    }
+
+    #[test]
+    fn test_check_integration_state_untracked_blocks_integration() {
+        // Untracked files should block integration even when tracked files are clean.
+        // This prevents incorrectly suggesting a worktree is safe to remove when
+        // it contains untracked files that would be lost.
+
+        let clean_working_tree = LineDiff {
+            added: 0,
+            deleted: 0,
+        };
+        let working_tree_matches_main = Some(Some(LineDiff {
+            added: 0,
+            deleted: 0,
+        }));
+
+        // Clean tracked files but has untracked: should NOT return Integrated
+        assert_eq!(
+            check_integration_state(
+                false,
+                Some("main"),
+                Some(false),
+                None,
+                false,
+                None,
+                None,
+                Some(&clean_working_tree),
+                &working_tree_matches_main,
+                true, // has untracked files
+            ),
+            None,
+            "Untracked files should block integration"
+        );
+
+        // Same scenario without untracked: SHOULD return Integrated
+        assert_eq!(
+            check_integration_state(
+                false,
+                Some("main"),
+                Some(false),
+                None,
+                false,
+                None,
+                None,
+                Some(&clean_working_tree),
+                &working_tree_matches_main,
+                false, // no untracked files
+            ),
+            Some(MainState::Integrated(IntegrationReason::TreesMatch)),
+            "Without untracked files, should show as integrated"
         );
     }
 }
