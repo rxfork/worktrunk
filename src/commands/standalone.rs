@@ -64,7 +64,7 @@ pub fn run_hook(hook_type: HookType, force: bool, name_filter: Option<&str>) -> 
     ) -> anyhow::Result<()> {
         if user.is_none() && project.is_none() {
             return Err(worktrunk::git::GitError::Other {
-                message: format!("No {hook_type} hook configured (neither user nor project)"),
+                message: format!("No {hook_type} hook configured; checked both user and project"),
             }
             .into());
         }

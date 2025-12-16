@@ -314,11 +314,11 @@ pub fn handle_switch_output(
                     )))?;
                 } else if Shell::is_integration_configured().ok().flatten().is_some() {
                     super::print(warning_message(cformat!(
-                        "Worktree at <bold>{path_display}</>. Branch doesn't match path: {mismatch_info} (cannot cd, binary invoked directly)"
+                        "Worktree at <bold>{path_display}</>. Branch doesn't match path: {mismatch_info}; cannot cd, binary invoked directly"
                     )))?;
                 } else {
                     super::print(warning_message(cformat!(
-                        "Worktree at <bold>{path_display}</>. Branch doesn't match path: {mismatch_info} (cannot cd, no shell integration)"
+                        "Worktree at <bold>{path_display}</>. Branch doesn't match path: {mismatch_info}; cannot cd, no shell integration"
                     )))?;
                     super::shell_integration_hint(shell_integration_hint())?;
                 }
@@ -340,7 +340,7 @@ pub fn handle_switch_output(
     let path_mismatch_warning = branch_info.expected_path.as_ref().map(|expected| {
         let expected_display = format_path_for_display(expected);
         warning_message(format!(
-            "Worktree path doesn't match naming template (expected {expected_display})"
+            "Worktree path doesn't match naming template; expected {expected_display}"
         ))
     });
 
