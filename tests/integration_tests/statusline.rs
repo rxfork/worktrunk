@@ -223,3 +223,68 @@ fn test_statusline_directive_mode(repo: TestRepo) {
         "stderr should have statusline output in directive mode"
     );
 }
+
+// --- Branch Display Tests ---
+
+/// Test that statusline reflects the current branch after checkout.
+///
+/// Git updates worktree metadata (`branch` field in `git worktree list`) when
+/// you checkout a different branch. This test verifies that statusline correctly
+/// shows the new branch name after such a checkout.
+#[rstest]
+fn test_statusline_reflects_checked_out_branch(mut repo: TestRepo) {
+    // Create a feature worktree
+    let feature_path = repo.add_worktree("feature");
+
+    // Verify statusline shows "feature" initially
+    let output = run_statusline_from_dir(&repo, &[], None, &feature_path);
+    assert!(
+        output.contains("feature"),
+        "statusline should show 'feature' for feature worktree, got: {output}"
+    );
+
+    // Create and checkout a different branch "other" in the feature worktree
+    repo.git_command(&["branch", "other"]).output().unwrap();
+    let checkout_output = repo
+        .git_command(&["checkout", "other"])
+        .current_dir(&feature_path)
+        .output()
+        .unwrap();
+    assert!(
+        checkout_output.status.success(),
+        "checkout should succeed: {}",
+        String::from_utf8_lossy(&checkout_output.stderr)
+    );
+
+    // Verify statusline now shows "other"
+    let output = run_statusline_from_dir(&repo, &[], None, &feature_path);
+    assert!(
+        output.contains("other"),
+        "statusline should show 'other' after checkout, got: {output}"
+    );
+    assert!(
+        !output.contains("feature"),
+        "statusline should not show 'feature' after checkout, got: {output}"
+    );
+}
+
+/// Test that statusline handles detached HEAD correctly.
+#[rstest]
+fn test_statusline_detached_head(mut repo: TestRepo) {
+    // Create a feature worktree
+    let feature_path = repo.add_worktree("feature");
+
+    // Detach HEAD
+    repo.git_command(&["checkout", "--detach"])
+        .current_dir(&feature_path)
+        .output()
+        .unwrap();
+
+    // Verify statusline shows HEAD (not "feature")
+    let output = run_statusline_from_dir(&repo, &[], None, &feature_path);
+    // In detached state, we show "HEAD" as the branch name
+    assert!(
+        output.contains("HEAD") || !output.contains("feature"),
+        "statusline should not show 'feature' in detached HEAD, got: {output}"
+    );
+}

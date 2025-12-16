@@ -231,6 +231,34 @@ fn test_remove_remote_only_branch(#[from(repo_with_remote)] repo: TestRepo) {
 }
 
 #[rstest]
+fn test_remove_nonexistent_branch(repo: TestRepo) {
+    // Try to remove a branch that doesn't exist at all
+    snapshot_remove("remove_nonexistent_branch", &repo, &["nonexistent"], None);
+}
+
+#[rstest]
+fn test_remove_partial_success(mut repo: TestRepo) {
+    // Create one valid worktree
+    let _feature_path = repo.add_worktree("feature");
+
+    // Try to remove both the valid worktree and a nonexistent one
+    // The valid one should be removed; error for nonexistent; exit with failure
+    snapshot_remove(
+        "remove_partial_success",
+        &repo,
+        &["feature", "nonexistent"],
+        None,
+    );
+
+    // Verify the valid worktree was actually removed
+    let worktrees_dir = repo.root_path().parent().unwrap();
+    assert!(
+        !worktrees_dir.join("feature").exists(),
+        "feature worktree should have been removed despite partial failure"
+    );
+}
+
+#[rstest]
 fn test_remove_by_name_dirty_target(mut repo: TestRepo) {
     let worktree_path = repo.add_worktree("feature-dirty");
 

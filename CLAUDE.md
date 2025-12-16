@@ -37,6 +37,7 @@ Use consistent terminology in documentation, help text, and code comments:
 
 - **main worktree** — when referring to the primary worktree (the original git directory)
 - **default branch** — when referring to the branch (main, master, etc.)
+- **target** — the destination branch for merge/rebase/push operations (e.g., "merge target", "rebase onto target"). Do NOT use "target" to refer to worktrees being operated on — use "worktree" or "worktrees" instead.
 
 Avoid mixing: "main/default branch worktree" is confusing. Use "main worktree" for worktrees and "default branch" for branches.
 

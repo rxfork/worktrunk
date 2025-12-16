@@ -1323,11 +1323,11 @@ fn main() {
                     let current_worktree = repo.worktree_root().ok();
 
                     // Partition worktrees into current, others, and branch-only.
-                    // Collect errors for invalid names so we can report all of them.
+                    // Track all errors (resolution + removal) so we can report them and continue.
                     let mut others = Vec::new();
                     let mut branch_only = Vec::new();
                     let mut current: Option<(PathBuf, Option<String>)> = None;
-                    let mut errors: Vec<anyhow::Error> = Vec::new();
+                    let mut all_errors: Vec<anyhow::Error> = Vec::new();
 
                     for worktree_name in &worktrees {
                         match resolve_worktree_arg(
@@ -1347,27 +1347,12 @@ fn main() {
                                 branch_only.push(branch);
                             }
                             Err(e) => {
-                                errors.push(e);
+                                // GitError variants already include emoji via error_message() in Display
+                                output::print(e.to_string())?;
+                                all_errors.push(e);
                             }
                         }
                     }
-
-                    // If any names failed to resolve, report those errors
-                    // (resolution errors are fatal - we can't proceed with unknown names)
-                    if !errors.is_empty() {
-                        for e in &errors {
-                            // GitError variants already include emoji via error_message() in Display
-                            output::print(e.to_string())?;
-                        }
-                        anyhow::bail!(
-                            "Failed to resolve {} of {} specified names",
-                            errors.len(),
-                            worktrees.len()
-                        );
-                    }
-
-                    // Track removal errors so we can report all of them
-                    let mut removal_errors: Vec<anyhow::Error> = Vec::new();
 
                     // Remove other worktrees first (approval was handled at the gate)
                     for (path, branch) in &others {
@@ -1386,7 +1371,10 @@ fn main() {
                                         verify,
                                     )?;
                                 }
-                                Err(e) => removal_errors.push(e),
+                                Err(e) => {
+                                    output::print(e.to_string())?;
+                                    all_errors.push(e);
+                                }
                             }
                         } else {
                             // Non-current worktree is detached - remove by path (no branch to delete)
@@ -1394,7 +1382,10 @@ fn main() {
                                 Ok(result) => {
                                     handle_remove_output(&result, None, background, verify)?;
                                 }
-                                Err(e) => removal_errors.push(e),
+                                Err(e) => {
+                                    output::print(e.to_string())?;
+                                    all_errors.push(e);
+                                }
                             }
                         }
                     }
@@ -1405,7 +1396,10 @@ fn main() {
                             Ok(result) => {
                                 handle_remove_output(&result, Some(branch), background, verify)?;
                             }
-                            Err(e) => removal_errors.push(e),
+                            Err(e) => {
+                                output::print(e.to_string())?;
+                                all_errors.push(e);
+                            }
                         }
                     }
 
@@ -1420,29 +1414,16 @@ fn main() {
                                     verify,
                                 )?;
                             }
-                            Err(e) => removal_errors.push(e),
+                            Err(e) => {
+                                output::print(e.to_string())?;
+                                all_errors.push(e);
+                            }
                         }
                     }
 
-                    // Report all removal errors
-                    if !removal_errors.is_empty() {
-                        for e in &removal_errors {
-                            // Errors already have their own formatting (emoji + color)
-                            output::print(e.to_string())?;
-                        }
-                        // Only show summary for multiple targets (single target error is self-explanatory)
-                        if worktrees.len() > 1 {
-                            anyhow::bail!(
-                                "Failed to remove {} of {} specified targets",
-                                removal_errors.len(),
-                                worktrees.len()
-                            );
-                        } else {
-                            // Single target - error already printed, just exit with failure
-                            // Terminate output before exiting (handles directive mode)
-                            let _ = output::terminate_output();
-                            process::exit(1);
-                        }
+                    // Exit with failure if any errors occurred (errors already printed)
+                    if !all_errors.is_empty() {
+                        anyhow::bail!("");
                     }
 
                     Ok(())
@@ -1526,15 +1507,18 @@ fn main() {
             // Anyhow error formatting:
             // - With context: show context as header, root cause in gutter
             // - Simple error: inline with emoji
+            // - Empty error: skip (errors already printed elsewhere)
             let msg = e.to_string();
-            let root_cause = e.root_cause().to_string();
-            if msg != root_cause {
-                // Has context: msg is context, root_cause is underlying error
-                let _ = output::print(error_message(&msg));
-                let _ = output::gutter(format_with_gutter(&root_cause, "", None));
-            } else {
-                // Simple error: inline with emoji
-                let _ = output::print(cformat!("{ERROR_EMOJI} <red>{msg}</>"));
+            if !msg.is_empty() {
+                let root_cause = e.root_cause().to_string();
+                if msg != root_cause {
+                    // Has context: msg is context, root_cause is underlying error
+                    let _ = output::print(error_message(&msg));
+                    let _ = output::gutter(format_with_gutter(&root_cause, "", None));
+                } else {
+                    // Simple error: inline with emoji
+                    let _ = output::print(cformat!("{ERROR_EMOJI} <red>{msg}</>"));
+                }
             }
         }
 
