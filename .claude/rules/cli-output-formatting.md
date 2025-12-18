@@ -411,6 +411,34 @@ output::gutter(format_with_gutter(&log, "", None))?;
 output::print(progress_message("Merging...\n"))?;
 ```
 
+**Avoid bullets in messages:** Use gutter formatting instead of bullet lists
+(`- item`) for multi-line content. Bullets add visual noise and don't provide
+the same clear separation as gutter formatting.
+
+```rust
+// BAD - bullet list in warning
+let mut warning = String::from("Some git operations failed:");
+for error in &errors {
+    warning.push_str(&format!("\n  - {}: {}", name, msg));
+}
+output::print(warning_message(warning))?;
+
+// GOOD - gutter formatting with bold branch names
+let error_lines: Vec<String> = errors
+    .iter()
+    .map(|e| cformat!("<bold>{}</>: {}", e.name, e.msg))
+    .collect();
+let warning = format!(
+    "Some git operations failed:\n{}",
+    format_with_gutter(&error_lines.join("\n"), "", None)
+);
+output::print(warning_message(warning))?;
+```
+
+The gutter provides consistent visual structure. Branch names should be bolded
+for emphasis. If we find cases where bullets are genuinely better than gutter
+formatting, we can reconsider this policy.
+
 ## Error Message Formatting
 
 **Single-line errors with variables are fine:**
