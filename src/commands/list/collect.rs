@@ -342,14 +342,13 @@ fn drain_results(
     expected_results: &ExpectedResults,
     mut on_result: impl FnMut(usize, &mut ListItem, &StatusContext),
 ) -> DrainOutcome {
-    use std::collections::HashMap;
     use std::time::{Duration, Instant};
 
     // Deadline for the entire drain operation (30 seconds should be more than enough)
     let deadline = Instant::now() + Duration::from_secs(30);
 
     // Track which result kinds we've received per item (for timeout diagnostics)
-    let mut received_by_item: HashMap<usize, Vec<TaskKind>> = HashMap::new();
+    let mut received_by_item: Vec<Vec<TaskKind>> = vec![Vec::new(); items.len()];
 
     // Temporary storage for data needed by status_symbols computation
     let mut status_contexts = vec![StatusContext::default(); items.len()];
@@ -359,7 +358,7 @@ fn drain_results(
         let remaining = deadline.saturating_duration_since(Instant::now());
         if remaining.is_zero() {
             // Deadline exceeded - build diagnostic info showing MISSING results
-            let received_count: usize = received_by_item.values().map(|v| v.len()).sum();
+            let received_count: usize = received_by_item.iter().map(|v| v.len()).sum();
 
             // Find items with missing results by comparing received vs expected
             let mut items_with_missing: Vec<MissingResult> = Vec::new();
@@ -369,10 +368,7 @@ fn drain_results(
                 let expected = expected_results.results_for(item_idx);
 
                 // Get received results for this item (empty vec if none received)
-                let received = received_by_item
-                    .get(&item_idx)
-                    .map(|v| v.as_slice())
-                    .unwrap_or(&[]);
+                let received = received_by_item[item_idx].as_slice();
 
                 // Find missing results
                 let missing_kinds: Vec<TaskKind> = expected
@@ -417,110 +413,98 @@ fn drain_results(
         };
 
         // Track this result for diagnostics (both success and error count as "received")
-        received_by_item.entry(item_idx).or_default().push(kind);
+        received_by_item[item_idx].push(kind);
 
         // Handle error case: apply defaults and collect error
         if let Err(error) = outcome {
             apply_default(items, &mut status_contexts, &error);
             errors.push(error);
-            on_result(item_idx, &mut items[item_idx], &status_contexts[item_idx]);
+            let item = &mut items[item_idx];
+            let status_ctx = &status_contexts[item_idx];
+            on_result(item_idx, item, status_ctx);
             continue;
         }
 
         // Handle success case
         let result = outcome.unwrap();
+        let item = &mut items[item_idx];
+        let status_ctx = &mut status_contexts[item_idx];
+
         match result {
-            TaskResult::CommitDetails { item_idx, commit } => {
-                items[item_idx].commit = Some(commit);
+            TaskResult::CommitDetails { commit, .. } => {
+                item.commit = Some(commit);
             }
-            TaskResult::AheadBehind { item_idx, counts } => {
-                items[item_idx].counts = Some(counts);
+            TaskResult::AheadBehind { counts, .. } => {
+                item.counts = Some(counts);
             }
             TaskResult::CommittedTreesMatch {
-                item_idx,
                 committed_trees_match,
+                ..
             } => {
-                items[item_idx].committed_trees_match = Some(committed_trees_match);
+                item.committed_trees_match = Some(committed_trees_match);
             }
             TaskResult::HasFileChanges {
-                item_idx,
-                has_file_changes,
+                has_file_changes, ..
             } => {
-                items[item_idx].has_file_changes = Some(has_file_changes);
+                item.has_file_changes = Some(has_file_changes);
             }
             TaskResult::WouldMergeAdd {
-                item_idx,
-                would_merge_add,
+                would_merge_add, ..
             } => {
-                items[item_idx].would_merge_add = Some(would_merge_add);
+                item.would_merge_add = Some(would_merge_add);
             }
-            TaskResult::IsAncestor {
-                item_idx,
-                is_ancestor,
-            } => {
-                items[item_idx].is_ancestor = Some(is_ancestor);
+            TaskResult::IsAncestor { is_ancestor, .. } => {
+                item.is_ancestor = Some(is_ancestor);
             }
-            TaskResult::BranchDiff {
-                item_idx,
-                branch_diff,
-            } => {
-                items[item_idx].branch_diff = Some(branch_diff);
+            TaskResult::BranchDiff { branch_diff, .. } => {
+                item.branch_diff = Some(branch_diff);
             }
             TaskResult::WorkingTreeDiff {
-                item_idx,
                 working_tree_diff,
                 working_tree_diff_with_main,
                 working_tree_status,
                 has_conflicts,
+                ..
             } => {
-                if let ItemKind::Worktree(data) = &mut items[item_idx].kind {
+                if let ItemKind::Worktree(data) = &mut item.kind {
                     data.working_tree_diff = Some(working_tree_diff);
                     data.working_tree_diff_with_main = Some(working_tree_diff_with_main);
                 } else {
                     debug_assert!(false, "WorkingTreeDiff result for non-worktree item");
                 }
                 // Store for status_symbols computation
-                status_contexts[item_idx].working_tree_status = Some(working_tree_status);
-                status_contexts[item_idx].has_conflicts = has_conflicts;
+                status_ctx.working_tree_status = Some(working_tree_status);
+                status_ctx.has_conflicts = has_conflicts;
             }
             TaskResult::MergeTreeConflicts {
-                item_idx,
                 has_merge_tree_conflicts,
+                ..
             } => {
                 // Store for status_symbols computation
-                status_contexts[item_idx].has_merge_tree_conflicts = has_merge_tree_conflicts;
+                status_ctx.has_merge_tree_conflicts = has_merge_tree_conflicts;
             }
-            TaskResult::GitOperation {
-                item_idx,
-                git_operation,
-            } => {
-                if let ItemKind::Worktree(data) = &mut items[item_idx].kind {
+            TaskResult::GitOperation { git_operation, .. } => {
+                if let ItemKind::Worktree(data) = &mut item.kind {
                     data.git_operation = git_operation;
                 } else {
                     debug_assert!(false, "GitOperation result for non-worktree item");
                 }
             }
-            TaskResult::UserMarker {
-                item_idx,
-                user_marker,
-            } => {
+            TaskResult::UserMarker { user_marker, .. } => {
                 // Store for status_symbols computation
-                status_contexts[item_idx].user_marker = user_marker;
+                status_ctx.user_marker = user_marker;
             }
-            TaskResult::Upstream { item_idx, upstream } => {
-                items[item_idx].upstream = Some(upstream);
+            TaskResult::Upstream { upstream, .. } => {
+                item.upstream = Some(upstream);
             }
-            TaskResult::CiStatus {
-                item_idx,
-                pr_status,
-            } => {
+            TaskResult::CiStatus { pr_status, .. } => {
                 // Wrap in Some() to indicate "loaded" (Some(None) = no CI, Some(Some(status)) = has CI)
-                items[item_idx].pr_status = Some(pr_status);
+                item.pr_status = Some(pr_status);
             }
         }
 
         // Invoke callback (progressive mode re-renders rows, buffered mode does nothing)
-        on_result(item_idx, &mut items[item_idx], &status_contexts[item_idx]);
+        on_result(item_idx, item, status_ctx);
     }
 
     DrainOutcome::Complete
