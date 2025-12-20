@@ -25,7 +25,7 @@ use crossbeam_channel as chan;
 use dunce::canonicalize;
 use rayon::prelude::*;
 use worktrunk::git::{LineDiff, Repository, Worktree};
-use worktrunk::styling::{INFO_EMOJI, format_with_gutter, warning_message};
+use worktrunk::styling::{INFO_SYMBOL, format_with_gutter, warning_message};
 
 use crate::commands::is_worktree_at_expected_path;
 
@@ -750,7 +750,7 @@ pub fn collect(
             .map(|item| layout.format_skeleton_row(item))
             .collect();
 
-        let initial_footer = format!("{INFO_EMOJI} {dim}{footer_base} (loading...){dim:#}");
+        let initial_footer = format!("{INFO_SYMBOL} {dim}{footer_base} (loading...){dim:#}");
 
         let table = ProgressiveTable::new(
             layout.format_header_line(),
@@ -896,7 +896,7 @@ pub fn collect(
 
                 // Update footer progress
                 let footer_msg = format!(
-                    "{INFO_EMOJI} {dim}{footer_base} ({completed_results}/{total_results} loaded){dim:#}"
+                    "{INFO_SYMBOL} {dim}{footer_base} ({completed_results}/{total_results} loaded){dim:#}"
                 );
                 if let Err(e) = table.update_footer(footer_msg) {
                     log::debug!("Progressive footer update failed: {}", e);

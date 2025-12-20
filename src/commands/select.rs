@@ -474,13 +474,13 @@ impl WorktreeSkimItem {
     /// Render Tab 1: Working tree preview (uncommitted changes vs HEAD)
     /// Matches `wt list` "HEAD±" column
     fn render_working_tree_preview(&self, width: usize) -> String {
-        use worktrunk::styling::INFO_EMOJI;
+        use worktrunk::styling::INFO_SYMBOL;
 
         let Some(wt_info) = self.item.worktree_data() else {
             // Branch without worktree - selecting will create one
             let branch = self.item.branch_name();
             return format!(
-                "{INFO_EMOJI} {branch} is branch only — press Enter to create worktree\n"
+                "{INFO_SYMBOL} {branch} is branch only — press Enter to create worktree\n"
             );
         };
 
@@ -488,7 +488,7 @@ impl WorktreeSkimItem {
         let path = wt_info.path.display().to_string();
         self.render_diff_preview(
             &["-C", &path, "diff", "HEAD"],
-            &cformat!("{INFO_EMOJI} <bold>{branch}</> has no uncommitted changes"),
+            &cformat!("{INFO_SYMBOL} <bold>{branch}</> has no uncommitted changes"),
             width,
         )
     }
@@ -496,30 +496,32 @@ impl WorktreeSkimItem {
     /// Render Tab 3: Branch diff preview (line diffs in commits ahead of default branch)
     /// Matches `wt list` "main…± (--full)" column
     fn render_branch_diff_preview(&self, width: usize) -> String {
-        use worktrunk::styling::INFO_EMOJI;
+        use worktrunk::styling::INFO_SYMBOL;
 
         let branch = self.item.branch_name();
         let repo = Repository::current();
         let Ok(default_branch) = repo.default_branch() else {
-            return cformat!("{INFO_EMOJI} <bold>{branch}</> has no commits ahead of main\n");
+            return cformat!("{INFO_SYMBOL} <bold>{branch}</> has no commits ahead of main\n");
         };
         if self.item.counts().ahead == 0 {
             return cformat!(
-                "{INFO_EMOJI} <bold>{branch}</> has no commits ahead of <bold>{default_branch}</>\n"
+                "{INFO_SYMBOL} <bold>{branch}</> has no commits ahead of <bold>{default_branch}</>\n"
             );
         }
 
         let merge_base = format!("{}...{}", default_branch, self.item.head());
         self.render_diff_preview(
             &["diff", &merge_base],
-            &cformat!("{INFO_EMOJI} <bold>{branch}</> has no changes vs <bold>{default_branch}</>"),
+            &cformat!(
+                "{INFO_SYMBOL} <bold>{branch}</> has no changes vs <bold>{default_branch}</>"
+            ),
             width,
         )
     }
 
     /// Render Tab 2: Log preview
     fn render_log_preview(&self, width: usize, height: usize) -> String {
-        use worktrunk::styling::INFO_EMOJI;
+        use worktrunk::styling::INFO_SYMBOL;
         // Minimum preview width to show timestamps (adds ~7 chars: space + 4-char time + space)
         // Note: preview is typically 50% of terminal width, so 50 = 100-col terminal
         const TIMESTAMP_WIDTH_THRESHOLD: usize = 50;
@@ -534,7 +536,9 @@ impl WorktreeSkimItem {
         let head = self.item.head();
         let branch = self.item.branch_name();
         let Ok(default_branch) = repo.default_branch() else {
-            output.push_str(&cformat!("{INFO_EMOJI} <bold>{branch}</> has no commits\n"));
+            output.push_str(&cformat!(
+                "{INFO_SYMBOL} <bold>{branch}</> has no commits\n"
+            ));
             return output;
         };
 
@@ -549,7 +553,9 @@ impl WorktreeSkimItem {
         // running git commands. This would provide better diagnostics but adds latency to
         // every preview render. Trade-off: simplicity + speed vs. detailed error messages.
         let Ok(merge_base_output) = repo.run_command(&["merge-base", &default_branch, head]) else {
-            output.push_str(&cformat!("{INFO_EMOJI} <bold>{branch}</> has no commits\n"));
+            output.push_str(&cformat!(
+                "{INFO_SYMBOL} <bold>{branch}</> has no commits\n"
+            ));
             return output;
         };
 

@@ -1,6 +1,6 @@
 use crate::common::wt_command;
 use std::collections::HashSet;
-use worktrunk::styling::SUCCESS_EMOJI;
+use worktrunk::styling::SUCCESS_SYMBOL;
 
 /// Issue found during validation
 #[derive(Debug)]
@@ -326,6 +326,6 @@ fn test_completion_validation() {
     }
 
     if errors.is_empty() && warnings.is_empty() {
-        println!("{SUCCESS_EMOJI} All shell completions validated successfully!");
+        println!("{SUCCESS_SYMBOL} All shell completions validated successfully!");
     }
 }

@@ -18,7 +18,7 @@ use shell_escape::escape;
 use super::HookType;
 use crate::path::format_path_for_display;
 use crate::styling::{
-    ERROR_EMOJI, HINT_EMOJI, error_message, format_bash_with_gutter, format_with_gutter,
+    ERROR_SYMBOL, HINT_SYMBOL, error_message, format_bash_with_gutter, format_with_gutter,
     hint_message, info_message, suggest_command,
 };
 
@@ -223,7 +223,7 @@ impl std::fmt::Display for GitError {
                 let cmd = suggest_command("switch", &[branch], &[]);
                 cwrite!(
                     f,
-                    "{ERROR_EMOJI} <red>Branch <bold>{branch}</> exists only on remote ({remote}/{branch})</>\n\n{HINT_EMOJI} <dim>To create a local worktree, run <bright-black>{cmd}</></>"
+                    "{ERROR_SYMBOL} <red>Branch <bold>{branch}</> exists only on remote ({remote}/{branch})</>\n\n{HINT_SYMBOL} <dim>To create a local worktree, run <bright-black>{cmd}</></>"
                 )
             }
 

@@ -5,7 +5,7 @@ use worktrunk::path::format_path_for_display;
 use worktrunk::shell::{self, Shell};
 use worktrunk::shell_exec::ShellConfig;
 use worktrunk::styling::{
-    INFO_EMOJI, PROGRESS_EMOJI, PROMPT_EMOJI, SUCCESS_EMOJI, format_bash_with_gutter,
+    INFO_SYMBOL, PROGRESS_SYMBOL, PROMPT_SYMBOL, SUCCESS_SYMBOL, format_bash_with_gutter,
     format_with_gutter, hint_message, warning_message,
 };
 
@@ -63,10 +63,10 @@ impl UninstallAction {
         }
     }
 
-    pub fn emoji(&self) -> &'static str {
+    pub fn symbol(&self) -> &'static str {
         match self {
-            UninstallAction::Removed => SUCCESS_EMOJI,
-            UninstallAction::WouldRemove => PROGRESS_EMOJI,
+            UninstallAction::Removed => SUCCESS_SYMBOL,
+            UninstallAction::WouldRemove => PROGRESS_SYMBOL,
         }
     }
 }
@@ -91,12 +91,12 @@ impl ConfigAction {
         }
     }
 
-    /// Returns the appropriate emoji for this action
-    pub fn emoji(&self) -> &'static str {
+    /// Returns the appropriate symbol for this action
+    pub fn symbol(&self) -> &'static str {
         match self {
-            ConfigAction::Added | ConfigAction::Created => SUCCESS_EMOJI,
-            ConfigAction::AlreadyExists => INFO_EMOJI,
-            ConfigAction::WouldAdd | ConfigAction::WouldCreate => PROGRESS_EMOJI,
+            ConfigAction::Added | ConfigAction::Created => SUCCESS_SYMBOL,
+            ConfigAction::AlreadyExists => INFO_SYMBOL,
+            ConfigAction::WouldAdd | ConfigAction::WouldCreate => PROGRESS_SYMBOL,
         }
     }
 }
@@ -530,7 +530,7 @@ fn prompt_for_confirmation(
 
         eprintln!(
             "{} {} {what} for {bold}{shell}{bold:#} @ {bold}{path}{bold:#}",
-            result.action.emoji(),
+            result.action.symbol(),
             result.action.description(),
         );
 
@@ -550,7 +550,7 @@ fn prompt_for_confirmation(
 
         eprintln!(
             "{} {} completions for {bold}{shell}{bold:#} @ {bold}{path}{bold:#}",
-            result.action.emoji(),
+            result.action.symbol(),
             result.action.description(),
         );
 
@@ -567,10 +567,10 @@ fn prompt_for_confirmation(
 fn prompt_yes_no() -> Result<bool, String> {
     use anstyle::Style;
     use std::io::Write;
-    use worktrunk::styling::{PROMPT_EMOJI, eprint, eprintln};
+    use worktrunk::styling::{PROMPT_SYMBOL, eprint, eprintln};
 
     let bold = Style::new().bold();
-    eprint!("{PROMPT_EMOJI} Proceed? {bold}[y/N]{bold:#} ");
+    eprint!("{PROMPT_SYMBOL} Proceed? {bold}[y/N]{bold:#} ");
     io::stderr().flush().map_err(|e| e.to_string())?;
 
     let mut input = String::new();
@@ -885,7 +885,7 @@ fn prompt_for_uninstall_confirmation(
 
         eprintln!(
             "{} {} {what} for {bold}{shell}{bold:#} @ {bold}{path}{bold:#}",
-            result.action.emoji(),
+            result.action.symbol(),
             result.action.description(),
         );
     }
@@ -897,7 +897,7 @@ fn prompt_for_uninstall_confirmation(
 
         eprintln!(
             "{} {} completions for {bold}{shell}{bold:#} @ {bold}{path}{bold:#}",
-            result.action.emoji(),
+            result.action.symbol(),
             result.action.description(),
         );
     }
@@ -971,7 +971,7 @@ pub fn handle_show_theme() -> Result<(), String> {
 
     // Prompt
     crate::output::print(info_message("Prompt formatting:")).map_err(|e| e.to_string())?;
-    crate::output::print(format!("{PROMPT_EMOJI} Proceed? [y/N] ")).map_err(|e| e.to_string())?;
+    crate::output::print(format!("{PROMPT_SYMBOL} Proceed? [y/N] ")).map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -988,8 +988,8 @@ mod tests {
 
     #[test]
     fn test_uninstall_action_emoji() {
-        assert_eq!(UninstallAction::Removed.emoji(), SUCCESS_EMOJI);
-        assert_eq!(UninstallAction::WouldRemove.emoji(), PROGRESS_EMOJI);
+        assert_eq!(UninstallAction::Removed.symbol(), SUCCESS_SYMBOL);
+        assert_eq!(UninstallAction::WouldRemove.symbol(), PROGRESS_SYMBOL);
     }
 
     #[test]
@@ -1006,11 +1006,11 @@ mod tests {
 
     #[test]
     fn test_config_action_emoji() {
-        assert_eq!(ConfigAction::Added.emoji(), SUCCESS_EMOJI);
-        assert_eq!(ConfigAction::Created.emoji(), SUCCESS_EMOJI);
-        assert_eq!(ConfigAction::AlreadyExists.emoji(), INFO_EMOJI);
-        assert_eq!(ConfigAction::WouldAdd.emoji(), PROGRESS_EMOJI);
-        assert_eq!(ConfigAction::WouldCreate.emoji(), PROGRESS_EMOJI);
+        assert_eq!(ConfigAction::Added.symbol(), SUCCESS_SYMBOL);
+        assert_eq!(ConfigAction::Created.symbol(), SUCCESS_SYMBOL);
+        assert_eq!(ConfigAction::AlreadyExists.symbol(), INFO_SYMBOL);
+        assert_eq!(ConfigAction::WouldAdd.symbol(), PROGRESS_SYMBOL);
+        assert_eq!(ConfigAction::WouldCreate.symbol(), PROGRESS_SYMBOL);
     }
 
     #[test]

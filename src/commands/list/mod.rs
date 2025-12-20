@@ -368,14 +368,14 @@ pub(crate) fn format_summary_message(
     hidden_column_count: usize,
 ) -> String {
     use anstyle::Style;
-    use worktrunk::styling::INFO_EMOJI;
+    use worktrunk::styling::INFO_SYMBOL;
 
     let metrics = SummaryMetrics::from_items(items);
     let dim = Style::new().dimmed();
     let summary = metrics
         .summary_parts(show_branches, hidden_column_count)
         .join(", ");
-    format!("{INFO_EMOJI} {dim}Showing {summary}{dim:#}")
+    format!("{INFO_SYMBOL} {dim}Showing {summary}{dim:#}")
 }
 
 #[cfg(test)]

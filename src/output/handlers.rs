@@ -15,7 +15,7 @@ use worktrunk::git::path_dir_name;
 use worktrunk::path::format_path_for_display;
 use worktrunk::shell::Shell;
 use worktrunk::styling::{
-    FormattedMessage, PROGRESS_EMOJI, SUCCESS_EMOJI, error_message, format_with_gutter,
+    FormattedMessage, PROGRESS_SYMBOL, SUCCESS_SYMBOL, error_message, format_with_gutter,
     hint_message, info_message, progress_message, success_message, suggest_command,
     warning_message,
 };
@@ -331,19 +331,19 @@ fn format_remove_worktree_message(
     let msg = if changed_directory {
         if let Some(b) = branch_display {
             cformat!(
-                "{SUCCESS_EMOJI} <green>Removed <bold>{b}</> {action_suffix}; changed directory to <bold>{path_display}</>{flag_text}</>{flag_after}"
+                "{SUCCESS_SYMBOL} <green>Removed <bold>{b}</> {action_suffix}; changed directory to <bold>{path_display}</>{flag_text}</>{flag_after}"
             )
         } else {
             cformat!(
-                "{SUCCESS_EMOJI} <green>Removed {action_suffix}; changed directory to <bold>{path_display}</>{flag_text}</>{flag_after}"
+                "{SUCCESS_SYMBOL} <green>Removed {action_suffix}; changed directory to <bold>{path_display}</>{flag_text}</>{flag_after}"
             )
         }
     } else if let Some(b) = branch_display {
         cformat!(
-            "{SUCCESS_EMOJI} <green>Removed <bold>{b}</> {action_suffix}{flag_text}</>{flag_after}"
+            "{SUCCESS_SYMBOL} <green>Removed <bold>{b}</> {action_suffix}{flag_text}</>{flag_after}"
         )
     } else {
-        cformat!("{SUCCESS_EMOJI} <green>Removed {action_suffix}{flag_text}</>{flag_after}")
+        cformat!("{SUCCESS_SYMBOL} <green>Removed {action_suffix}{flag_text}</>{flag_after}")
     };
     FormattedMessage::new(msg)
 }
@@ -562,7 +562,7 @@ fn handle_branch_only_output(
         let flag_text = &flag_note.text;
         let flag_after = flag_note.after_green();
         super::print(FormattedMessage::new(cformat!(
-            "{SUCCESS_EMOJI} <green>Removed branch <bold>{branch_name}</>{flag_text}</>{flag_after}"
+            "{SUCCESS_SYMBOL} <green>Removed branch <bold>{branch_name}</>{flag_text}</>{flag_after}"
         )))?;
     }
 
@@ -682,15 +682,15 @@ fn handle_removed_worktree_output(
         // in its canonical dim styling, not tinted by cyan.
         let action = if deletion_mode.should_keep() {
             cformat!(
-                "{PROGRESS_EMOJI} <cyan>Removing <bold>{branch_name}</> worktree in background; retaining branch{flag_text}</>{flag_after}"
+                "{PROGRESS_SYMBOL} <cyan>Removing <bold>{branch_name}</> worktree in background; retaining branch{flag_text}</>{flag_after}"
             )
         } else if should_delete_branch {
             cformat!(
-                "{PROGRESS_EMOJI} <cyan>Removing <bold>{branch_name}</> worktree & branch in background{flag_text}</>{flag_after}"
+                "{PROGRESS_SYMBOL} <cyan>Removing <bold>{branch_name}</> worktree & branch in background{flag_text}</>{flag_after}"
             )
         } else {
             cformat!(
-                "{PROGRESS_EMOJI} <cyan>Removing <bold>{branch_name}</> worktree in background; retaining unmerged branch</>"
+                "{PROGRESS_SYMBOL} <cyan>Removing <bold>{branch_name}</> worktree in background; retaining unmerged branch</>"
             )
         };
         super::print(FormattedMessage::new(action))?;

@@ -84,22 +84,6 @@ pub const INFO_SYMBOL: &str = cstr!("<dim>○</>");
 /// Prompt symbol (cyan ❯) - for questions requiring user input
 pub const PROMPT_SYMBOL: &str = cstr!("<cyan>❯</>");
 
-// Legacy aliases for compatibility during migration
-#[doc(hidden)]
-pub use ERROR_SYMBOL as ERROR_EMOJI;
-#[doc(hidden)]
-pub use HINT_SYMBOL as HINT_EMOJI;
-#[doc(hidden)]
-pub use INFO_SYMBOL as INFO_EMOJI;
-#[doc(hidden)]
-pub use PROGRESS_SYMBOL as PROGRESS_EMOJI;
-#[doc(hidden)]
-pub use PROMPT_SYMBOL as PROMPT_EMOJI;
-#[doc(hidden)]
-pub use SUCCESS_SYMBOL as SUCCESS_EMOJI;
-#[doc(hidden)]
-pub use WARNING_SYMBOL as WARNING_EMOJI;
-
 // ============================================================================
 // Formatted Message Type
 // ============================================================================

@@ -6,7 +6,7 @@ use worktrunk::config::{CommandConfig, ProjectConfig, WorktrunkConfig};
 use worktrunk::git::Repository;
 use worktrunk::path::format_path_for_display;
 use worktrunk::styling::{
-    INFO_EMOJI, PROMPT_EMOJI, format_bash_with_gutter, format_heading, format_with_gutter,
+    INFO_SYMBOL, PROMPT_SYMBOL, format_bash_with_gutter, format_heading, format_with_gutter,
     hint_message, info_message, progress_message, success_message,
 };
 
@@ -846,9 +846,9 @@ fn render_hook_commands(
 
         // Use ❯ for needs approval, ○ for approved/user hooks
         let (emoji, suffix) = if needs_approval {
-            (PROMPT_EMOJI, cformat!(" <dim>(requires approval)</>"))
+            (PROMPT_SYMBOL, cformat!(" <dim>(requires approval)</>"))
         } else {
-            (INFO_EMOJI, String::new())
+            (INFO_SYMBOL, String::new())
         };
 
         writeln!(out, "{emoji} {label}{suffix}")?;

@@ -25,7 +25,7 @@ use color_print::cformat;
 use worktrunk::config::{Command, WorktrunkConfig};
 use worktrunk::git::{GitError, HookType};
 use worktrunk::styling::{
-    INFO_EMOJI, PROMPT_EMOJI, WARNING_EMOJI, eprint, eprintln, format_bash_with_gutter,
+    INFO_SYMBOL, PROMPT_SYMBOL, WARNING_SYMBOL, eprint, eprintln, format_bash_with_gutter,
     hint_message, stderr, warning_message,
 };
 
@@ -109,7 +109,7 @@ fn prompt_for_batch_approval(commands: &[&Command], project_id: &str) -> anyhow:
     eprintln!(
         "{}",
         cformat!(
-            "{WARNING_EMOJI} <yellow><bold>{project_name}</> needs approval to execute <bold>{count}</> command{plural}:</>"
+            "{WARNING_SYMBOL} <yellow><bold>{project_name}</> needs approval to execute <bold>{count}</> command{plural}:</>"
         )
     );
     eprintln!();
@@ -120,8 +120,8 @@ fn prompt_for_batch_approval(commands: &[&Command], project_id: &str) -> anyhow:
         // Uses INFO_SYMBOL (○) since this is a preview, not active execution
         let phase = cmd.phase.to_string();
         let label = match &cmd.name {
-            Some(name) => cformat!("{INFO_EMOJI} {phase} <bold>{name}</>:"),
-            None => format!("{INFO_EMOJI} {phase}:"),
+            Some(name) => cformat!("{INFO_SYMBOL} {phase} <bold>{name}</>:"),
+            None => format!("{INFO_SYMBOL} {phase}:"),
         };
         eprintln!("{label}");
         eprint!("{}", format_bash_with_gutter(&cmd.template, ""));
@@ -139,7 +139,7 @@ fn prompt_for_batch_approval(commands: &[&Command], project_id: &str) -> anyhow:
 
     eprint!(
         "{}",
-        cformat!("{PROMPT_EMOJI} Allow and remember? <bold>[y/N]</> ")
+        cformat!("{PROMPT_SYMBOL} Allow and remember? <bold>[y/N]</> ")
     );
     stderr().flush()?;
 
