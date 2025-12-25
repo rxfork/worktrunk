@@ -82,17 +82,23 @@ This installs required shells (zsh, fish) for shell integration tests and builds
 
 ### Shell/PTY Integration Tests
 
-PTY-based tests (approval prompts, TUI select, progressive rendering, shell wrappers) are behind the `shell-integration-tests` feature. These tests can trigger a nextest bug where its terminal cleanup receives SIGTTOU. See `native_pty_system()` in `tests/common/mod.rs` for details.
+PTY-based tests (approval prompts, TUI select, progressive rendering, shell wrappers) are behind the `shell-integration-tests` feature.
 
-```bash
-# Default: runs without PTY tests
-cargo nextest run
+**IMPORTANT for AI coding environments (Codex, Claude Code):** When running in background process groups, nextest's InputHandler receives SIGTTOU when restoring terminal settings. This causes the test process to be suspended mid-run. The symptom is `zsh: suspended (tty output)` or similar.
 
-# Full suite: requires env var to prevent nextest suspension
-NEXTEST_NO_INPUT_HANDLER=1 cargo nextest run --features shell-integration-tests
-```
+**Solutions:**
 
-The pre-merge hook already sets `NEXTEST_NO_INPUT_HANDLER=1`.
+1. Use `cargo test` instead of `cargo nextest run` (no input handler issues):
+   ```bash
+   cargo test --test integration --features shell-integration-tests
+   ```
+
+2. Or set `NEXTEST_NO_INPUT_HANDLER=1`:
+   ```bash
+   NEXTEST_NO_INPUT_HANDLER=1 cargo nextest run --features shell-integration-tests
+   ```
+
+The pre-merge hook (`wt hook pre-merge --force`) already sets `NEXTEST_NO_INPUT_HANDLER=1` automatically. See `tests/common/mod.rs` for technical details on the SIGTTOU issue.
 
 ## Command Execution Principles
 
