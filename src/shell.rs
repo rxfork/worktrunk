@@ -287,18 +287,6 @@ impl Shell {
 
         Ok(None)
     }
-
-    /// Returns a summary of what the shell integration does for display in confirmation
-    ///
-    /// This just returns the same as config_line since we want to show the exact wrapper
-    pub fn integration_summary(&self) -> String {
-        self.config_line()
-    }
-
-    /// Returns a summary with custom prefix for display in confirmation
-    pub fn integration_summary_with_prefix(&self, cmd: &str) -> String {
-        self.config_line_with_prefix(cmd)
-    }
 }
 
 /// Shell integration configuration

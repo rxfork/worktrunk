@@ -13,10 +13,10 @@ use worktrunk::utils::get_now;
 /// Format timestamp as abbreviated relative time (e.g., "2h")
 pub fn format_relative_time_short(timestamp: i64) -> String {
     // Cast to i64 for signed arithmetic (handles future timestamps)
-    format_relative_time_impl(timestamp, get_now() as i64, true)
+    format_relative_time_impl(timestamp, get_now() as i64)
 }
 
-fn format_relative_time_impl(timestamp: i64, now: i64, short: bool) -> String {
+fn format_relative_time_impl(timestamp: i64, now: i64) -> String {
     const MINUTE: i64 = 60;
     const HOUR: i64 = MINUTE * 60;
     const DAY: i64 = HOUR * 24;
@@ -27,35 +27,30 @@ fn format_relative_time_impl(timestamp: i64, now: i64, short: bool) -> String {
     let seconds_ago = now - timestamp;
 
     if seconds_ago < 0 {
-        return if short { "future" } else { "in the future" }.to_string();
+        return "future".to_string();
     }
 
     if seconds_ago < MINUTE {
-        return if short { "now" } else { "just now" }.to_string();
+        return "now".to_string();
     }
 
-    const UNITS: &[(i64, &str, &str)] = &[
-        (YEAR, "year", "y"),
-        (MONTH, "month", "mo"),
-        (WEEK, "week", "w"),
-        (DAY, "day", "d"),
-        (HOUR, "hour", "h"),
-        (MINUTE, "minute", "m"),
+    const UNITS: &[(i64, &str)] = &[
+        (YEAR, "y"),
+        (MONTH, "mo"),
+        (WEEK, "w"),
+        (DAY, "d"),
+        (HOUR, "h"),
+        (MINUTE, "m"),
     ];
 
-    for &(unit_seconds, label, abbrev) in UNITS {
+    for &(unit_seconds, abbrev) in UNITS {
         let value = seconds_ago / unit_seconds;
         if value > 0 {
-            return if short {
-                format!("{}{}", value, abbrev)
-            } else {
-                let plural = if value == 1 { "" } else { "s" };
-                format!("{} {}{} ago", value, label, plural)
-            };
+            return format!("{}{}", value, abbrev);
         }
     }
 
-    if short { "now" } else { "just now" }.to_string()
+    "now".to_string()
 }
 
 /// Shorten a path relative to the main worktree.
@@ -208,60 +203,33 @@ mod tests {
         let now: i64 = 1700000000; // Fixed timestamp for testing
 
         // Just now (< 1 minute)
-        assert_eq!(format_relative_time_impl(now - 30, now, true), "now");
-        assert_eq!(format_relative_time_impl(now - 59, now, true), "now");
+        assert_eq!(format_relative_time_impl(now - 30, now), "now");
+        assert_eq!(format_relative_time_impl(now - 59, now), "now");
 
         // Minutes
-        assert_eq!(format_relative_time_impl(now - 60, now, true), "1m");
-        assert_eq!(format_relative_time_impl(now - 120, now, true), "2m");
-        assert_eq!(format_relative_time_impl(now - 3599, now, true), "59m");
+        assert_eq!(format_relative_time_impl(now - 60, now), "1m");
+        assert_eq!(format_relative_time_impl(now - 120, now), "2m");
+        assert_eq!(format_relative_time_impl(now - 3599, now), "59m");
 
         // Hours
-        assert_eq!(format_relative_time_impl(now - 3600, now, true), "1h");
-        assert_eq!(format_relative_time_impl(now - 7200, now, true), "2h");
+        assert_eq!(format_relative_time_impl(now - 3600, now), "1h");
+        assert_eq!(format_relative_time_impl(now - 7200, now), "2h");
 
         // Days
-        assert_eq!(format_relative_time_impl(now - 86400, now, true), "1d");
-        assert_eq!(format_relative_time_impl(now - 172800, now, true), "2d");
+        assert_eq!(format_relative_time_impl(now - 86400, now), "1d");
+        assert_eq!(format_relative_time_impl(now - 172800, now), "2d");
 
         // Weeks
-        assert_eq!(format_relative_time_impl(now - 604800, now, true), "1w");
+        assert_eq!(format_relative_time_impl(now - 604800, now), "1w");
 
         // Months
-        assert_eq!(format_relative_time_impl(now - 2592000, now, true), "1mo");
+        assert_eq!(format_relative_time_impl(now - 2592000, now), "1mo");
 
         // Years
-        assert_eq!(format_relative_time_impl(now - 31536000, now, true), "1y");
+        assert_eq!(format_relative_time_impl(now - 31536000, now), "1y");
 
         // Future timestamp
-        assert_eq!(format_relative_time_impl(now + 1000, now, true), "future");
-    }
-
-    #[test]
-    fn test_format_relative_time_long() {
-        let now: i64 = 1700000000;
-
-        assert_eq!(format_relative_time_impl(now - 30, now, false), "just now");
-        assert_eq!(
-            format_relative_time_impl(now - 60, now, false),
-            "1 minute ago"
-        );
-        assert_eq!(
-            format_relative_time_impl(now - 120, now, false),
-            "2 minutes ago"
-        );
-        assert_eq!(
-            format_relative_time_impl(now - 3600, now, false),
-            "1 hour ago"
-        );
-        assert_eq!(
-            format_relative_time_impl(now - 86400, now, false),
-            "1 day ago"
-        );
-        assert_eq!(
-            format_relative_time_impl(now + 1000, now, false),
-            "in the future"
-        );
+        assert_eq!(format_relative_time_impl(now + 1000, now), "future");
     }
 
     #[test]

@@ -39,7 +39,6 @@ pub use error::{
     // Error inspection functions
     add_hook_skip_hint,
     exit_code,
-    is_command_not_approved,
 };
 pub use repository::{Repository, ResolvedWorktree, set_base_path};
 pub use url::GitRemoteUrl;

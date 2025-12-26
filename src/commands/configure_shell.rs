@@ -299,21 +299,18 @@ fn configure_shell_file(
     explicit_shell: bool,
     cmd: &str,
 ) -> Result<Option<ConfigureResult>, String> {
-    // Get a summary of the shell integration for display
-    let integration_summary = shell.integration_summary_with_prefix(cmd);
-
-    // The actual line we write to the config file
-    let config_content = shell.config_line_with_prefix(cmd);
+    // The line we write to the config file (also used for display)
+    let config_line = shell.config_line_with_prefix(cmd);
 
     // For Fish, we write to a separate conf.d/ file
     if matches!(shell, Shell::Fish) {
         return configure_fish_file(
             shell,
             path,
-            &config_content,
+            &config_line,
             dry_run,
             explicit_shell,
-            &integration_summary,
+            &config_line,
         );
     }
 
@@ -336,12 +333,12 @@ fn configure_shell_file(
             })?;
 
             // Canonical detection: check if the line matches exactly what we write
-            if line.trim() == config_content {
+            if line.trim() == config_line {
                 return Ok(Some(ConfigureResult {
                     shell,
                     path: path.to_path_buf(),
                     action: ConfigAction::AlreadyExists,
-                    config_line: integration_summary.clone(),
+                    config_line: config_line.clone(),
                 }));
             }
         }
@@ -352,7 +349,7 @@ fn configure_shell_file(
                 shell,
                 path: path.to_path_buf(),
                 action: ConfigAction::WouldAdd,
-                config_line: integration_summary.clone(),
+                config_line: config_line.clone(),
             }));
         }
 
@@ -366,7 +363,7 @@ fn configure_shell_file(
         })?;
 
         // Add blank line before config, then the config line with its own newline
-        write!(file, "\n{}\n", config_content).map_err(|e| {
+        write!(file, "\n{}\n", config_line).map_err(|e| {
             format!(
                 "Failed to write to {}: {}",
                 format_path_for_display(path),
@@ -378,7 +375,7 @@ fn configure_shell_file(
             shell,
             path: path.to_path_buf(),
             action: ConfigAction::Added,
-            config_line: integration_summary.clone(),
+            config_line: config_line.clone(),
         }))
     } else {
         // File doesn't exist
@@ -389,7 +386,7 @@ fn configure_shell_file(
                     shell,
                     path: path.to_path_buf(),
                     action: ConfigAction::WouldCreate,
-                    config_line: integration_summary.clone(),
+                    config_line: config_line.clone(),
                 }));
             }
 
@@ -401,7 +398,7 @@ fn configure_shell_file(
             }
 
             // Write the config content
-            fs::write(path, format!("{}\n", config_content)).map_err(|e| {
+            fs::write(path, format!("{}\n", config_line)).map_err(|e| {
                 format!(
                     "Failed to write to {}: {}",
                     format_path_for_display(path),
@@ -413,7 +410,7 @@ fn configure_shell_file(
                 shell,
                 path: path.to_path_buf(),
                 action: ConfigAction::Created,
-                config_line: integration_summary.clone(),
+                config_line: config_line.clone(),
             }))
         } else {
             // Don't create config files for shells the user might not use
@@ -428,7 +425,7 @@ fn configure_fish_file(
     content: &str,
     dry_run: bool,
     explicit_shell: bool,
-    integration_summary: &str,
+    config_line: &str,
 ) -> Result<Option<ConfigureResult>, String> {
     // For Fish, we write to conf.d/{cmd}.fish (separate file)
 
@@ -443,7 +440,7 @@ fn configure_fish_file(
                 shell,
                 path: path.to_path_buf(),
                 action: ConfigAction::AlreadyExists,
-                config_line: integration_summary.to_string(),
+                config_line: config_line.to_string(),
             }));
         }
     }
@@ -468,7 +465,7 @@ fn configure_fish_file(
             } else {
                 ConfigAction::WouldCreate
             },
-            config_line: integration_summary.to_string(),
+            config_line: config_line.to_string(),
         }));
     }
 
@@ -491,7 +488,7 @@ fn configure_fish_file(
         shell,
         path: path.to_path_buf(),
         action: ConfigAction::Created,
-        config_line: integration_summary.to_string(),
+        config_line: config_line.to_string(),
     }))
 }
 

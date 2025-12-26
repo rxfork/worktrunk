@@ -574,12 +574,6 @@ pub fn exit_code(err: &anyhow::Error) -> Option<i32> {
     })
 }
 
-/// Check if error is CommandNotApproved (silent error)
-pub fn is_command_not_approved(err: &anyhow::Error) -> bool {
-    err.downcast_ref::<WorktrunkError>()
-        .is_some_and(|e| matches!(e, WorktrunkError::CommandNotApproved))
-}
-
 /// If the error is a HookCommandFailed, wrap it to add a hint about using --no-verify.
 ///
 /// ## When to use
@@ -774,32 +768,6 @@ mod tests {
         }
         .into();
         assert_eq!(exit_code(&add_hook_skip_hint(inner)), Some(7));
-    }
-
-    #[test]
-    fn test_is_command_not_approved() {
-        assert!(is_command_not_approved(
-            &WorktrunkError::CommandNotApproved.into()
-        ));
-        assert!(!is_command_not_approved(
-            &WorktrunkError::ChildProcessExited {
-                code: 1,
-                message: "test".into()
-            }
-            .into()
-        ));
-        assert!(!is_command_not_approved(
-            &WorktrunkError::HookCommandFailed {
-                hook_type: HookType::PostCreate,
-                command_name: None,
-                error: "failed".into(),
-                exit_code: None,
-            }
-            .into()
-        ));
-        assert!(!is_command_not_approved(
-            &GitError::DetachedHead { action: None }.into()
-        ));
     }
 
     #[test]

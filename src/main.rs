@@ -161,8 +161,8 @@ fn maybe_handle_help_with_pager() -> bool {
 ///
 /// Returns the usage/options/subcommands section without the after_long_help content.
 /// If `width` is provided, wraps text at that width (for web docs); otherwise uses default.
-/// If `with_colors` is true, preserves ANSI color codes for HTML conversion.
-fn get_help_reference(command_path: &[&str], width: Option<usize>, with_colors: bool) -> String {
+/// Always preserves ANSI color codes for HTML conversion.
+fn get_help_reference(command_path: &[&str], width: Option<usize>) -> String {
     use clap::ColorChoice;
     use clap::error::ErrorKind;
 
@@ -172,11 +172,7 @@ fn get_help_reference(command_path: &[&str], width: Option<usize>, with_colors: 
     args.push("--help".to_string());
 
     let mut cmd = cli::build_command();
-    cmd = cmd.color(if with_colors {
-        ColorChoice::Always
-    } else {
-        ColorChoice::Never
-    });
+    cmd = cmd.color(ColorChoice::Always);
     if let Some(w) = width {
         cmd = cmd.term_width(w);
     }
@@ -187,12 +183,7 @@ fn get_help_reference(command_path: &[&str], width: Option<usize>, with_colors: 
             ErrorKind::DisplayHelp | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
         ) {
         let rendered = err.render();
-        // .ansi() returns ANSI-styled output, .to_string() strips colors
-        let text = if with_colors {
-            rendered.ansi().to_string()
-        } else {
-            rendered.to_string()
-        };
+        let text = rendered.ansi().to_string();
         text.replace("```text\n", "```\n")
             .replace("```console\n", "```bash\n")
     } else {
@@ -346,7 +337,7 @@ fn handle_help_page(args: &[String]) {
     };
 
     // Get the help reference block (wrap at 80 chars for web docs, with colors for HTML)
-    let reference_block = get_help_reference(&[subcommand], Some(80), true);
+    let reference_block = get_help_reference(&[subcommand], Some(80));
 
     // Output the generated content (frontmatter is in skeleton files)
     // Uses region markers so sync can replace just this content
@@ -515,7 +506,7 @@ fn format_subcommand_section(
         .collect();
 
     // Get help reference (wrap at 80 chars for web docs, with colors for HTML)
-    let reference_block = get_help_reference(&command_path, Some(80), true);
+    let reference_block = get_help_reference(&command_path, Some(80));
 
     // Format the section: heading, main content, command reference, then nested subdocs
     let mut section = format!("## {}\n\n", full_command);
