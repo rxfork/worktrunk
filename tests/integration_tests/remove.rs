@@ -385,16 +385,99 @@ fn test_remove_foreground_unmerged(mut repo: TestRepo) {
     );
 }
 
+/// Tests foreground removal with --no-delete-branch on an integrated branch.
+/// The hint should show "Branch integrated (reason); retained with --no-delete-branch"
+#[rstest]
+fn test_remove_foreground_no_delete_branch(mut repo: TestRepo) {
+    // Create a worktree (integrated - same commit as main)
+    let _worktree_path = repo.add_worktree("feature-fg-keep");
+
+    // Remove with both --no-background and --no-delete-branch
+    snapshot_remove(
+        "remove_foreground_no_delete_branch",
+        &repo,
+        &["--no-background", "--no-delete-branch", "feature-fg-keep"],
+        None,
+    );
+}
+
+/// Tests foreground removal with --no-delete-branch on an unmerged branch.
+/// No hint needed since the flag had no effect (branch wouldn't be deleted anyway).
+#[rstest]
+fn test_remove_foreground_no_delete_branch_unmerged(mut repo: TestRepo) {
+    // Create a worktree with an unmerged commit
+    let worktree_path = repo.add_worktree("feature-fg-unmerged-keep");
+
+    // Add a commit to the feature branch that's not in main
+    std::fs::write(worktree_path.join("feature.txt"), "new feature").unwrap();
+    repo.git_command(&["add", "feature.txt"])
+        .current_dir(&worktree_path)
+        .output()
+        .unwrap();
+    repo.git_command(&["commit", "-m", "Add feature"])
+        .current_dir(&worktree_path)
+        .output()
+        .unwrap();
+
+    // Go back to main
+    repo.git_command(&["checkout", "main"]).output().unwrap();
+
+    // Remove with both --no-background and --no-delete-branch
+    // No hint because:
+    // - Branch is unmerged (wouldn't be deleted anyway)
+    // - --no-delete-branch had no effect
+    snapshot_remove(
+        "remove_foreground_no_delete_branch_unmerged",
+        &repo,
+        &[
+            "--no-background",
+            "--no-delete-branch",
+            "feature-fg-unmerged-keep",
+        ],
+        None,
+    );
+}
+
 #[rstest]
 fn test_remove_no_delete_branch(mut repo: TestRepo) {
-    // Create a worktree
+    // Create a worktree (integrated - same commit as main)
     let _worktree_path = repo.add_worktree("feature-keep");
 
     // Remove worktree but keep the branch using --no-delete-branch flag
+    // Since branch is integrated, the flag has an effect - hint explains this
     snapshot_remove(
         "remove_no_delete_branch",
         &repo,
         &["--no-delete-branch", "feature-keep"],
+        None,
+    );
+}
+
+#[rstest]
+fn test_remove_no_delete_branch_unmerged(mut repo: TestRepo) {
+    // Create a worktree with an unmerged commit
+    let worktree_path = repo.add_worktree("feature-unmerged-keep");
+
+    // Add a commit to the feature branch that's not in main
+    std::fs::write(worktree_path.join("feature.txt"), "new feature").unwrap();
+    repo.git_command(&["add", "feature.txt"])
+        .current_dir(&worktree_path)
+        .output()
+        .unwrap();
+    repo.git_command(&["commit", "-m", "Add feature"])
+        .current_dir(&worktree_path)
+        .output()
+        .unwrap();
+
+    // Go back to main before removing
+    repo.git_command(&["checkout", "main"]).output().unwrap();
+
+    // Remove worktree with --no-delete-branch flag
+    // Since branch is unmerged, the flag has no effect - no hint shown
+    snapshot_remove(
+        "remove_no_delete_branch_unmerged",
+        &repo,
+        &["--no-delete-branch", "feature-unmerged-keep"],
         None,
     );
 }
@@ -486,6 +569,29 @@ fn test_remove_from_detached_head_in_worktree(mut repo: TestRepo) {
         "remove_from_detached_head_in_worktree",
         &repo,
         &[],
+        Some(&worktree_path),
+    );
+}
+
+/// Test foreground removal from a detached HEAD state.
+///
+/// Covers the foreground detached HEAD code path in handlers.rs.
+/// The output should be "✓ Removed worktree (detached HEAD, no branch to delete)".
+///
+/// Ignored on Windows: subprocess tests stay in the worktree, causing file locking errors.
+#[rstest]
+#[cfg_attr(windows, ignore)]
+fn test_remove_foreground_detached_head(mut repo: TestRepo) {
+    let worktree_path = repo.add_worktree("feature-detached-fg");
+
+    // Detach HEAD in the worktree
+    repo.detach_head_in_worktree("feature-detached-fg");
+
+    // Run foreground remove from within the detached worktree
+    snapshot_remove(
+        "remove_foreground_detached_head",
+        &repo,
+        &["--no-background"],
         Some(&worktree_path),
     );
 }
