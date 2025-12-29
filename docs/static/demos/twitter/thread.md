@@ -52,14 +52,14 @@ A few points on why I'm so excited about the project, and why I hope it becomes 
 <!-- Goal: Why isolation matters, then prove the UX problem -->
 
 **2/** (202 chars)
-As models have improved this year, I've been running more & more Claude Code instances in parallel.
+As models have improved this year, I've been running more & more Claude Code instances in parallel, often 5-10.
 
 Each needs its own isolated working directory, otherwise they get confused by each other's changes.
 
 **3/** (222 chars)
 Git worktrees solve this, but the UX is terrible!
 
-To create & navigate to a new worktree:
+To create & navigate to a new worktree in git:
 
 git worktree add -b feat ../repo.feat && cd ../repo.feat
 
@@ -91,10 +91,10 @@ wt remove: delete a worktree
 <!-- ============ PHASE 4: FEATURES ============ -->
 <!-- Goal: List additional capabilities, one per tweet, snappy -->
 
-**7/** (228 chars)
-Beyond the core commands, features that make worktrees simpler:
+**7/** (275 chars)
+Beyond core commands, Worktrunk has quality-of-life features to simplify working with many parallel changes:
 
-Post-start hooks run after creating a worktree: install deps, copy caches, start dev servers, set up the environment. There's a hook for every stage of the worktree lifecycle.
+Hooks: Post-start hooks run after creating a worktree: install deps, copy caches, start dev servers, etc. And there's a hook for every stage of a worktree lifecycle.
 
 [wt-hooks.gif — switch --create showing multiple post-start hooks running]
 
@@ -116,7 +116,7 @@ wt select: fuzzy picker across all branches.
 [wt-select.gif]
 
 **10/** (99 chars)
-When running wt step commit or wt merge, worktrunk can have an LLM write the commit message, with a customizable template.
+LLM Commits: When running wt step commit or wt merge, worktrunk can have an LLM write the commit message, with a customizable template.
 
 [wt-commit.gif — git diff then wt step commit]
 
