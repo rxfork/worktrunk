@@ -790,8 +790,6 @@ def record_all_themes(
 
     tape_rendered = demo_env.out_dir / ".rendered.tape"
     starship_config = demo_env.out_dir / "starship.toml"
-    docs_assets = repo_root / "docs" / "static" / "assets"
-    docs_assets.mkdir(parents=True, exist_ok=True)
 
     for theme_name, output_gif in output_gifs.items():
         theme = THEMES[theme_name]
@@ -816,7 +814,3 @@ def record_all_themes(
         record_vhs(tape_rendered, vhs_binary)
         tape_rendered.unlink(missing_ok=True)
         print(f"GIF saved to {output_gif}")
-
-        # Copy to docs for local preview
-        shutil.copy(output_gif, docs_assets / output_gif.name)
-        print(f"Copied to {docs_assets / output_gif.name}")

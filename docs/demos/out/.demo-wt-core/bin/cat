@@ -1,0 +1,7 @@
+#!/bin/bash
+# Use bat for syntax highlighting if file is toml
+if [[ "$1" == *.toml ]]; then
+    exec bat --style=plain --paging=never "$@"
+else
+    exec /bin/cat "$@"
+fi

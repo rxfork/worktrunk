@@ -26,7 +26,7 @@ LIGHT_THEME = {
     "brightMagenta": "#a475f9",
     "brightCyan": "#39c5cf",
     "brightWhite": "#8c959f",
-    "background": "#FFFDF8",
+    "background": "#FFFBF0",
     "foreground": "#1f2328",
     "cursor": "#d97706",
     "selection": "#FFF0C8",
