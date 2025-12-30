@@ -98,6 +98,16 @@ static ZOLA_LINK_PATTERN: LazyLock<Regex> =
 static ZOLA_RAWCODE_PATTERN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?s)\{% rawcode\(\) %\}(.*?)\{% end %\}").unwrap());
 
+/// Regex to convert Zola figure/picture elements to simple markdown images
+/// Matches: <figure class="demo">...<img src="/assets/X.gif" alt="Y"...>...</figure>
+/// Extracts: src path and alt text from the <img> tag
+static ZOLA_FIGURE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r#"(?s)<figure class="demo">\s*<picture>.*?<img src="/assets/([^"]+)" alt="([^"]*)"[^>]*>.*?</picture>.*?</figure>"#,
+    )
+    .unwrap()
+});
+
 // =============================================================================
 // Unified Template Infrastructure
 // =============================================================================
@@ -732,6 +742,7 @@ fn heading_to_anchor(heading: &str) -> String {
 /// - `[text](@/page.md)` → `[text](https://worktrunk.dev/page/)`
 /// - `[text](@/page.md#anchor)` → `[text](https://worktrunk.dev/page/#anchor)`
 /// - `{% rawcode() %}...{% end %}` → `<pre>...</pre>`
+/// - `<figure class="demo">...<img src="/assets/X.gif"...>...</figure>` → `![alt](raw.githubusercontent.com/.../X.gif)`
 fn transform_zola_to_github(content: &str) -> String {
     // Transform internal links
     let content = ZOLA_LINK_PATTERN
@@ -744,10 +755,21 @@ fn transform_zola_to_github(content: &str) -> String {
         .into_owned();
 
     // Transform rawcode shortcodes to pre tags
-    ZOLA_RAWCODE_PATTERN
+    let content = ZOLA_RAWCODE_PATTERN
         .replace_all(&content, |caps: &regex::Captures| {
             let inner = caps.get(1).unwrap().as_str();
             format!("<pre>{}</pre>", inner)
+        })
+        .into_owned();
+
+    // Transform figure/picture elements to markdown images with GitHub raw URLs
+    ZOLA_FIGURE_PATTERN
+        .replace_all(&content, |caps: &regex::Captures| {
+            let filename = caps.get(1).unwrap().as_str();
+            let alt = caps.get(2).unwrap().as_str();
+            format!(
+                "![{alt}](https://raw.githubusercontent.com/max-sixty/worktrunk-assets/main/demos/{filename})"
+            )
         })
         .into_owned()
 }
