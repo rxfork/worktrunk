@@ -92,7 +92,7 @@ use worktrunk::styling::{
 };
 
 use super::command_executor::CommandContext;
-use super::hooks::{HookFailureStrategy, HookPipeline, HookSource};
+use super::hooks::{HookFailureStrategy, prepare_hook_commands, spawn_hook_commands_background};
 use super::repository_ext::{RemoveTarget, RepositoryCliExt};
 
 /// Generate a backup path for the given path with a timestamp suffix.
@@ -815,112 +815,56 @@ impl<'a> CommandContext<'a> {
     ///
     /// Runs user hooks first, then project hooks.
     pub fn execute_post_create_commands(&self) -> anyhow::Result<()> {
-        let pipeline = HookPipeline::new(*self);
-
-        // Run user hooks first (no approval required)
-        if let Some(user_config) = &self.config.hooks.post_create {
-            pipeline.run_sequential(
-                user_config,
-                HookType::PostCreate,
-                HookSource::User,
-                &[],
-                HookFailureStrategy::Warn,
-                None,
-            )?;
-        }
-
-        // Then run project hooks (approval checked at gate, not here)
-        let project_config = match self.repo.load_project_config()? {
-            Some(cfg) => cfg,
-            None => return Ok(()),
-        };
-
-        let Some(post_create_config) = &project_config.hooks.post_create else {
-            return Ok(());
-        };
-
-        pipeline.run_sequential(
-            post_create_config,
+        let project_config = self.repo.load_project_config()?;
+        super::hooks::run_hook_with_filter(
+            self,
+            self.config.hooks.post_create.as_ref(),
+            project_config
+                .as_ref()
+                .and_then(|c| c.hooks.post_create.as_ref()),
             HookType::PostCreate,
-            HookSource::Project,
             &[],
             HookFailureStrategy::Warn,
             None,
-        )?;
-        Ok(())
+        )
     }
 
     /// Spawn post-start commands in parallel as background processes (non-blocking)
-    ///
-    /// Spawns user hooks first, then project hooks.
     pub fn spawn_post_start_commands(&self) -> anyhow::Result<()> {
-        let pipeline = HookPipeline::new(*self);
+        let project_config = self.repo.load_project_config()?;
 
-        // Spawn user hooks first (no approval required)
-        if let Some(user_config) = &self.config.hooks.post_start {
-            pipeline.spawn_background(
-                user_config,
-                HookType::PostStart,
-                HookSource::User,
-                &[],
-                None,
-            )?;
-        }
-
-        // Then spawn project hooks (approval checked at gate, not here)
-        let project_config = match self.repo.load_project_config()? {
-            Some(cfg) => cfg,
-            None => return Ok(()),
-        };
-
-        let Some(post_start_config) = &project_config.hooks.post_start else {
-            return Ok(());
-        };
-
-        pipeline.spawn_background(
-            post_start_config,
+        let commands = prepare_hook_commands(
+            self,
+            self.config.hooks.post_start.as_ref(),
+            project_config
+                .as_ref()
+                .and_then(|c| c.hooks.post_start.as_ref()),
             HookType::PostStart,
-            HookSource::Project,
             &[],
             None,
-        )
+        )?;
+
+        spawn_hook_commands_background(self, commands, HookType::PostStart)
     }
 
     /// Spawn post-switch commands in parallel as background processes (non-blocking)
     ///
-    /// Spawns user hooks first, then project hooks.
     /// Runs on every switch, including to existing worktrees and newly created ones.
     pub fn spawn_post_switch_commands(&self) -> anyhow::Result<()> {
-        let pipeline = HookPipeline::new(*self);
+        let project_config = self.repo.load_project_config()?;
 
-        // Spawn user hooks first (no approval required)
-        if let Some(user_config) = &self.config.hooks.post_switch {
-            pipeline.spawn_background(
-                user_config,
-                HookType::PostSwitch,
-                HookSource::User,
-                &[],
-                None,
-            )?;
-        }
-
-        // Then spawn project hooks (approval checked at gate, not here)
-        let project_config = match self.repo.load_project_config()? {
-            Some(cfg) => cfg,
-            None => return Ok(()),
-        };
-
-        let Some(post_switch_config) = &project_config.hooks.post_switch else {
-            return Ok(());
-        };
-
-        pipeline.spawn_background(
-            post_switch_config,
+        let commands = prepare_hook_commands(
+            self,
+            self.config.hooks.post_switch.as_ref(),
+            project_config
+                .as_ref()
+                .and_then(|c| c.hooks.post_switch.as_ref()),
             HookType::PostSwitch,
-            HookSource::Project,
             &[],
             None,
-        )
+        )?;
+
+        spawn_hook_commands_background(self, commands, HookType::PostSwitch)
     }
 }
 
