@@ -220,7 +220,7 @@ echo "Add placeholder module for user profile settings."
     # User config with LLM commit generation
     _write_user_config(
         env,
-        ["npm run dev -- --port {{ branch | hash_port }} &", "cargo nextest run"],
+        ["npm run dev -- --port {{ branch | hash_port }}", "cargo nextest run"],
         commit_generation=True,
     )
 
