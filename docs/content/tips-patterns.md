@@ -15,7 +15,7 @@ Create a worktree and launch Claude in one command:
 ```bash
 alias wsc='wt switch --create --execute=claude'
 wsc new-feature                       # Creates worktree, runs hooks, launches Claude
-wsc feature -- 'Fix GH #322'          # Pass initial prompt to Claude
+wsc feature -- 'Fix GH #322'          # Runs `claude 'Fix GH #322'`
 ```
 
 ## Eliminate cold starts

@@ -2238,7 +2238,8 @@ wt switch --create fix --base=@  # Branch from current HEAD
         ///
         /// Then `wsc feature-branch` creates the worktree and launches Claude
         /// Code. Arguments after `--` are passed to the command, so
-        /// `wsc feature -- 'Fix GH #322'` works.
+        /// `wsc feature -- 'Fix GH #322'` runs `claude 'Fix GH #322'`,
+        /// starting Claude with a prompt.
         #[arg(short = 'x', long)]
         execute: Option<String>,
 

@@ -113,7 +113,7 @@ Usage: <b><span class=c>wt switch</span></b> <span class=c>[OPTIONS]</span> <spa
 
           Then <b>wsc feature-branch</b> creates the worktree and launches Claude Code.
           Arguments after <b>--</b> are passed to the command, so <b>wsc feature -- &#39;Fix</b>
-          GH #322&#39; works.
+          GH #322&#39; runs <b>claude &#39;Fix GH #322&#39;</b>, starting Claude with a prompt.
 
   <b><span class=c>-y</span></b>, <b><span class=c>--yes</span></b>
           Skip approval prompts
