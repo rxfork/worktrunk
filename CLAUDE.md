@@ -27,44 +27,6 @@ When making decisions, prioritize:
 
 Use deprecation warnings to get there smoothly when external interfaces must change.
 
-## Code Quality
-
-Claude commonly makes the mistake of adding `#[allow(dead_code)]` when writing code that isn't immediately used. Don't suppress the warning—either delete the code or add a TODO comment explaining when it will be used.
-
-Example of escalating instead of suppressing:
-
-```rust
-// TODO(feature-name): Used by upcoming config validation
-fn parse_config() { ... }
-```
-
-## Documentation
-
-**Behavior changes require documentation updates.** This is not optional.
-
-When changing:
-- Detection logic
-- CLI flags or their defaults
-- Error conditions or messages
-
-Ask: "Does `--help` still describe what the code does?" If not, update `src/cli.rs` first.
-
-After modifying `cli.rs`, sync the doc pages:
-
-```bash
-cargo test --test integration test_command_pages_are_in_sync
-```
-
-## Data Safety
-
-Never risk data loss without explicit user consent. Err on the side of failing safely.
-
-- **Prefer failure over silent data loss** — If an operation might destroy untracked files, uncommitted changes, or user data, fail with an error rather than proceeding
-- **Explicit consent for destructive operations** — Operations that force-remove data (like `--force` on remove) require the user to explicitly request that behavior
-- **Time-of-check vs time-of-use** — If there's a gap between checking safety and performing an operation, be conservative. Example: `wt merge` verifies the worktree is clean before rebasing, but files could be added before cleanup — don't force-remove during cleanup
-
-A failed command that preserves data is always better than a "successful" command that silently destroys work.
-
 ## Terminology
 
 Use consistent terminology in documentation, help text, and code comments:
@@ -133,6 +95,33 @@ PTY-based tests (approval prompts, TUI select, progressive rendering, shell wrap
    ```
 
 The pre-merge hook (`wt hook pre-merge --yes`) already sets `NEXTEST_NO_INPUT_HANDLER=1` automatically.
+
+## Documentation
+
+**Behavior changes require documentation updates.** This is not optional.
+
+When changing:
+- Detection logic
+- CLI flags or their defaults
+- Error conditions or messages
+
+Ask: "Does `--help` still describe what the code does?" If not, update `src/cli.rs` first.
+
+After modifying `cli.rs`, sync the doc pages:
+
+```bash
+cargo test --test integration test_command_pages_are_in_sync
+```
+
+## Data Safety
+
+Never risk data loss without explicit user consent. Err on the side of failing safely.
+
+- **Prefer failure over silent data loss** — If an operation might destroy untracked files, uncommitted changes, or user data, fail with an error rather than proceeding
+- **Explicit consent for destructive operations** — Operations that force-remove data (like `--force` on remove) require the user to explicitly request that behavior
+- **Time-of-check vs time-of-use** — If there's a gap between checking safety and performing an operation, be conservative. Example: `wt merge` verifies the worktree is clean before rebasing, but files could be added before cleanup — don't force-remove during cleanup
+
+A failed command that preserves data is always better than a "successful" command that silently destroys work.
 
 ## Command Execution Principles
 
@@ -241,3 +230,14 @@ Use `wt list --format=json` for structured data access. See `wt list --help` for
 - Worktrees are **addressed by branch name**, not by filesystem path.
 - Each worktree should map to **exactly one branch**.
 - We **never retarget an existing worktree** to a different branch; instead create/switch/remove worktrees.
+
+## Code Quality
+
+Claude commonly makes the mistake of adding `#[allow(dead_code)]` when writing code that isn't immediately used. Don't suppress the warning—either delete the code or add a TODO comment explaining when it will be used.
+
+Example of escalating instead of suppressing:
+
+```rust
+// TODO(feature-name): Used by upcoming config validation
+fn parse_config() { ... }
+```
