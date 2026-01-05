@@ -477,7 +477,7 @@ fi
 ## Command reference
 
 {% terminal() %}
-wt hook - Run hooks independently
+wt hook - Run configured hooks
 
 Usage: <b><span class=c>wt hook</span></b> <span class=c>[OPTIONS]</span> <span class=c>&lt;COMMAND&gt;</span>
 

@@ -71,7 +71,7 @@ Removal runs in the background by default (returns immediately). Logs are writte
 ## Command reference
 
 {% terminal() %}
-wt remove - Remove worktree and branch (if merged)
+wt remove - Remove worktree; delete branch if merged
 
 Usage: <b><span class=c>wt remove</span></b> <span class=c>[OPTIONS]</span> <span class=c>[BRANCHES]...</span>
 

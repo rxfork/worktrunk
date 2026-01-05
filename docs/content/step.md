@@ -39,12 +39,12 @@ wt step push
 ## See also
 
 - [wt merge](@/merge.md) — Runs commit → squash → rebase → hooks → push → cleanup automatically
-- [wt hook](@/hook.md) — Run hooks independently
+- [wt hook](@/hook.md) — Run configured hooks
 
 ## Command reference
 
 {% terminal() %}
-wt step - Run individual workflow operations
+wt step - Run individual operations
 
 Usage: <b><span class=c>wt step</span></b> <span class=c>[OPTIONS]</span> <span class=c>&lt;COMMAND&gt;</span>
 

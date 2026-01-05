@@ -863,7 +863,7 @@ wt config state logs
     Clear,
 }
 
-/// Run individual workflow operations
+/// Run individual operations
 #[derive(Subcommand)]
 pub enum StepCommand {
     /// Commit changes with LLM commit message
@@ -1003,7 +1003,7 @@ Note: This command is experimental and may change in future versions.
     },
 }
 
-/// Run hooks independently
+/// Run configured hooks
 #[derive(Subcommand)]
 pub enum HookCommand {
     /// Show configured hooks
@@ -1440,7 +1440,7 @@ WORKTRUNK_COMMIT_GENERATION__ARGS="test: automated commit" \
         action: ConfigCommand,
     },
 
-    /// Run individual workflow operations
+    /// Run individual operations
     #[command(
         name = "step",
         after_long_help = r#"Run individual git workflow operations: commits, squashes, rebases, and pushes.
@@ -1474,7 +1474,7 @@ wt step push
 ## See also
 
 - [wt merge](@/merge.md) — Runs commit → squash → rebase → hooks → push → cleanup automatically
-- [wt hook](@/hook.md) — Run hooks independently
+- [wt hook](@/hook.md) — Run configured hooks
 
 <!-- subdoc: for-each -->
 "#
@@ -1484,7 +1484,7 @@ wt step push
         action: StepCommand,
     },
 
-    /// Run hooks independently
+    /// Run configured hooks
     #[command(
         name = "hook",
         after_long_help = r#"Shell commands that run at key points in the worktree lifecycle.
@@ -2392,7 +2392,7 @@ To change which branch a worktree is on, use `git switch` inside that worktree.
         verify: bool,
     },
 
-    /// Remove worktree and branch (if merged)
+    /// Remove worktree; delete branch if merged
     #[command(
         after_long_help = r#"Removes worktrees and their branches (if merged), returning to the main worktree. Defaults to removing the current worktree.
 

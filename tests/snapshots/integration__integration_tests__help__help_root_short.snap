@@ -10,6 +10,7 @@ info:
     GIT_EDITOR: ""
     RUST_LOG: warn
     SOURCE_DATE_EPOCH: "1735776000"
+    TERM: alacritty
     WORKTRUNK_CONFIG_PATH: /nonexistent/test/config.toml
     WORKTRUNK_TEST_SKIP_URL_HEALTH_CHECK: "1"
 ---
@@ -24,12 +25,12 @@ Usage: [1m[36mwt[0m [36m[OPTIONS][0m [36m[COMMAND]
 
 [1m[32mCommands:
   [1m[36mconfig[0m  Manage configuration and shell integration
-  [1m[36mstep[0m    Run individual workflow operations
-  [1m[36mhook[0m    Run hooks independently
+  [1m[36mstep[0m    Run individual operations
+  [1m[36mhook[0m    Run configured hooks
   [1m[36mselect[0m  Interactive worktree selector
   [1m[36mlist[0m    List worktrees and their status
   [1m[36mswitch[0m  Switch to a worktree
-  [1m[36mremove[0m  Remove worktree and branch (if merged)
+  [1m[36mremove[0m  Remove worktree; delete branch if merged
   [1m[36mmerge[0m   Merge worktree into target branch
 
 [1m[32mOptions:

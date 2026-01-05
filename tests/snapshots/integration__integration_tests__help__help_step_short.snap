@@ -11,6 +11,7 @@ info:
     GIT_EDITOR: ""
     RUST_LOG: warn
     SOURCE_DATE_EPOCH: "1735776000"
+    TERM: alacritty
     WORKTRUNK_CONFIG_PATH: /nonexistent/test/config.toml
     WORKTRUNK_TEST_SKIP_URL_HEALTH_CHECK: "1"
 ---
@@ -19,7 +20,7 @@ exit_code: 0
 ----- stdout -----
 
 ----- stderr -----
-wt step - Run individual workflow operations
+wt step - Run individual operations
 
 Usage: [1m[36mwt step[0m [36m[OPTIONS][0m [36m<COMMAND>
 
