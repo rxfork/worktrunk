@@ -55,11 +55,11 @@ wt merge --no-commit
 
 1. **Squash** — Stages uncommitted changes, then combines all commits since target into one (like GitHub's "Squash and merge"). Use `--stage` to control what gets staged: `all` (default), `tracked`, or `none`. A backup ref is saved to `refs/wt-backup/<branch>`. With `--no-squash`, uncommitted changes become a separate commit and individual commits are preserved.
 2. **Rebase** — Rebases onto target if behind. Skipped if already up-to-date. Conflicts abort immediately.
-3. **Pre-merge hooks** — Project commands run after rebase, before merge. Failures abort. See [wt hook](@/hook.md).
+3. **Pre-merge hooks** — Hooks run after rebase, before merge. Failures abort. See [wt hook](@/hook.md).
 4. **Merge** — Fast-forward merge to the target branch. Non-fast-forward merges are rejected.
-5. **Pre-remove hooks** — Project commands run before removing worktree. Failures abort.
+5. **Pre-remove hooks** — Hooks run before removing worktree. Failures abort.
 6. **Cleanup** — Removes the worktree and branch. Use `--no-remove` to keep the worktree. When already on the target branch or in the main worktree, the worktree is preserved.
-7. **Post-merge hooks** — Project commands run after cleanup. Failures are logged but don't abort.
+7. **Post-merge hooks** — Hooks run after cleanup. Failures are logged but don't abort.
 
 Use `--no-commit` to skip committing uncommitted changes and squashing; rebase still runs by default and can rewrite commits unless `--no-rebase` is passed. Useful after preparing commits manually with `wt step`. Requires a clean working tree.
 

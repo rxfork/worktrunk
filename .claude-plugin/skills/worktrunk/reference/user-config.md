@@ -297,7 +297,7 @@ User hooks support the same hook types and template variables as project hooks. 
 | Location | `~/.config/worktrunk/config.toml` | `.config/wt.toml` |
 | Scope | All repositories | Single repository |
 | Approval | Not required | Required |
-| Execution order | First | After user hooks |
+| Execution order | Before project hooks | After user hooks |
 
 **Filtering by repository:**
 

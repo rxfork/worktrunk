@@ -8,13 +8,14 @@ group = "Reference"
 
 ## What commands does Worktrunk execute?
 
-Worktrunk executes commands in three contexts:
+Worktrunk executes commands in four contexts:
 
-1. **Project hooks** (`.config/wt.toml`) — Automation for worktree lifecycle
-2. **LLM commands** (`~/.config/worktrunk/config.toml`) — Commit message generation
-3. **--execute flag** — Explicitly provided commands
+1. **User hooks** (`~/.config/worktrunk/config.toml`) — Personal automation for all repositories
+2. **Project hooks** (`.config/wt.toml`) — Repository-specific automation
+3. **LLM commands** (`~/.config/worktrunk/config.toml`) — Commit message generation
+4. **--execute flag** — Explicitly provided commands
 
-Commands from project hooks require approval on first run. Approved commands are saved to user config. If a command changes, Worktrunk requires new approval.
+User hooks don't require approval (you defined them). Commands from project hooks require approval on first run. Approved commands are saved to user config. If a command changes, Worktrunk requires new approval.
 
 ### Example approval prompt
 
