@@ -190,51 +190,22 @@ fn is_plugin_installed() -> bool {
     content.contains("\"worktrunk@worktrunk\"")
 }
 
-/// Render runtime information (version, binary name, shell integration status)
+/// Render OTHER section (version, Claude plugin, hyperlinks)
 fn render_runtime_info(out: &mut String) -> anyhow::Result<()> {
     let cmd = crate::binary_name();
     let version = version_str();
-    let shell_active = output::is_shell_integration_active();
 
-    // Version as suffix to heading (avoid lonely gutter)
+    // Version as suffix to heading
     writeln!(
         out,
         "{}",
-        format_heading("RUNTIME", Some(&cformat!("{cmd} {version}")))
+        format_heading("OTHER", Some(&cformat!("{cmd} {version}")))
     )?;
 
-    // Shell integration status
-    if shell_active {
-        writeln!(out, "{}", info_message("Shell integration active"))?;
-    } else {
-        writeln!(out, "{}", warning_message("Shell integration not active"))?;
-    }
-
-    // Cache plugin status for use after debug info
+    // Claude Code plugin status
     let plugin_installed = is_plugin_installed();
     let claude_available = is_claude_available();
 
-    // Debug info for shell integration troubleshooting
-    // Show invocation details that help diagnose issues like https://github.com/max-sixty/worktrunk/pull/387
-    let invocation = crate::invocation_path();
-    let is_git_subcommand = crate::is_git_subcommand();
-
-    // Build debug lines
-    let mut debug_lines = Vec::new();
-
-    // Always show how wt was invoked
-    debug_lines.push(cformat!("Invoked as: <bold>{invocation}</>"));
-
-    // Show if running as git subcommand (affects shell integration)
-    if is_git_subcommand {
-        debug_lines.push("Git subcommand: yes (GIT_EXEC_PATH set)".to_string());
-    }
-
-    // Show shell integration debug info in a gutter
-    let debug_text = debug_lines.join("\n");
-    writeln!(out, "{}", format_with_gutter(&debug_text, None))?;
-
-    // Claude Code plugin status (after debug info)
     if plugin_installed {
         writeln!(out, "{}", success_message("Claude Code plugin installed"))?;
     } else if claude_available {
@@ -255,7 +226,7 @@ fn render_runtime_info(out: &mut String) -> anyhow::Result<()> {
         )?;
     }
 
-    // Show hyperlink support status (separate from shell integration)
+    // Show hyperlink support status
     let hyperlinks_supported =
         worktrunk::styling::supports_hyperlinks(worktrunk::styling::Stream::Stderr);
     let status = if hyperlinks_supported {
@@ -463,6 +434,23 @@ fn render_project_config(out: &mut String) -> anyhow::Result<()> {
 fn render_shell_status(out: &mut String) -> anyhow::Result<()> {
     writeln!(out, "{}", format_heading("SHELL INTEGRATION", None))?;
 
+    // Shell integration runtime status (moved from RUNTIME section)
+    let shell_active = output::is_shell_integration_active();
+    if shell_active {
+        writeln!(out, "{}", info_message("Shell integration active"))?;
+    } else {
+        writeln!(out, "{}", warning_message("Shell integration not active"))?;
+        // Show invocation details to help diagnose
+        let invocation = crate::invocation_path();
+        let is_git_subcommand = crate::is_git_subcommand();
+        let mut debug_lines = vec![cformat!("Binary invoked as: <bold>{invocation}</>")];
+        if is_git_subcommand {
+            debug_lines.push("Git subcommand: yes (GIT_EXEC_PATH set)".to_string());
+        }
+        writeln!(out, "{}", format_with_gutter(&debug_lines.join("\n"), None))?;
+    }
+    writeln!(out)?;
+
     // Use the same detection logic as `wt config shell install`
     let cmd = crate::binary_name();
     let scan_result = match scan_shell_configs(None, true, &cmd) {
@@ -526,6 +514,18 @@ fn render_shell_status(out: &mut String) -> anyhow::Result<()> {
                 if let Some(det) = detection {
                     for detected in &det.matched_lines {
                         writeln!(out, "{}", format_bash_with_gutter(detected.content.trim()))?;
+                    }
+
+                    // Check if any matched lines use .exe suffix and warn about function name
+                    let uses_exe = det.matched_lines.iter().any(|m| m.content.contains(".exe"));
+                    if uses_exe {
+                        writeln!(
+                            out,
+                            "{}",
+                            hint_message(cformat!(
+                                "Creates shell function <bold>{cmd}</>. Aliases should use <bright-black>{cmd}</>, not <bright-black>{cmd}.exe</>"
+                            ))
+                        )?;
                     }
                 }
 
@@ -626,14 +626,57 @@ fn render_shell_status(out: &mut String) -> anyhow::Result<()> {
             for detected in &detection.unmatched_candidates {
                 writeln!(out, "{}", format_bash_with_gutter(detected.content.trim()))?;
             }
+
+            // If any unmatched lines contain .exe, explain the function name issue
+            let uses_exe = detection
+                .unmatched_candidates
+                .iter()
+                .any(|m| m.content.contains(".exe"));
+            if uses_exe {
+                writeln!(
+                    out,
+                    "{}",
+                    hint_message(cformat!(
+                        "Note: <bold>{cmd}.exe</> creates shell function <bold>{cmd}</>. \
+                         Aliases should use <bright-black>{cmd}</>, not <bright-black>{cmd}.exe</>"
+                    ))
+                )?;
+            }
         }
     }
 
-    // If we have unmatched candidates but no configured shells, suggest raising an issue
+    // Show aliases that bypass shell integration (Issue #348)
+    for detection in &detection_results {
+        for alias in &detection.bypass_aliases {
+            let path = format_path_for_display(&detection.path);
+            let location = format!("{}:{}", path, alias.line_number);
+            writeln!(
+                out,
+                "{}",
+                warning_message(cformat!(
+                    "Alias <bold>{}</> bypasses shell integration — won't auto-cd",
+                    alias.alias_name
+                ))
+            )?;
+            writeln!(out, "{}", format_bash_with_gutter(alias.content.trim()))?;
+            writeln!(
+                out,
+                "{}",
+                hint_message(cformat!(
+                    "Change to <bright-black>alias {}=\"{cmd}\"</> @ {location}",
+                    alias.alias_name
+                ))
+            )?;
+        }
+    }
+
+    // Check if any shell has config already (eval line present)
     let has_any_configured = scan_result
         .configured
         .iter()
         .any(|r| matches!(r.action, ConfigAction::AlreadyExists));
+
+    // If we have unmatched candidates but no configured shells, suggest raising an issue
     if has_any_unmatched && !has_any_configured {
         let unmatched_summary: Vec<_> = detection_results
             .iter()
