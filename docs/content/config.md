@@ -146,7 +146,7 @@ notify = "notify-send 'Merging {{ branch }}'"
 
 User hooks run before project hooks and don't require approval. Skip with `--no-verify`.
 
-See [wt hook](@/hook.md#user-hooks) for complete documentation.
+See [`wt hook`](@/hook.md#user-hooks) for complete documentation.
 
 ## Project config
 
@@ -163,7 +163,7 @@ test = "npm test"
 lint = "npm run lint"
 ```
 
-See [wt hook](@/hook.md) for complete documentation on hook types, execution order, template variables, and [JSON context](@/hook.md#json-context).
+See [`wt hook`](@/hook.md) for complete documentation on hook types, execution order, template variables, and [JSON context](@/hook.md#json-context).
 
 ### Dev server URL
 
@@ -787,7 +787,7 @@ Usage: <b><span class=c>wt config state default-branch</span></b> <span class=c>
 
 ## wt config state ci-status
 
-Caches GitHub/GitLab CI status for display in [wt list](@/list.md#ci-status).
+Caches GitHub/GitLab CI status for display in [`wt list`](@/list.md#ci-status).
 
 ### How it works
 
@@ -807,7 +807,7 @@ Caches GitHub/GitLab CI status for display in [wt list](@/list.md#ci-status).
 | `no-ci` | No checks configured |
 | `error` | Fetch error (rate limit, network, auth) |
 
-See [wt list CI status](@/list.md#ci-status) for display symbols and colors.
+See [`wt list` CI status](@/list.md#ci-status) for display symbols and colors.
 
 ### When to use
 

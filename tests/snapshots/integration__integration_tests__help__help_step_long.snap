@@ -71,5 +71,5 @@ Manual merge workflow with review between steps:
 
 [32mSee also
 
-- wt merge — Runs commit → squash → rebase → hooks → push → cleanup automatically
-- wt hook — Run configured hooks
+- [2mwt merge[0m — Runs commit → squash → rebase → hooks → push → cleanup automatically
+- [2mwt hook[0m — Run configured hooks

@@ -509,7 +509,7 @@ Without a subcommand, runs `get`."#
     /// CI status cache
     #[command(
         name = "ci-status",
-        after_long_help = r#"Caches GitHub/GitLab CI status for display in [wt list](@/list.md#ci-status).
+        after_long_help = r#"Caches GitHub/GitLab CI status for display in [`wt list`](@/list.md#ci-status).
 
 ## How it works
 
@@ -529,7 +529,7 @@ Without a subcommand, runs `get`."#
 | `no-ci` | No checks configured |
 | `error` | Fetch error (rate limit, network, auth) |
 
-See [wt list CI status](@/list.md#ci-status) for display symbols and colors.
+See [`wt list` CI status](@/list.md#ci-status) for display symbols and colors.
 
 ## When to use
 
@@ -1312,10 +1312,10 @@ To change which branch a worktree is on, use `git switch` inside that worktree.
 
 ## See also
 
-- [wt select](@/select.md) — Interactive worktree selection
-- [wt list](@/list.md) — View all worktrees
-- [wt remove](@/remove.md) — Delete worktrees when done
-- [wt merge](@/merge.md) — Integrate changes back to the default branch
+- [`wt select`](@/select.md) — Interactive worktree selection
+- [`wt list`](@/list.md) — View all worktrees
+- [`wt remove`](@/remove.md) — Delete worktrees when done
+- [`wt merge`](@/merge.md) — Integrate changes back to the default branch
 "#
     )]
     Switch {
@@ -1595,7 +1595,7 @@ Missing a field that would be generally useful? Open an issue at https://github.
 
 ## See also
 
-- [wt select](@/select.md) — Interactive worktree picker with live preview
+- [`wt select`](@/select.md) — Interactive worktree picker with live preview
 "#
     )]
     // TODO: `args_conflicts_with_subcommands` causes confusing errors for unknown
@@ -1690,12 +1690,12 @@ Removal runs in the background by default (returns immediately). Logs are writte
 
 ## Shortcuts
 
-`@` (current), `-` (previous), `^` (default branch). See [wt switch](@/switch.md#shortcuts).
+`@` (current), `-` (previous), `^` (default branch). See [`wt switch`](@/switch.md#shortcuts).
 
 ## See also
 
-- [wt merge](@/merge.md) — Remove worktree after merging
-- [wt list](@/list.md) — View all worktrees
+- [`wt merge`](@/merge.md) — Remove worktree after merging
+- [`wt list`](@/list.md) — View all worktrees
 "#
     )]
     Remove {
@@ -1776,7 +1776,7 @@ wt merge --no-commit
 
 1. **Squash** — Stages uncommitted changes, then combines all commits since target into one (like GitHub's "Squash and merge"). Use `--stage` to control what gets staged: `all` (default), `tracked`, or `none`. A backup ref is saved to `refs/wt-backup/<branch>`. With `--no-squash`, uncommitted changes become a separate commit and individual commits are preserved.
 2. **Rebase** — Rebases onto target if behind. Skipped if already up-to-date. Conflicts abort immediately.
-3. **Pre-merge hooks** — Hooks run after rebase, before merge. Failures abort. See [wt hook](@/hook.md).
+3. **Pre-merge hooks** — Hooks run after rebase, before merge. Failures abort. See [`wt hook`](@/hook.md).
 4. **Merge** — Fast-forward merge to the target branch. Non-fast-forward merges are rejected.
 5. **Pre-remove hooks** — Hooks run before removing worktree. Failures abort.
 6. **Cleanup** — Removes the worktree and branch. Use `--no-remove` to keep the worktree. When already on the target branch or in the main worktree, the worktree is preserved.
@@ -1800,9 +1800,9 @@ lint = "cargo clippy"
 
 ## See also
 
-- [wt step](@/step.md) — Run individual operations (commit, squash, rebase, push)
-- [wt remove](@/remove.md) — Remove worktrees without merging
-- [wt switch](@/switch.md) — Navigate to other worktrees
+- [`wt step`](@/step.md) — Run individual operations (commit, squash, rebase, push)
+- [`wt remove`](@/remove.md) — Remove worktrees without merging
+- [`wt switch`](@/switch.md) — Navigate to other worktrees
 "#
     )]
     Merge {
@@ -1900,8 +1900,8 @@ Branches without worktrees are included — selecting one creates a worktree. (`
 
 ## See also
 
-- [wt list](@/list.md) — Static table view with all worktree metadata
-- [wt switch](@/switch.md) — Direct switching to a known target branch
+- [`wt list`](@/list.md) — Static table view with all worktree metadata
+- [`wt switch`](@/switch.md) — Direct switching to a known target branch
 "#
     )]
     Select,
@@ -1939,8 +1939,8 @@ wt step push
 
 ## See also
 
-- [wt merge](@/merge.md) — Runs commit → squash → rebase → hooks → push → cleanup automatically
-- [wt hook](@/hook.md) — Run configured hooks
+- [`wt merge`](@/merge.md) — Runs commit → squash → rebase → hooks → push → cleanup automatically
+- [`wt hook`](@/hook.md) — Run configured hooks
 
 <!-- subdoc: for-each -->
 "#
@@ -2063,7 +2063,7 @@ cleanup = "rm -rf /tmp/cache/{{ branch }}"
 - **pre-remove** — Before removing worktree during cleanup
 - **post-merge** — After cleanup completes
 
-See [wt merge](@/merge.md#pipeline) for the complete pipeline.
+See [`wt merge`](@/merge.md#pipeline) for the complete pipeline.
 
 ## Configuration
 
@@ -2415,9 +2415,9 @@ fi
 
 ## See also
 
-- [wt merge](@/merge.md) — Runs hooks automatically during merge
-- [wt switch](@/switch.md) — Runs post-create/post-start hooks on `--create`
-- [wt config](@/config.md) — Manage hook approvals
+- [`wt merge`](@/merge.md) — Runs hooks automatically during merge
+- [`wt switch`](@/switch.md) — Runs post-create/post-start hooks on `--create`
+- [`wt config`](@/config.md) — Manage hook approvals
 
 <!-- subdoc: approvals -->
 "#
@@ -2568,7 +2568,7 @@ notify = "notify-send 'Merging {{ branch }}'"
 
 User hooks run before project hooks and don't require approval. Skip with `--no-verify`.
 
-See [wt hook](@/hook.md#user-hooks) for complete documentation.
+See [`wt hook`](@/hook.md#user-hooks) for complete documentation.
 
 ## Project config
 
@@ -2585,7 +2585,7 @@ test = "npm test"
 lint = "npm run lint"
 ```
 
-See [wt hook](@/hook.md) for complete documentation on hook types, execution order, template variables, and [JSON context](@/hook.md#json-context).
+See [`wt hook`](@/hook.md) for complete documentation on hook types, execution order, template variables, and [JSON context](@/hook.md#json-context).
 
 ### Dev server URL
 
