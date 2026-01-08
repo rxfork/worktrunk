@@ -204,7 +204,7 @@ Both run when creating a worktree. The difference:
 | Hook | Execution | Best for |
 |------|-----------|----------|
 | `post-create` | Blocks until complete | Tasks the developer needs before working (dependency install) |
-| `post-start` | Background, parallel | Long-running tasks that can finish in parallel |
+| `post-start` | Background, parallel | Long-running tasks that don't block worktree creation |
 
 Many tasks work well in `post-start` — they'll likely be ready by the time they're needed, especially when the fallback is recompiling. If unsure, prefer `post-start` for faster worktree creation.
 
@@ -385,7 +385,7 @@ wt hook post-create --var branch=feature/test  # Override template variable
 
 The `user:` and `project:` prefixes filter by source. Use `user:` or `project:` alone to run all hooks from that source, or `user:name` / `project:name` to run a specific hook.
 
-The `--var KEY=VALUE` flag lets you override built-in template variables — useful for testing hooks with different contexts without switching to that context.
+The `--var KEY=VALUE` flag overrides built-in template variables — useful for testing hooks with different contexts without switching to that context.
 
 ## Language-specific tips
 
