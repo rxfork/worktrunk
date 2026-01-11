@@ -64,8 +64,9 @@
 //! Both modes render the final table in `collect()`, ensuring a single canonical rendering path.
 //!
 //! **Flat parallelism**: All tasks (for all worktrees and branches) are collected into a single
-//! work queue and processed via Rayon's thread pool. This avoids nested parallelism and ensures
-//! optimal CPU utilization (~8 threads) regardless of worktree count.
+//! work queue and processed via Rayon's thread pool. This avoids nested parallelism and keeps
+//! utilization high regardless of worktree count (pool size is set at startup; default is 2x CPU
+//! cores unless `RAYON_NUM_THREADS` is set).
 //!
 //! **Task ordering**: Work items are sorted so local git operations run first, network tasks
 //! (CI status, URL health checks) run last. This ensures the table fills in quickly with local
@@ -1015,7 +1016,8 @@ pub fn collect(
 
     // Collect all work items upfront, then execute in a single Rayon pool.
     // This avoids nested parallelism (Rayon par_iter → thread::scope per worktree)
-    // which could create 100+ threads. Instead, we have one pool with ~8 threads.
+    // which could create 100+ threads. Instead, we have one pool with the configured
+    // thread count (default 2x CPU cores unless overridden by RAYON_NUM_THREADS).
     let sorted_worktrees_clone = sorted_worktrees.clone();
     let tx_worker = tx.clone();
     let expected_results_clone = expected_results.clone();
