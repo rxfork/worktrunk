@@ -95,27 +95,6 @@ pub struct TaskContext {
 }
 
 impl TaskContext {
-    /// Get a working tree handle for this task's worktree.
-    ///
-    /// Returns `Some(WorkingTree)` for worktree items, `None` for branch-only items.
-    /// Use this for worktree-specific operations (git status, working tree diff).
-    ///
-    /// Tasks that require a worktree should only be spawned for items with worktrees,
-    /// so the `None` case indicates a programming error if encountered in such tasks.
-    fn worktree(&self) -> Option<worktrunk::git::WorkingTree<'_>> {
-        self.branch_ref.working_tree(&self.repo)
-    }
-
-    /// Get the branch name, if any.
-    fn branch(&self) -> Option<&str> {
-        self.branch_ref.branch.as_deref()
-    }
-
-    /// Get the commit SHA.
-    fn commit_sha(&self) -> &str {
-        &self.branch_ref.commit_sha
-    }
-
     fn error(&self, kind: TaskKind, message: impl Display) -> TaskError {
         TaskError::new(self.item_idx, kind, message.to_string())
     }
@@ -398,10 +377,10 @@ impl Task for CommitDetailsTask {
     fn compute(ctx: TaskContext) -> Result<TaskResult, TaskError> {
         let repo = &ctx.repo;
         let timestamp = repo
-            .commit_timestamp(ctx.commit_sha())
+            .commit_timestamp(&ctx.branch_ref.commit_sha)
             .map_err(|e| ctx.error(Self::KIND, e))?;
         let commit_message = repo
-            .commit_message(ctx.commit_sha())
+            .commit_message(&ctx.branch_ref.commit_sha)
             .map_err(|e| ctx.error(Self::KIND, e))?;
         Ok(TaskResult::CommitDetails {
             item_idx: ctx.item_idx,
@@ -426,15 +405,15 @@ impl Task for AheadBehindTask {
         // Check cache first (populated by batch_ahead_behind if it ran).
         // Cache lookup has minor overhead (rev-parse for cache key + allocations),
         // but saves the expensive ahead_behind computation on cache hit.
-        let (ahead, behind) = if let Some(branch) = ctx.branch() {
+        let (ahead, behind) = if let Some(branch) = ctx.branch_ref.branch.as_deref() {
             if let Some(counts) = repo.get_cached_ahead_behind(&base, branch) {
                 counts
             } else {
-                repo.ahead_behind(&base, ctx.commit_sha())
+                repo.ahead_behind(&base, &ctx.branch_ref.commit_sha)
                     .map_err(|e| ctx.error(Self::KIND, e))?
             }
         } else {
-            repo.ahead_behind(&base, ctx.commit_sha())
+            repo.ahead_behind(&base, &ctx.branch_ref.commit_sha)
                 .map_err(|e| ctx.error(Self::KIND, e))?
         };
 
@@ -456,10 +435,10 @@ impl Task for CommittedTreesMatchTask {
     fn compute(ctx: TaskContext) -> Result<TaskResult, TaskError> {
         let base = ctx.integration_target(Self::KIND)?;
         let repo = &ctx.repo;
-        // Use ctx.commit_sha() (the item's commit) instead of HEAD,
-        // since for branches without worktrees, HEAD is the main worktree's HEAD
+        // Use the item's commit instead of HEAD, since for branches without
+        // worktrees, HEAD is the main worktree's HEAD.
         let committed_trees_match = repo
-            .trees_match(ctx.commit_sha(), &base)
+            .trees_match(&ctx.branch_ref.commit_sha, &base)
             .map_err(|e| ctx.error(Self::KIND, e))?;
         Ok(TaskResult::CommittedTreesMatch {
             item_idx: ctx.item_idx,
@@ -486,7 +465,7 @@ impl Task for HasFileChangesTask {
 
     fn compute(ctx: TaskContext) -> Result<TaskResult, TaskError> {
         // No branch name (detached HEAD) - return conservative default (assume has changes)
-        let Some(branch) = ctx.branch() else {
+        let Some(branch) = ctx.branch_ref.branch.as_deref() else {
             return Ok(TaskResult::HasFileChanges {
                 item_idx: ctx.item_idx,
                 has_file_changes: true,
@@ -523,7 +502,7 @@ impl Task for WouldMergeAddTask {
 
     fn compute(ctx: TaskContext) -> Result<TaskResult, TaskError> {
         // No branch name (detached HEAD) - return conservative default (assume would add)
-        let Some(branch) = ctx.branch() else {
+        let Some(branch) = ctx.branch_ref.branch.as_deref() else {
             return Ok(TaskResult::WouldMergeAdd {
                 item_idx: ctx.item_idx,
                 would_merge_add: true,
@@ -558,7 +537,7 @@ impl Task for IsAncestorTask {
         let base = ctx.integration_target(Self::KIND)?;
         let repo = &ctx.repo;
         let is_ancestor = repo
-            .is_ancestor(ctx.commit_sha(), &base)
+            .is_ancestor(&ctx.branch_ref.commit_sha, &base)
             .map_err(|e| ctx.error(Self::KIND, e))?;
 
         Ok(TaskResult::IsAncestor {
@@ -578,7 +557,7 @@ impl Task for BranchDiffTask {
         let base = ctx.default_branch(Self::KIND)?;
         let repo = &ctx.repo;
         let diff = repo
-            .branch_diff_stats(&base, ctx.commit_sha())
+            .branch_diff_stats(&base, &ctx.branch_ref.commit_sha)
             .map_err(|e| ctx.error(Self::KIND, e))?;
 
         Ok(TaskResult::BranchDiff {
@@ -597,7 +576,8 @@ impl Task for WorkingTreeDiffTask {
     fn compute(ctx: TaskContext) -> Result<TaskResult, TaskError> {
         // This task is only spawned for worktree items, so worktree path is always present.
         let wt = ctx
-            .worktree()
+            .branch_ref
+            .working_tree(&ctx.repo)
             .expect("WorkingTreeDiffTask requires a worktree");
         // Use --no-optional-locks to avoid index lock contention with WorkingTreeConflictsTask's
         // `git stash create` which needs the index lock.
@@ -644,7 +624,7 @@ impl Task for MergeTreeConflictsTask {
         let base = ctx.default_branch(Self::KIND)?;
         let repo = &ctx.repo;
         let has_merge_tree_conflicts = repo
-            .has_merge_conflicts(&base, ctx.commit_sha())
+            .has_merge_conflicts(&base, &ctx.branch_ref.commit_sha)
             .map_err(|e| ctx.error(Self::KIND, e))?;
         Ok(TaskResult::MergeTreeConflicts {
             item_idx: ctx.item_idx,
@@ -667,7 +647,8 @@ impl Task for WorkingTreeConflictsTask {
         let base = ctx.default_branch(Self::KIND)?;
         // This task is only spawned for worktree items, so worktree path is always present.
         let wt = ctx
-            .worktree()
+            .branch_ref
+            .working_tree(&ctx.repo)
             .expect("WorkingTreeConflictsTask requires a worktree");
 
         // Use --no-optional-locks to avoid index lock contention with WorkingTreeDiffTask.
@@ -737,7 +718,8 @@ impl Task for GitOperationTask {
     fn compute(ctx: TaskContext) -> Result<TaskResult, TaskError> {
         // This task is only spawned for worktree items, so worktree path is always present.
         let wt = ctx
-            .worktree()
+            .branch_ref
+            .working_tree(&ctx.repo)
             .expect("GitOperationTask requires a worktree");
         let git_operation = detect_git_operation(&wt);
         Ok(TaskResult::GitOperation {
@@ -755,7 +737,7 @@ impl Task for UserMarkerTask {
 
     fn compute(ctx: TaskContext) -> Result<TaskResult, TaskError> {
         let repo = &ctx.repo;
-        let user_marker = repo.user_marker(ctx.branch());
+        let user_marker = repo.user_marker(ctx.branch_ref.branch.as_deref());
         Ok(TaskResult::UserMarker {
             item_idx: ctx.item_idx,
             user_marker,
@@ -773,7 +755,7 @@ impl Task for UpstreamTask {
         let repo = &ctx.repo;
 
         // No branch means no upstream
-        let Some(branch) = ctx.branch() else {
+        let Some(branch) = ctx.branch_ref.branch.as_deref() else {
             return Ok(TaskResult::Upstream {
                 item_idx: ctx.item_idx,
                 upstream: UpstreamStatus::default(),
@@ -793,7 +775,7 @@ impl Task for UpstreamTask {
 
         let remote = upstream_branch.split_once('/').map(|(r, _)| r.to_string());
         let (ahead, behind) = repo
-            .ahead_behind(&upstream_branch, ctx.commit_sha())
+            .ahead_behind(&upstream_branch, &ctx.branch_ref.commit_sha)
             .map_err(|e| ctx.error(Self::KIND, e))?;
 
         Ok(TaskResult::Upstream {
@@ -819,9 +801,9 @@ impl Task for CiStatusTask {
 
     fn compute(ctx: TaskContext) -> Result<TaskResult, TaskError> {
         let repo = &ctx.repo;
-        let pr_status = ctx.branch().and_then(|branch| {
+        let pr_status = ctx.branch_ref.branch.as_deref().and_then(|branch| {
             let has_upstream = repo.upstream_branch(branch).ok().flatten().is_some();
-            PrStatus::detect(repo, branch, ctx.commit_sha(), has_upstream)
+            PrStatus::detect(repo, branch, &ctx.branch_ref.commit_sha, has_upstream)
         });
 
         Ok(TaskResult::CiStatus {
