@@ -43,8 +43,8 @@ mod working_tree;
 mod worktrees;
 
 // Re-export WorkingTree
-pub use working_tree::WorkingTree;
 pub(super) use working_tree::path_to_logging_context;
+pub use working_tree::{TreesMatchResult, WorkingTree};
 
 // ============================================================================
 // Repository Cache
@@ -65,6 +65,9 @@ pub(super) struct RepoCache {
     pub(super) is_bare: OnceCell<bool>,
     /// Default branch (main, master, etc.)
     pub(super) default_branch: OnceCell<Option<String>>,
+    /// Invalid default branch config (set when user configured a non-existent branch).
+    /// Populated by `default_branch()` as a side effect, read by `invalid_default_branch_config()`.
+    pub(super) invalid_default_branch: OnceCell<Option<String>>,
     /// Effective integration target (local default branch or upstream if ahead)
     pub(super) integration_target: OnceCell<Option<String>>,
     /// Primary remote name (None if no remotes configured)

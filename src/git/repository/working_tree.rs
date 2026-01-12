@@ -212,20 +212,16 @@ impl<'a> WorkingTree<'a> {
         LineDiff::from_numstat(&stdout)
     }
 
-    /// Get working tree diff stats vs a base branch, if trees differ.
+    /// Check if HEAD tree matches a base branch tree.
     ///
-    /// When `base_branch` is `None` (main worktree), returns `Some(LineDiff::default())`.
-    /// If the base branch tree matches HEAD and the working tree is dirty, computes
-    /// the precise diff; otherwise returns zero to indicate trees match.
-    /// When trees differ, returns `None` so callers can skip expensive comparisons.
-    pub fn working_tree_diff_with_base(
+    /// This runs `rev-parse --verify` + `diff-tree --quiet` and returns the result.
+    /// Can be called directly for parallel execution with `git status`.
+    pub fn trees_match_base<'b>(
         &self,
-        base_branch: Option<&str>,
-        working_tree_dirty: bool,
-    ) -> anyhow::Result<Option<LineDiff>> {
+        base_branch: Option<&'b str>,
+    ) -> anyhow::Result<TreesMatchResult<'b>> {
         let Some(branch) = base_branch else {
-            // Main worktree has no base to compare against
-            return Ok(Some(LineDiff::default()));
+            return Ok(TreesMatchResult::NoBaseBranch);
         };
 
         // Check if branch exists
@@ -233,7 +229,7 @@ impl<'a> WorkingTree<'a> {
             .run_command(&["rev-parse", "--verify", branch])
             .is_err()
         {
-            return Ok(None);
+            return Ok(TreesMatchResult::BranchNotFound);
         }
 
         // Check if trees match
@@ -242,14 +238,22 @@ impl<'a> WorkingTree<'a> {
             .is_ok();
 
         if trees_match {
-            // Trees identical - if working tree is dirty, compute the diff
-            if working_tree_dirty {
-                Ok(Some(self.working_tree_diff_vs_ref(branch)?))
-            } else {
-                Ok(Some(LineDiff::default()))
-            }
+            Ok(TreesMatchResult::TreesMatch { branch })
         } else {
-            Ok(None)
+            Ok(TreesMatchResult::TreesDiffer)
         }
     }
+}
+
+/// Result of checking if HEAD tree matches a base branch tree.
+#[derive(Debug, Clone, Copy)]
+pub enum TreesMatchResult<'a> {
+    /// No base branch specified (main worktree).
+    NoBaseBranch,
+    /// Base branch doesn't exist.
+    BranchNotFound,
+    /// Trees differ between HEAD and base branch.
+    TreesDiffer,
+    /// Trees match - includes branch name for computing diff if needed.
+    TreesMatch { branch: &'a str },
 }
