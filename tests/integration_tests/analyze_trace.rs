@@ -7,10 +7,11 @@ use std::process::{Command, Stdio};
 #[test]
 fn test_analyze_trace_from_stdin() {
     let sample_trace = r#"[wt-trace] ts=1000000 tid=1 cmd="git status" dur=10.0ms ok=true
-[wt-trace] ts=1000000 tid=2 cmd="git status" dur=15.0ms ok=true
-[wt-trace] ts=1010000 tid=1 cmd="git diff" dur=100.0ms ok=true
-[wt-trace] ts=1020000 tid=2 cmd="git merge-base HEAD main" dur=500.0ms ok=true
-[wt-trace] ts=1030000 tid=1 cmd="gh pr list" dur=200.0ms ok=true"#;
+[wt-trace] ts=1010000 tid=1 cmd="git status" dur=15.0ms ok=true
+[wt-trace] ts=1025000 tid=1 cmd="git diff" dur=100.0ms ok=true
+[wt-trace] ts=1025000 tid=2 event="Showed skeleton"
+[wt-trace] ts=1125000 tid=1 cmd="git merge-base HEAD main" dur=500.0ms ok=true
+[wt-trace] ts=1625000 tid=1 cmd="gh pr list" dur=200.0ms ok=true"#;
 
     let mut child = Command::new(env!("CARGO_BIN_EXE_analyze-trace"))
         .stdin(Stdio::piped())
@@ -32,28 +33,28 @@ fn test_analyze_trace_from_stdin() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    // Should be valid JSON with Chrome Trace Format structure
-    let parsed: serde_json::Value =
-        serde_json::from_str(&stdout).expect("Output should be valid JSON");
+    // Verify it's valid Chrome Trace Format JSON
+    let json: serde_json::Value = serde_json::from_str(&stdout).expect("Should output valid JSON");
 
+    assert_eq!(json["displayTimeUnit"], "ms", "Should have displayTimeUnit");
     assert!(
-        parsed["traceEvents"].is_array(),
+        json["traceEvents"].is_array(),
         "Should have traceEvents array"
     );
-    assert_eq!(
-        parsed["displayTimeUnit"], "ms",
-        "Should have displayTimeUnit"
-    );
 
-    let events = parsed["traceEvents"].as_array().unwrap();
-    assert_eq!(events.len(), 5, "Should have 5 trace events");
+    let events = json["traceEvents"].as_array().unwrap();
+    assert_eq!(events.len(), 6, "Should have 6 events");
 
-    // Check first event structure
+    // Check command events
     assert_eq!(events[0]["name"], "git status");
     assert_eq!(events[0]["ph"], "X"); // Complete event
-    assert_eq!(events[0]["ts"], 1000000);
-    assert_eq!(events[0]["tid"], 1);
-    assert_eq!(events[0]["cat"], "git");
+    assert!(events[0]["dur"].is_number()); // Has duration
+
+    // Check instant event
+    assert_eq!(events[3]["name"], "Showed skeleton");
+    assert_eq!(events[3]["ph"], "I"); // Instant event
+    assert_eq!(events[3]["s"], "g"); // Global scope
+    assert!(events[3]["dur"].is_null()); // No duration
 }
 
 /// Test that the binary shows usage when run interactively without input.
@@ -107,18 +108,19 @@ fn test_analyze_trace_empty_input() {
 /// Test reading from a file.
 #[test]
 fn test_analyze_trace_from_file() {
-    // Create a temporary file with trace data
+    // Create a temp file with sample trace data
     let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
-    let log_path = temp_dir.path().join("trace.log");
+    let log_file = temp_dir.path().join("trace.log");
 
     let sample_trace = r#"[wt-trace] ts=1000000 tid=1 cmd="git rev-parse" dur=5.0ms ok=true
 [wt-trace] ts=1005000 tid=1 cmd="git status" dur=10.0ms ok=true
-[wt-trace] ts=1015000 tid=2 cmd="git diff" dur=20.0ms ok=true"#;
+[wt-trace] ts=1015000 tid=1 event="Skeleton displayed"
+[wt-trace] ts=1015000 tid=2 cmd="git diff" dur=50.0ms ok=true"#;
 
-    std::fs::write(&log_path, sample_trace).expect("Failed to write temp file");
+    std::fs::write(&log_file, sample_trace).expect("Failed to write sample log");
 
     let output = Command::new(env!("CARGO_BIN_EXE_analyze-trace"))
-        .arg(&log_path)
+        .arg(&log_file)
         .output()
         .expect("Failed to run analyze-trace");
 
@@ -126,11 +128,15 @@ fn test_analyze_trace_from_file() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    // Should be valid Chrome Trace Format JSON
-    let parsed: serde_json::Value =
-        serde_json::from_str(&stdout).expect("Output should be valid JSON");
+    // Verify it's valid Chrome Trace Format JSON
+    let json: serde_json::Value = serde_json::from_str(&stdout).expect("Should output valid JSON");
 
-    let events = parsed["traceEvents"].as_array().unwrap();
-    assert_eq!(events.len(), 3, "Should have 3 trace events");
+    assert!(json["traceEvents"].is_array(), "Should have traceEvents");
+    let events = json["traceEvents"].as_array().unwrap();
+    assert_eq!(events.len(), 4, "Should have 4 events");
+
+    // Check we have both command and instant events
     assert_eq!(events[0]["name"], "git rev-parse");
+    assert_eq!(events[2]["name"], "Skeleton displayed");
+    assert_eq!(events[2]["ph"], "I"); // Instant event
 }
