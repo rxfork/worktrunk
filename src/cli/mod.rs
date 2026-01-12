@@ -124,6 +124,25 @@ pub fn build_command() -> Command {
     })
 }
 
+/// Parent commands whose subcommands can be suggested for unrecognized top-level commands.
+const NESTED_COMMAND_PARENTS: &[&str] = &["step", "hook"];
+
+/// Check if an unrecognized subcommand matches a nested subcommand.
+///
+/// Returns the full command path if found, e.g., "wt step squash" for "squash".
+pub fn suggest_nested_subcommand(cmd: &Command, unknown: &str) -> Option<String> {
+    for parent in NESTED_COMMAND_PARENTS {
+        if let Some(parent_cmd) = cmd.get_subcommands().find(|c| c.get_name() == *parent)
+            && parent_cmd
+                .get_subcommands()
+                .any(|s| s.get_name() == unknown)
+        {
+            return Some(format!("wt {parent} {unknown}"));
+        }
+    }
+    None
+}
+
 fn apply_help_template_recursive(mut cmd: Command, path: &str) -> Command {
     cmd = cmd.help_template(HELP_TEMPLATE).display_name(path);
 

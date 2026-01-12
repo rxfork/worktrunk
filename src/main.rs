@@ -685,9 +685,24 @@ fn expand_demo_placeholders(text: &str) -> String {
 /// Enhance clap errors with command-specific hints, then exit.
 ///
 /// For `wt switch` missing the branch argument, adds hints about shortcuts.
+/// For unrecognized subcommands that match nested commands, suggests the full path.
 fn enhance_and_exit_error(err: clap::Error) -> ! {
     use clap::error::ErrorKind;
     use color_print::ceprintln;
+
+    // For unrecognized subcommands, check if they match a nested subcommand
+    // e.g., `wt squash` -> suggest `wt step squash`
+    if err.kind() == ErrorKind::InvalidSubcommand
+        && let Some(unknown) = err.get(clap::error::ContextKind::InvalidSubcommand)
+    {
+        let cmd = cli::build_command();
+        if let Some(suggestion) = cli::suggest_nested_subcommand(&cmd, unknown.to_string().as_str())
+        {
+            eprint!("{}", err.render().ansi());
+            ceprintln!("\n  <yellow>tip:</>  did you mean <cyan,bold>{suggestion}</cyan,bold>?");
+            process::exit(2);
+        }
+    }
 
     // Enhance `wt switch` missing argument error with shortcut hints.
     // Hints go to stderr, which is safe since stdout is reserved for data output.
