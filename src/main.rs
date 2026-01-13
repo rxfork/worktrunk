@@ -908,7 +908,12 @@ fn main() {
                                     return Ok(());
                                 }
 
-                                let shell_count = scan_result.results.len();
+                                // Count unique shells, not file results (fish may have 2 files: functions/ and legacy conf.d/)
+                                let mut shells: Vec<_> =
+                                    scan_result.results.iter().map(|r| r.shell).collect();
+                                shells.sort_by_key(|s| s.to_string());
+                                shells.dedup();
+                                let shell_count = shells.len();
                                 let completion_count = scan_result.completion_results.len();
                                 let total_changes = shell_count + completion_count;
 
