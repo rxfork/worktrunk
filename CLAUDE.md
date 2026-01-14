@@ -254,8 +254,8 @@ When CI shows a codecov/patch failure, investigate before declaring "ready to me
 
 1. Identify uncovered lines in your changes:
    ```bash
-   task coverage
-   cargo llvm-cov report --show-missing-lines | grep <file>
+   task coverage                                          # run tests, generate coverage
+   cargo llvm-cov report --show-missing-lines | grep <file>   # query the report
    git diff main...HEAD -- path/to/file.rs
    ```
 
