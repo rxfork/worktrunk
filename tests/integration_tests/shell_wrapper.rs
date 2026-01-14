@@ -3061,19 +3061,19 @@ echo "SCRIPT_COMPLETED"
         }
     }
 
-    /// Test that interactive `wt --help` uses a pager.
+    /// Test that interactive `wt --help` skips the pager.
     ///
     /// This is the complement to `test_wrapper_help_redirect_captures_all_output`:
     /// - Redirect case (`&>file`): pager should be SKIPPED (output goes to file)
-    /// - Interactive case (no redirect): pager should be USED
+    /// - Interactive case (no redirect): pager should be SKIPPED (output goes to terminal)
     ///
-    /// We verify pager invocation by setting GIT_PAGER to a script that creates
-    /// a marker file before passing through the content.
+    /// We verify pager is not invoked by setting GIT_PAGER to a script that would
+    /// create a marker file if it ran.
     #[rstest]
     #[case("bash")]
     #[case("zsh")]
     #[case("fish")]
-    fn test_wrapper_help_interactive_uses_pager(#[case] shell: &str, repo: TestRepo) {
+    fn test_wrapper_help_interactive_skips_pager(#[case] shell: &str, repo: TestRepo) {
         use std::io::Read;
 
         let wt_bin = get_cargo_bin("wt");
@@ -3194,12 +3194,12 @@ echo "SCRIPT_COMPLETED"
             terminal_output
         );
 
-        // Verify pager was invoked (marker file should exist)
+        // Verify pager was NOT invoked (marker file should not exist)
         assert!(
-            marker_file.exists(),
-            "{}: Pager was NOT invoked for interactive help.\n\
-             The marker file was not created, indicating show_help_in_pager() \n\
-             skipped the pager even though stderr is a TTY.\n\
+            !marker_file.exists(),
+            "{}: Pager was invoked for interactive help.\n\
+             The marker file was created, indicating show_help_in_pager() \n\
+             ran the pager even though help should print directly.\n\
              Terminal output:\n{}",
             shell,
             terminal_output
