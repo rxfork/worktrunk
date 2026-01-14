@@ -58,7 +58,6 @@ Manual merge workflow with review between steps:
 
   [2mwt step commit
   [2mwt step squash
-  [2m# Review the squashed commit
   [2mwt step rebase
   [2mwt step push
 

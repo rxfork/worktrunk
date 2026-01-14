@@ -968,7 +968,6 @@ Manual merge workflow with review between steps:
 ```console
 wt step commit
 wt step squash
-# Review the squashed commit
 wt step rebase
 wt step push
 ```
