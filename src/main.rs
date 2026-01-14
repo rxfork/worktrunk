@@ -1773,10 +1773,8 @@ fn main() {
                     let _ = output::print(format_with_gutter(&chain_text, None));
                 } else if msg.contains('\n') {
                     // Multiline error without context - this shouldn't happen if all
-                    // errors have proper context. Fail in tests, log in production.
-                    if cfg!(test) {
-                        panic!("Multiline error without context: {msg}");
-                    }
+                    // errors have proper context. Catch in debug builds, log in release.
+                    debug_assert!(false, "Multiline error without context: {msg}");
                     log::warn!("Multiline error without context: {msg}");
                     let _ = output::print(error_message("Command failed"));
                     let _ = output::print(format_with_gutter(&msg, None));

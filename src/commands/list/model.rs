@@ -297,15 +297,6 @@ impl UpstreamStatus {
             behind: self.behind,
         })
     }
-
-    #[cfg(test)]
-    pub(crate) fn from_parts(remote: Option<String>, ahead: usize, behind: usize) -> Self {
-        Self {
-            remote,
-            ahead,
-            behind,
-        }
-    }
 }
 
 /// Unified item for displaying worktrees and branches in the same table
@@ -1979,7 +1970,11 @@ mod tests {
 
     #[test]
     fn test_upstream_status_active_with_remote() {
-        let status = UpstreamStatus::from_parts(Some("origin".to_string()), 3, 2);
+        let status = UpstreamStatus {
+            remote: Some("origin".to_string()),
+            ahead: 3,
+            behind: 2,
+        };
         let active = status.active().unwrap();
         assert_eq!(active.remote, "origin");
         assert_eq!(active.ahead, 3);
@@ -1988,7 +1983,11 @@ mod tests {
 
     #[test]
     fn test_upstream_status_active_no_remote() {
-        let status = UpstreamStatus::from_parts(None, 0, 0);
+        let status = UpstreamStatus {
+            remote: None,
+            ahead: 0,
+            behind: 0,
+        };
         assert!(status.active().is_none());
     }
 
