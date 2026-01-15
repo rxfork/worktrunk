@@ -764,6 +764,9 @@ mod tests {
     #[case("zsh")]
     #[case("fish")]
     fn test_wrapper_step_for_each(#[case] shell: &str, mut repo: TestRepo) {
+        // Remove fixture worktrees so we can create our own feature-a and feature-b
+        repo.remove_fixture_worktrees();
+
         repo.commit("Initial commit");
 
         // Create additional worktrees
@@ -945,7 +948,7 @@ watch = "echo 'Watching for file changes'"
         // Pre-approve the commands in user config
         fs::write(
             repo.test_config_path(),
-            r#"[projects."repo"]
+            r#"[projects."../origin"]
 approved-commands = [
     "echo 'Installing dependencies...'",
     "echo 'Building project...'",
@@ -992,7 +995,7 @@ test = "echo '✓ All 47 tests passed in 2.3s'"
         // Pre-approve commands
         fs::write(
             repo.test_config_path(),
-            r#"[projects."repo"]
+            r#"[projects."../origin"]
 approved-commands = [
     "echo '✓ Code formatting check passed'",
     "echo '✓ Linting passed - no warnings'",
@@ -1048,7 +1051,7 @@ test = "echo '✗ Test suite failed: 3 tests failing' && exit 1"
         // Pre-approve the commands
         fs::write(
             repo.test_config_path(),
-            r#"[projects."repo"]
+            r#"[projects."../origin"]
 approved-commands = [
     "echo '✓ Code formatting check passed'",
     "echo '✗ Test suite failed: 3 tests failing' && exit 1",
@@ -1116,7 +1119,7 @@ check2 = "{} check2 3"
             format!(
                 r#"worktree-path = "../{{{{ repo }}}}.{{{{ branch }}}}"
 
-[projects."repo"]
+[projects."../origin"]
 approved-commands = [
     "{} check1 3",
     "{} check2 3",
@@ -1166,7 +1169,7 @@ approved-commands = [
         // Pre-approve the command in user config
         fs::write(
             repo.test_config_path(),
-            r#"[projects."repo"]
+            r#"[projects."../origin"]
 approved-commands = ["echo 'test command executed'"]
 "#,
         )
@@ -1309,7 +1312,7 @@ approved-commands = ["echo 'test command executed'"]
         // Pre-approve the command in user config
         fs::write(
             repo.test_config_path(),
-            r#"[projects."repo"]
+            r#"[projects."../origin"]
 approved-commands = ["echo 'background task'"]
 "#,
         )
@@ -1357,7 +1360,7 @@ approved-commands = ["echo 'background task'"]
         // Pre-approve the command in user config
         fs::write(
             repo.test_config_path(),
-            r#"[projects."repo"]
+            r#"[projects."../origin"]
 approved-commands = ["echo 'fish background task'"]
 "#,
         )
@@ -1571,7 +1574,7 @@ approved-commands = ["echo 'fish background task'"]
         // Pre-approve the command
         fs::write(
             repo.test_config_path(),
-            r#"[projects."repo"]
+            r#"[projects."../origin"]
 approved-commands = ["echo 'background job'"]
 "#,
         )
@@ -1621,7 +1624,7 @@ approved-commands = ["echo 'background job'"]
         // Pre-approve the command
         fs::write(
             repo.test_config_path(),
-            r#"[projects."repo"]
+            r#"[projects."../origin"]
 approved-commands = ["echo 'bash background'"]
 "#,
         )
@@ -2119,7 +2122,7 @@ approved-commands = ["echo 'bash background'"]
         // Pre-approve the command
         fs::write(
             repo.test_config_path(),
-            r#"[projects."repo"]
+            r#"[projects."../origin"]
 approved-commands = ["echo 'cleanup test'"]
 "#,
         )
@@ -2460,6 +2463,9 @@ fi
     fn test_readme_example_approval_prompt(repo: TestRepo) {
         use portable_pty::CommandBuilder;
         use std::io::{Read, Write};
+
+        // Remove origin so worktrunk uses directory name as project identifier
+        repo.run_git(&["remote", "remove", "origin"]);
 
         // Create project config with named post-create commands
         repo.write_project_config(

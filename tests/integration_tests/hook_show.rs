@@ -113,6 +113,9 @@ deploy = "scripts/deploy.sh"
 
 #[rstest]
 fn test_hook_show_approval_status(repo: TestRepo, temp_home: TempDir) {
+    // Remove origin so project_identifier is "repo" (directory name)
+    repo.run_git(&["remote", "remove", "origin"]);
+
     // Create user config at XDG path with one approved command
     let global_config_dir = temp_home.path().join(".config").join("worktrunk");
     fs::create_dir_all(&global_config_dir).unwrap();
@@ -227,6 +230,9 @@ lint = "pre-commit run"
 /// Test `wt hook clear` when no approvals exist for the project.
 #[rstest]
 fn test_hook_clear_no_approvals(repo: TestRepo, temp_home: TempDir) {
+    // Remove origin so project_identifier is "repo" (directory name)
+    repo.run_git(&["remote", "remove", "origin"]);
+
     // Create user config without any project approvals
     let global_config_dir = temp_home.path().join(".config").join("worktrunk");
     fs::create_dir_all(&global_config_dir).unwrap();
@@ -254,6 +260,9 @@ fn test_hook_clear_no_approvals(repo: TestRepo, temp_home: TempDir) {
 /// Test `wt hook clear` when project has approvals to clear.
 #[rstest]
 fn test_hook_clear_with_approvals(repo: TestRepo, temp_home: TempDir) {
+    // Remove origin so project_identifier is "repo" (directory name)
+    repo.run_git(&["remote", "remove", "origin"]);
+
     // Create user config with approved commands for this project
     let global_config_dir = temp_home.path().join(".config").join("worktrunk");
     fs::create_dir_all(&global_config_dir).unwrap();
